@@ -6,6 +6,9 @@ libwii-nx is GPL-3.0-or-later. What it is built from or follows:
 
 - **wiicompiled-nx** - GPL-3.0. The platform layer and the first natives move
   here from its runtime. <https://github.com/nx-mod/wiicompiled-nx>
+- **wii-nx** - GPL-3.0. `tools/wiinx-extract` and `tools/wiicrypto.py` are
+  copies of its `example-wii-nx/scripts/extract-dol` and `wiicrypto.py`; the
+  signature masking follows its `resolve-symbols`. <https://github.com/nx-mod/wii-nx>
 
 ## Reimplemented natively from other work
 

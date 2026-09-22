@@ -1,0 +1,1689 @@
+{
+ "about": "Every library build seen in a game's startup banners. Add games with tools/wiinx-scan record; regenerate the header with tools/wiinx-scan header.",
+ "builds": [
+  {
+   "id": "nw4r.ef@2007-06-08",
+   "banner": "NW4R - EF Jun  8 2007 (0x4199_60831)",
+   "seen_in": [
+    "RSPE01"
+   ],
+   "source": "doldecomp/ogws src/nw4r/ef: NW4R_LIB_VERSION - no Wii Sports disc here to read it from"
+  },
+  {
+   "id": "nw4r.ef@2008-03-08",
+   "banner": "NW4R - EF Mar  8 2008 (0x4201_127)",
+   "seen_in": [
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "nw4r.ef@2009-06-09",
+   "banner": "NW4R - EF Jun  9 2009 (0x4302_145)",
+   "seen_in": [
+    "SMNE01"
+   ]
+  },
+  {
+   "id": "nw4r.g3d@2007-06-08",
+   "banner": "NW4R - G3D Jun  8 2007 (0x4199_60831)",
+   "seen_in": [
+    "RSPE01"
+   ],
+   "source": "doldecomp/ogws src/nw4r/g3d: NW4R_LIB_VERSION - no Wii Sports disc here to read it from"
+  },
+  {
+   "id": "nw4r.g3d@2007-12-18",
+   "banner": "NW4R - G3D Dec 18 2007 (0x4199_60831)",
+   "seen_in": [
+    "R92E01"
+   ]
+  },
+  {
+   "id": "nw4r.g3d@2008-03-08",
+   "banner": "NW4R - G3D Mar  8 2008 (0x4201_127)",
+   "seen_in": [
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "nw4r.g3d@2009-04-02",
+   "banner": "NW4R - G3D Apr  2 2009 (0x4302_145)",
+   "seen_in": [
+    "SMNE01"
+   ]
+  },
+  {
+   "id": "nw4r.g3d@2009-12-22",
+   "banner": "NW4R - G3D Dec 22 2009 (0x4302_158)",
+   "seen_in": [
+    "SP2E01"
+   ]
+  },
+  {
+   "id": "nw4r.g3d@2012-03-30",
+   "banner": "NW4R - G3D Mar 30 2012 (0x4302_213)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "nw4r.lyt@2007-06-08",
+   "banner": "NW4R - LYT Jun  8 2007 (0x4199_60831)",
+   "seen_in": [
+    "RSPE01"
+   ],
+   "source": "doldecomp/ogws src/nw4r/lyt: NW4R_LIB_VERSION - no Wii Sports disc here to read it from"
+  },
+  {
+   "id": "nw4r.lyt@2008-03-08",
+   "banner": "NW4R - LYT Mar  8 2008 (0x4201_127)",
+   "seen_in": [
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "nw4r.lyt@2008-08-21",
+   "banner": "NW4R - LYT Aug 21 2008 (0x4199_60831)",
+   "seen_in": [
+    "HAYA"
+   ]
+  },
+  {
+   "id": "nw4r.lyt@2009-04-02",
+   "banner": "NW4R - LYT Apr  2 2009 (0x4302_145)",
+   "seen_in": [
+    "SMNE01"
+   ]
+  },
+  {
+   "id": "nw4r.lyt@2010-03-15",
+   "banner": "NW4R - LYT Mar 15 2010 (0x4302_158)",
+   "seen_in": [
+    "SP2E01"
+   ]
+  },
+  {
+   "id": "nw4r.snd@2007-06-08",
+   "banner": "NW4R - SND Jun  8 2007 (0x4199_60831)",
+   "seen_in": [
+    "RSPE01"
+   ],
+   "source": "doldecomp/ogws src/nw4r/snd: NW4R_LIB_VERSION - no Wii Sports disc here to read it from"
+  },
+  {
+   "id": "nw4r.snd@2008-03-08",
+   "banner": "NW4R - SND Mar  8 2008 (0x4201_127)",
+   "seen_in": [
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "nw4r.snd@2008-11-20",
+   "banner": "NW4R - SND Nov 20 2008 (0x4199_60831)",
+   "seen_in": [
+    "HAYA"
+   ]
+  },
+  {
+   "id": "nw4r.snd@2009-06-09",
+   "banner": "NW4R - SND Jun  9 2009 (0x4302_145)",
+   "seen_in": [
+    "SMNE01"
+   ]
+  },
+  {
+   "id": "nw4r.snd@2009-12-22",
+   "banner": "NW4R - SND Dec 22 2009 (0x4302_158)",
+   "seen_in": [
+    "SP2E01"
+   ]
+  },
+  {
+   "id": "nw4r.snd@2012-03-30",
+   "banner": "NW4R - SND Mar 30 2012 (0x4302_213)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.ai@2006-10-26",
+   "banner": "RVL_SDK - AI Oct 26 2006 (0x4199_60831)",
+   "seen_in": [
+    "HAAA"
+   ]
+  },
+  {
+   "id": "rvl.ai@2006-11-30",
+   "banner": "RVL_SDK - AI Nov 30 2006 (0x4199_60831)",
+   "seen_in": [
+    "R8PE01",
+    "RM3E01"
+   ]
+  },
+  {
+   "id": "rvl.ai@2007-05-08",
+   "banner": "RVL_SDK - AI May  8 2007 (0x4199_60831)",
+   "seen_in": [
+    "HAFE",
+    "HAFP",
+    "HAGE",
+    "HAGP"
+   ]
+  },
+  {
+   "id": "rvl.ai@2007-08-08",
+   "banner": "RVL_SDK - AI Aug  8 2007 (0x4199_60831)",
+   "seen_in": [
+    "HACA",
+    "R92E01",
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "rvl.ai@2008-07-30",
+   "banner": "RVL_SDK - AI Jul 30 2008 (0x4199_60831)",
+   "seen_in": [
+    "HAYA",
+    "R7PE01"
+   ]
+  },
+  {
+   "id": "rvl.ai@2009-02-27",
+   "banner": "RVL_SDK - AI Feb 27 2009 (0x4302_145)",
+   "seen_in": [
+    "SMNE01"
+   ]
+  },
+  {
+   "id": "rvl.ai@2009-12-11",
+   "banner": "RVL_SDK - AI Dec 11 2009 (0x4302_145)",
+   "seen_in": [
+    "SP2E01"
+   ]
+  },
+  {
+   "id": "rvl.ai@2010-04-20",
+   "banner": "RVL_SDK - AI Apr 20 2010 (0x4199_60831)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.ai@2010-08-23",
+   "banner": "RVL_SDK - AI Aug 23 2010 (0x4302_145)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.ax@2006-10-26",
+   "banner": "RVL_SDK - AX Oct 26 2006 (0x4199_60831)",
+   "seen_in": [
+    "HAAA"
+   ]
+  },
+  {
+   "id": "rvl.ax@2006-12-18",
+   "banner": "RVL_SDK - AX Dec 18 2006 (0x4199_60831)",
+   "seen_in": [
+    "R8PE01",
+    "RM3E01"
+   ]
+  },
+  {
+   "id": "rvl.ax@2007-05-08",
+   "banner": "RVL_SDK - AX May  8 2007 (0x4199_60831)",
+   "seen_in": [
+    "HAFE",
+    "HAFP",
+    "HAGE",
+    "HAGP"
+   ]
+  },
+  {
+   "id": "rvl.ax@2007-08-08",
+   "banner": "RVL_SDK - AX Aug  8 2007 (0x4199_60831)",
+   "seen_in": [
+    "HACA",
+    "R92E01",
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "rvl.ax@2008-07-30",
+   "banner": "RVL_SDK - AX Jul 30 2008 (0x4199_60831)",
+   "seen_in": [
+    "HAYA",
+    "R7PE01"
+   ]
+  },
+  {
+   "id": "rvl.ax@2009-02-27",
+   "banner": "RVL_SDK - AX Feb 27 2009 (0x4302_145)",
+   "seen_in": [
+    "SMNE01"
+   ]
+  },
+  {
+   "id": "rvl.ax@2009-12-11",
+   "banner": "RVL_SDK - AX Dec 11 2009 (0x4302_145)",
+   "seen_in": [
+    "SP2E01"
+   ]
+  },
+  {
+   "id": "rvl.ax@2010-04-20",
+   "banner": "RVL_SDK - AX Apr 20 2010 (0x4199_60831)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.ax@2010-08-23",
+   "banner": "RVL_SDK - AX Aug 23 2010 (0x4302_145)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.card@2010-04-20",
+   "banner": "RVL_SDK - CARD Apr 20 2010 (0x4199_60831)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.cnt@2007-05-10",
+   "banner": "RVL_SDK - CNT May 10 2007 (0x4199_60831)",
+   "seen_in": [
+    "HAFE",
+    "HAFP",
+    "HAGE",
+    "HAGP"
+   ]
+  },
+  {
+   "id": "rvl.cnt@2007-08-08",
+   "banner": "RVL_SDK - CNT Aug  8 2007 (0x4199_60831)",
+   "seen_in": [
+    "HACA",
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "rvl.cnt@2008-07-30",
+   "banner": "RVL_SDK - CNT Jul 30 2008 (0x4199_60831)",
+   "seen_in": [
+    "HAYA"
+   ]
+  },
+  {
+   "id": "rvl.cnt@2010-04-20",
+   "banner": "RVL_SDK - CNT Apr 20 2010 (0x4199_60831)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.cnt@2010-08-23",
+   "banner": "RVL_SDK - CNT Aug 23 2010 (0x4302_145)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.cntcache@2010-05-13",
+   "banner": "RVL_SDK - CNTCACHE May 13 2010 (0x4199_60831)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.cntcache@2012-03-08",
+   "banner": "RVL_SDK - CNTCACHE Mar  8 2012 (0x4302_145)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.dsp@2006-10-26",
+   "banner": "RVL_SDK - DSP Oct 26 2006 (0x4199_60831)",
+   "seen_in": [
+    "HAAA"
+   ]
+  },
+  {
+   "id": "rvl.dsp@2006-11-30",
+   "banner": "RVL_SDK - DSP Nov 30 2006 (0x4199_60831)",
+   "seen_in": [
+    "R8PE01",
+    "RM3E01"
+   ]
+  },
+  {
+   "id": "rvl.dsp@2007-05-08",
+   "banner": "RVL_SDK - DSP May  8 2007 (0x4199_60831)",
+   "seen_in": [
+    "HAFE",
+    "HAFP",
+    "HAGE",
+    "HAGP"
+   ]
+  },
+  {
+   "id": "rvl.dsp@2007-08-08",
+   "banner": "RVL_SDK - DSP Aug  8 2007 (0x4199_60831)",
+   "seen_in": [
+    "HACA",
+    "R92E01",
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "rvl.dsp@2008-07-30",
+   "banner": "RVL_SDK - DSP Jul 30 2008 (0x4199_60831)",
+   "seen_in": [
+    "HAYA",
+    "R7PE01"
+   ]
+  },
+  {
+   "id": "rvl.dsp@2009-02-27",
+   "banner": "RVL_SDK - DSP Feb 27 2009 (0x4302_145)",
+   "seen_in": [
+    "SMNE01"
+   ]
+  },
+  {
+   "id": "rvl.dsp@2009-12-11",
+   "banner": "RVL_SDK - DSP Dec 11 2009 (0x4302_145)",
+   "seen_in": [
+    "SP2E01"
+   ]
+  },
+  {
+   "id": "rvl.dsp@2010-04-20",
+   "banner": "RVL_SDK - DSP Apr 20 2010 (0x4199_60831)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.dsp@2010-08-23",
+   "banner": "RVL_SDK - DSP Aug 23 2010 (0x4302_145)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.dvd@2006-10-26",
+   "banner": "RVL_SDK - DVD Oct 26 2006 (0x4199_60831)",
+   "seen_in": [
+    "HAAA"
+   ]
+  },
+  {
+   "id": "rvl.dvd@2007-04-24",
+   "banner": "RVL_SDK - DVD Apr 24 2007 (0x4199_60831)",
+   "seen_in": [
+    "R8PE01",
+    "RM3E01"
+   ]
+  },
+  {
+   "id": "rvl.dvd@2007-06-21",
+   "banner": "RVL_SDK - DVD Jun 21 2007 (0x4199_60831)",
+   "seen_in": [
+    "HAFE",
+    "HAFP",
+    "HAGE",
+    "HAGP"
+   ]
+  },
+  {
+   "id": "rvl.dvd@2007-07-31",
+   "banner": "RVL_SDK - DVD Jul 31 2007 (0x4199_60831)",
+   "seen_in": [
+    "IOS21"
+   ]
+  },
+  {
+   "id": "rvl.dvd@2007-08-08",
+   "banner": "RVL_SDK - DVD Aug  8 2007 (0x4199_60831)",
+   "seen_in": [
+    "R92E01",
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "rvl.dvd@2008-02-22",
+   "banner": "RVL_SDK - DVD Feb 22 2008 (0x4199_60831)",
+   "seen_in": [
+    "HACA"
+   ]
+  },
+  {
+   "id": "rvl.dvd@2008-07-30",
+   "banner": "RVL_SDK - DVD Jul 30 2008 (0x4199_60831)",
+   "seen_in": [
+    "HAYA",
+    "R7PE01"
+   ]
+  },
+  {
+   "id": "rvl.dvd@2009-02-27",
+   "banner": "RVL_SDK - DVD Feb 27 2009 (0x4302_145)",
+   "seen_in": [
+    "HADE"
+   ]
+  },
+  {
+   "id": "rvl.dvd@2009-09-09",
+   "banner": "RVL_SDK - DVD Sep  9 2009 (0x4302_145)",
+   "seen_in": [
+    "SMNE01"
+   ]
+  },
+  {
+   "id": "rvl.dvd@2009-12-11",
+   "banner": "RVL_SDK - DVD Dec 11 2009 (0x4302_145)",
+   "seen_in": [
+    "SP2E01"
+   ]
+  },
+  {
+   "id": "rvl.dvd@2010-04-20",
+   "banner": "RVL_SDK - DVD Apr 20 2010 (0x4199_60831)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.dvd@2010-08-23",
+   "banner": "RVL_SDK - DVD Aug 23 2010 (0x4302_145)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.dwc@2008-03-01",
+   "banner": "RVL_SDK - DWC Mar  1 2008 (0x4199_60831)",
+   "seen_in": [
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "rvl.ecx@2012-07-27",
+   "banner": "RVL_SDK - ECX Jul 27 2012 (0x4302_213)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.enc@2007-08-08",
+   "banner": "RVL_SDK - ENC Aug  8 2007 (0x4199_60831)",
+   "seen_in": [
+    "R92E01",
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "rvl.enc@2008-07-30",
+   "banner": "RVL_SDK - ENC Jul 30 2008 (0x4199_60831)",
+   "seen_in": [
+    "HAYA"
+   ]
+  },
+  {
+   "id": "rvl.enc@2010-04-20",
+   "banner": "RVL_SDK - ENC Apr 20 2010 (0x4199_60831)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.enc@2010-08-23",
+   "banner": "RVL_SDK - ENC Aug 23 2010 (0x4302_145)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.exi@2006-10-26",
+   "banner": "RVL_SDK - EXI Oct 26 2006 (0x4199_60831)",
+   "seen_in": [
+    "HAAA"
+   ]
+  },
+  {
+   "id": "rvl.exi@2006-11-30",
+   "banner": "RVL_SDK - EXI Nov 30 2006 (0x4199_60831)",
+   "seen_in": [
+    "R8PE01",
+    "RM3E01"
+   ]
+  },
+  {
+   "id": "rvl.exi@2007-06-06",
+   "banner": "RVL_SDK - EXI Jun  6 2007 (0x4199_60831)",
+   "seen_in": [
+    "HAFE",
+    "HAFP",
+    "HAGE",
+    "HAGP"
+   ]
+  },
+  {
+   "id": "rvl.exi@2007-07-31",
+   "banner": "RVL_SDK - EXI Jul 31 2007 (0x4199_60831)",
+   "seen_in": [
+    "IOS21"
+   ]
+  },
+  {
+   "id": "rvl.exi@2007-08-08",
+   "banner": "RVL_SDK - EXI Aug  8 2007 (0x4199_60831)",
+   "seen_in": [
+    "HACA",
+    "R92E01",
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "rvl.exi@2008-07-30",
+   "banner": "RVL_SDK - EXI Jul 30 2008 (0x4199_60831)",
+   "seen_in": [
+    "HAYA",
+    "R7PE01"
+   ]
+  },
+  {
+   "id": "rvl.exi@2009-02-27",
+   "banner": "RVL_SDK - EXI Feb 27 2009 (0x4302_145)",
+   "seen_in": [
+    "HADE",
+    "SMNE01"
+   ]
+  },
+  {
+   "id": "rvl.exi@2009-12-11",
+   "banner": "RVL_SDK - EXI Dec 11 2009 (0x4302_145)",
+   "seen_in": [
+    "SP2E01"
+   ]
+  },
+  {
+   "id": "rvl.exi@2010-04-20",
+   "banner": "RVL_SDK - EXI Apr 20 2010 (0x4199_60831)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.exi@2010-08-23",
+   "banner": "RVL_SDK - EXI Aug 23 2010 (0x4302_145)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.fa@2009-03-04",
+   "banner": "RVL_SDK - FA Mar  4 2009 (0x4302_145)",
+   "seen_in": [
+    "HAYA"
+   ]
+  },
+  {
+   "id": "rvl.fa@2010-04-20",
+   "banner": "RVL_SDK - FA Apr 20 2010 (0x4199_60831)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.fa@2012-03-08",
+   "banner": "RVL_SDK - FA Mar  8 2012 (0x4302_145)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.gx@2006-10-26",
+   "banner": "RVL_SDK - GX Oct 26 2006 (0x4199_60831)",
+   "seen_in": [
+    "HAAA"
+   ]
+  },
+  {
+   "id": "rvl.gx@2006-11-29",
+   "banner": "RVL_SDK - GX Nov 29 2006 (0x4200_60308)",
+   "seen_in": [
+    "RM3E01"
+   ]
+  },
+  {
+   "id": "rvl.gx@2006-11-30",
+   "banner": "RVL_SDK - GX Nov 30 2006 (0x4199_60831)",
+   "seen_in": [
+    "R8PE01"
+   ]
+  },
+  {
+   "id": "rvl.gx@2007-05-08",
+   "banner": "RVL_SDK - GX May  8 2007 (0x4199_60831)",
+   "seen_in": [
+    "HAFE",
+    "HAFP",
+    "HAGE",
+    "HAGP"
+   ]
+  },
+  {
+   "id": "rvl.gx@2007-12-11",
+   "banner": "RVL_SDK - GX Dec 11 2007 (0x4199_60831)",
+   "seen_in": [
+    "HACA",
+    "R92E01",
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "rvl.gx@2008-09-11",
+   "banner": "RVL_SDK - GX Sep 11 2008 (0x4199_60831)",
+   "seen_in": [
+    "HAYA",
+    "R7PE01"
+   ]
+  },
+  {
+   "id": "rvl.gx@2009-02-27",
+   "banner": "RVL_SDK - GX Feb 27 2009 (0x4302_145)",
+   "seen_in": [
+    "SMNE01"
+   ]
+  },
+  {
+   "id": "rvl.gx@2009-12-11",
+   "banner": "RVL_SDK - GX Dec 11 2009 (0x4302_145)",
+   "seen_in": [
+    "SP2E01"
+   ]
+  },
+  {
+   "id": "rvl.gx@2010-04-20",
+   "banner": "RVL_SDK - GX Apr 20 2010 (0x4199_60831)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.gx@2010-08-23",
+   "banner": "RVL_SDK - GX Aug 23 2010 (0x4302_145)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.hbm@2007-05-16",
+   "banner": "RVL_SDK - HBM May 16 2007 (0x4199_60726)",
+   "seen_in": [
+    "HAFE",
+    "HAFP",
+    "HAGE",
+    "HAGP"
+   ]
+  },
+  {
+   "id": "rvl.hbm@2007-05-18",
+   "banner": "RVL_SDK - HBM May 18 2007 (0x4199_60831)",
+   "seen_in": [
+    "R8PE01"
+   ]
+  },
+  {
+   "id": "rvl.hbm@2007-11-22",
+   "banner": "RVL_SDK - HBM Nov 22 2007 (0x4199_60726)",
+   "seen_in": [
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "rvl.hbm@2008-02-07",
+   "banner": "RVL_SDK - HBM Feb  7 2008 (0x4199_60726)",
+   "seen_in": [
+    "HACA",
+    "R92E01"
+   ]
+  },
+  {
+   "id": "rvl.hbm@2008-06-16",
+   "banner": "RVL_SDK - HBM Jun 16 2008 (0x4199_60831)",
+   "seen_in": [
+    "R7PE01"
+   ]
+  },
+  {
+   "id": "rvl.hbm@2008-09-24",
+   "banner": "RVL_SDK - HBM Sep 24 2008 (0x4199_60831)",
+   "seen_in": [
+    "HAYA"
+   ]
+  },
+  {
+   "id": "rvl.hbm@2009-03-03",
+   "banner": "RVL_SDK - HBM Mar  3 2009 (0x4201_142)",
+   "seen_in": [
+    "SMNE01"
+   ]
+  },
+  {
+   "id": "rvl.hbm@2010-05-19",
+   "banner": "RVL_SDK - HBM May 19 2010 (0x4302_145)",
+   "seen_in": [
+    "SP2E01"
+   ]
+  },
+  {
+   "id": "rvl.hbm@2010-07-30",
+   "banner": "RVL_SDK - HBM Jul 30 2010 (0x4302_145)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.hid@2010-08-23",
+   "banner": "RVL_SDK - HID Aug 23 2010 (0x4302_145)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.kbd@2007-08-08",
+   "banner": "RVL_SDK - KBD Aug  8 2007 (0x4199_60831)",
+   "seen_in": [
+    "HACA"
+   ]
+  },
+  {
+   "id": "rvl.kbd@2010-04-20",
+   "banner": "RVL_SDK - KBD Apr 20 2010 (0x4199_60831)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.kbd@2010-08-23",
+   "banner": "RVL_SDK - KBD Aug 23 2010 (0x4302_145)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.kpad@2006-10-31",
+   "banner": "RVL_SDK - KPAD Oct 31 2006 (0x4199_60831)",
+   "seen_in": [
+    "HAAA"
+   ]
+  },
+  {
+   "id": "rvl.kpad@2007-05-17",
+   "banner": "RVL_SDK - KPAD May 17 2007 (0x4199_60831)",
+   "seen_in": [
+    "R8PE01",
+    "RM3E01"
+   ]
+  },
+  {
+   "id": "rvl.kpad@2007-06-28",
+   "banner": "RVL_SDK - KPAD Jun 28 2007 (0x4199_60831)",
+   "seen_in": [
+    "HAFE",
+    "HAFP",
+    "HAGE",
+    "HAGP"
+   ]
+  },
+  {
+   "id": "rvl.kpad@2007-08-08",
+   "banner": "RVL_SDK - KPAD Aug  8 2007 (0x4199_60831)",
+   "seen_in": [
+    "HACA",
+    "R92E01",
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "rvl.kpad@2008-09-11",
+   "banner": "RVL_SDK - KPAD Sep 11 2008 (0x4199_60831)",
+   "seen_in": [
+    "HAYA",
+    "R7PE01"
+   ]
+  },
+  {
+   "id": "rvl.kpad@2009-06-22",
+   "banner": "RVL_SDK - KPAD Jun 22 2009 (0x4302_145)",
+   "seen_in": [
+    "SMNE01"
+   ]
+  },
+  {
+   "id": "rvl.kpad@2009-12-11",
+   "banner": "RVL_SDK - KPAD Dec 11 2009 (0x4302_145)",
+   "seen_in": [
+    "SP2E01"
+   ]
+  },
+  {
+   "id": "rvl.kpad@2010-04-20",
+   "banner": "RVL_SDK - KPAD Apr 20 2010 (0x4199_60831)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.kpad@2010-08-23",
+   "banner": "RVL_SDK - KPAD Aug 23 2010 (0x4302_145)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.kpr@2007-08-08",
+   "banner": "RVL_SDK - KPR Aug  8 2007 (0x4199_60831)",
+   "seen_in": [
+    "HACA"
+   ]
+  },
+  {
+   "id": "rvl.kpr@2010-04-20",
+   "banner": "RVL_SDK - KPR Apr 20 2010 (0x4199_60831)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.kpr@2010-08-23",
+   "banner": "RVL_SDK - KPR Aug 23 2010 (0x4302_145)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.mp@2007-12-10",
+   "banner": "RVL_SDK - MP Dec 10 2007 (0x4199_60831)",
+   "seen_in": [
+    "HACA"
+   ]
+  },
+  {
+   "id": "rvl.nand@2006-10-26",
+   "banner": "RVL_SDK - NAND Oct 26 2006 (0x4199_60831)",
+   "seen_in": [
+    "HAAA"
+   ]
+  },
+  {
+   "id": "rvl.nand@2006-11-30",
+   "banner": "RVL_SDK - NAND Nov 30 2006 (0x4199_60831)",
+   "seen_in": [
+    "R8PE01",
+    "RM3E01"
+   ]
+  },
+  {
+   "id": "rvl.nand@2007-05-08",
+   "banner": "RVL_SDK - NAND May  8 2007 (0x4199_60831)",
+   "seen_in": [
+    "HAFE",
+    "HAFP",
+    "HAGE",
+    "HAGP"
+   ]
+  },
+  {
+   "id": "rvl.nand@2007-07-31",
+   "banner": "RVL_SDK - NAND Jul 31 2007 (0x4199_60831)",
+   "seen_in": [
+    "IOS21"
+   ]
+  },
+  {
+   "id": "rvl.nand@2007-12-11",
+   "banner": "RVL_SDK - NAND Dec 11 2007 (0x4199_60831)",
+   "seen_in": [
+    "HACA",
+    "R92E01",
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "rvl.nand@2008-09-11",
+   "banner": "RVL_SDK - NAND Sep 11 2008 (0x4199_60831)",
+   "seen_in": [
+    "HAYA",
+    "R7PE01"
+   ]
+  },
+  {
+   "id": "rvl.nand@2009-02-27",
+   "banner": "RVL_SDK - NAND Feb 27 2009 (0x4302_145)",
+   "seen_in": [
+    "HADE",
+    "SMNE01"
+   ]
+  },
+  {
+   "id": "rvl.nand@2009-12-11",
+   "banner": "RVL_SDK - NAND Dec 11 2009 (0x4302_145)",
+   "seen_in": [
+    "SP2E01"
+   ]
+  },
+  {
+   "id": "rvl.nand@2010-04-20",
+   "banner": "RVL_SDK - NAND Apr 20 2010 (0x4199_60831)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.nand@2010-08-23",
+   "banner": "RVL_SDK - NAND Aug 23 2010 (0x4302_145)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.ncd@2006-11-11",
+   "banner": "RVL_SDK - NCD Nov 11 2006 (0x4199_60831)",
+   "seen_in": [
+    "HAAA"
+   ]
+  },
+  {
+   "id": "rvl.ncd@2007-06-28",
+   "banner": "RVL_SDK - NCD Jun 28 2007 (0x4199_60831)",
+   "seen_in": [
+    "HAFE",
+    "HAFP",
+    "HAGE",
+    "HAGP"
+   ]
+  },
+  {
+   "id": "rvl.ncd@2007-12-10",
+   "banner": "RVL_SDK - NCD Dec 10 2007 (0x4199_60831)",
+   "seen_in": [
+    "HACA",
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "rvl.ncd@2008-12-12",
+   "banner": "RVL_SDK - NCD Dec 12 2008 (0x4199_60831)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.ncd@2009-01-19",
+   "banner": "RVL_SDK - NCD Jan 19 2009 (0x4199_60831)",
+   "seen_in": [
+    "HAYA"
+   ]
+  },
+  {
+   "id": "rvl.ncd@2009-06-09",
+   "banner": "RVL_SDK - NCD Jun  9 2009 (0x4199_60831)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.nhttp@2007-06-27",
+   "banner": "RVL_SDK - NHTTP Jun 27 2007 (0x4199_60726)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.nhttp@2007-10-11",
+   "banner": "RVL_SDK - NHTTP Oct 11 2007 (0x4199_60726)",
+   "seen_in": [
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "rvl.nhttp@2009-05-12",
+   "banner": "RVL_SDK - NHTTP May 12 2009 (0x4199_60831)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.nhttpcreate@2009-05-12",
+   "banner": "RVL_SDK - NHTTPCREATE May 12 2009 (0x4199_60831)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.nwc24@2007-05-10",
+   "banner": "RVL_SDK - NWC24 May 10 2007 (0x4199_60831)",
+   "seen_in": [
+    "RM3E01"
+   ]
+  },
+  {
+   "id": "rvl.nwc24@2007-06-28",
+   "banner": "RVL_SDK - NWC24 Jun 28 2007 (0x4199_60831)",
+   "seen_in": [
+    "HAFE",
+    "HAFP",
+    "HAGE",
+    "HAGP"
+   ]
+  },
+  {
+   "id": "rvl.nwc24@2007-12-10",
+   "banner": "RVL_SDK - NWC24 Dec 10 2007 (0x4199_60831)",
+   "seen_in": [
+    "HACA",
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "rvl.nwc24@2008-12-12",
+   "banner": "RVL_SDK - NWC24 Dec 12 2008 (0x4199_60831)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.nwc24@2009-06-09",
+   "banner": "RVL_SDK - NWC24 Jun  9 2009 (0x4199_60831)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.os@2006-10-26",
+   "banner": "RVL_SDK - OS Oct 26 2006 (0x4199_60831)",
+   "seen_in": [
+    "HAAA"
+   ]
+  },
+  {
+   "id": "rvl.os@2007-04-24",
+   "banner": "RVL_SDK - OS Apr 24 2007 (0x4199_60831)",
+   "seen_in": [
+    "R8PE01"
+   ]
+  },
+  {
+   "id": "rvl.os@2007-06-15",
+   "banner": "RVL_SDK - OS Jun 15 2007 (0x4199_60831)",
+   "seen_in": [
+    "RM3E01"
+   ]
+  },
+  {
+   "id": "rvl.os@2007-06-28",
+   "banner": "RVL_SDK - OS Jun 28 2007 (0x4199_60831)",
+   "seen_in": [
+    "HAFE",
+    "HAFP",
+    "HAGE",
+    "HAGP"
+   ]
+  },
+  {
+   "id": "rvl.os@2007-07-31",
+   "banner": "RVL_SDK - OS Jul 31 2007 (0x4199_60831)",
+   "seen_in": [
+    "IOS21"
+   ]
+  },
+  {
+   "id": "rvl.os@2007-12-11",
+   "banner": "RVL_SDK - OS Dec 11 2007 (0x4199_60831)",
+   "seen_in": [
+    "HACA"
+   ]
+  },
+  {
+   "id": "rvl.os@2008-01-28",
+   "banner": "RVL_SDK - OS Jan 28 2008 (0x4199_60831)",
+   "seen_in": [
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "rvl.os@2008-01-30",
+   "banner": "RVL_SDK - OS Jan 30 2008 (0x4199_60831)",
+   "seen_in": [
+    "R92E01"
+   ]
+  },
+  {
+   "id": "rvl.os@2008-10-02",
+   "banner": "RVL_SDK - OS Oct  2 2008 (0x4199_60831)",
+   "seen_in": [
+    "HAYA",
+    "R7PE01"
+   ]
+  },
+  {
+   "id": "rvl.os@2009-02-27",
+   "banner": "RVL_SDK - OS Feb 27 2009 (0x4302_145)",
+   "seen_in": [
+    "HADE",
+    "SMNE01"
+   ]
+  },
+  {
+   "id": "rvl.os@2009-12-11",
+   "banner": "RVL_SDK - OS Dec 11 2009 (0x4302_145)",
+   "seen_in": [
+    "SP2E01"
+   ]
+  },
+  {
+   "id": "rvl.os@2010-04-20",
+   "banner": "RVL_SDK - OS Apr 20 2010 (0x4199_60831)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.os@2010-08-23",
+   "banner": "RVL_SDK - OS Aug 23 2010 (0x4302_145)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.pad@2006-11-30",
+   "banner": "RVL_SDK - PAD Nov 30 2006 (0x4199_60831)",
+   "seen_in": [
+    "R8PE01"
+   ]
+  },
+  {
+   "id": "rvl.pad@2007-07-31",
+   "banner": "RVL_SDK - PAD Jul 31 2007 (0x4199_60831)",
+   "seen_in": [
+    "IOS21"
+   ]
+  },
+  {
+   "id": "rvl.pad@2007-10-03",
+   "banner": "RVL_SDK - PAD Oct  3 2007 (0x4199_60831)",
+   "seen_in": [
+    "R92E01",
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "rvl.pad@2009-02-27",
+   "banner": "RVL_SDK - PAD Feb 27 2009 (0x4302_145)",
+   "seen_in": [
+    "HADE"
+   ]
+  },
+  {
+   "id": "rvl.pad@2010-04-20",
+   "banner": "RVL_SDK - PAD Apr 20 2010 (0x4199_60831)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.rfl@2008-01-28",
+   "banner": "RVL_SDK - RFL Jan 28 2008 (0x4201_127)",
+   "seen_in": [
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "rvl.rfl@2008-02-18",
+   "banner": "RVL_SDK - RFL Feb 18 2008 (0x4199_60831)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.rfl@2008-03-06",
+   "banner": "RVL_SDK - RFL Mar  6 2008 (0x4199_60831)",
+   "seen_in": [
+    "R7PE01"
+   ]
+  },
+  {
+   "id": "rvl.rfl@2008-10-06",
+   "banner": "RVL_SDK - RFL Oct  6 2008 (0x4199_60831)",
+   "seen_in": [
+    "HACA"
+   ]
+  },
+  {
+   "id": "rvl.rfl@2011-04-20",
+   "banner": "RVL_SDK - RFL Apr 20 2011 (0x4302_188)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.sc@2006-10-31",
+   "banner": "RVL_SDK - SC Oct 31 2006 (0x4199_60831)",
+   "seen_in": [
+    "HAAA"
+   ]
+  },
+  {
+   "id": "rvl.sc@2006-11-30",
+   "banner": "RVL_SDK - SC Nov 30 2006 (0x4199_60831)",
+   "seen_in": [
+    "R8PE01",
+    "RM3E01"
+   ]
+  },
+  {
+   "id": "rvl.sc@2007-05-08",
+   "banner": "RVL_SDK - SC May  8 2007 (0x4199_60831)",
+   "seen_in": [
+    "HAFE",
+    "HAFP",
+    "HAGE",
+    "HAGP"
+   ]
+  },
+  {
+   "id": "rvl.sc@2007-07-31",
+   "banner": "RVL_SDK - SC Jul 31 2007 (0x4199_60831)",
+   "seen_in": [
+    "IOS21"
+   ]
+  },
+  {
+   "id": "rvl.sc@2007-08-08",
+   "banner": "RVL_SDK - SC Aug  8 2007 (0x4199_60831)",
+   "seen_in": [
+    "R92E01",
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "rvl.sc@2008-02-22",
+   "banner": "RVL_SDK - SC Feb 22 2008 (0x4199_60831)",
+   "seen_in": [
+    "HACA"
+   ]
+  },
+  {
+   "id": "rvl.sc@2008-07-30",
+   "banner": "RVL_SDK - SC Jul 30 2008 (0x4199_60831)",
+   "seen_in": [
+    "HAYA",
+    "R7PE01"
+   ]
+  },
+  {
+   "id": "rvl.sc@2009-02-27",
+   "banner": "RVL_SDK - SC Feb 27 2009 (0x4302_145)",
+   "seen_in": [
+    "HADE",
+    "SMNE01"
+   ]
+  },
+  {
+   "id": "rvl.sc@2009-12-11",
+   "banner": "RVL_SDK - SC Dec 11 2009 (0x4302_145)",
+   "seen_in": [
+    "SP2E01"
+   ]
+  },
+  {
+   "id": "rvl.sc@2010-04-20",
+   "banner": "RVL_SDK - SC Apr 20 2010 (0x4199_60831)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.sc@2012-03-08",
+   "banner": "RVL_SDK - SC Mar  8 2012 (0x4302_145)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.si@2006-10-26",
+   "banner": "RVL_SDK - SI Oct 26 2006 (0x4199_60831)",
+   "seen_in": [
+    "HAAA"
+   ]
+  },
+  {
+   "id": "rvl.si@2006-11-30",
+   "banner": "RVL_SDK - SI Nov 30 2006 (0x4199_60831)",
+   "seen_in": [
+    "R8PE01",
+    "RM3E01"
+   ]
+  },
+  {
+   "id": "rvl.si@2007-05-08",
+   "banner": "RVL_SDK - SI May  8 2007 (0x4199_60831)",
+   "seen_in": [
+    "HAFE",
+    "HAFP",
+    "HAGE",
+    "HAGP"
+   ]
+  },
+  {
+   "id": "rvl.si@2007-07-31",
+   "banner": "RVL_SDK - SI Jul 31 2007 (0x4199_60831)",
+   "seen_in": [
+    "IOS21"
+   ]
+  },
+  {
+   "id": "rvl.si@2007-08-08",
+   "banner": "RVL_SDK - SI Aug  8 2007 (0x4199_60831)",
+   "seen_in": [
+    "HACA",
+    "R92E01",
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "rvl.si@2008-07-30",
+   "banner": "RVL_SDK - SI Jul 30 2008 (0x4199_60831)",
+   "seen_in": [
+    "HAYA",
+    "R7PE01"
+   ]
+  },
+  {
+   "id": "rvl.si@2009-02-27",
+   "banner": "RVL_SDK - SI Feb 27 2009 (0x4302_145)",
+   "seen_in": [
+    "HADE",
+    "SMNE01"
+   ]
+  },
+  {
+   "id": "rvl.si@2009-12-11",
+   "banner": "RVL_SDK - SI Dec 11 2009 (0x4302_145)",
+   "seen_in": [
+    "SP2E01"
+   ]
+  },
+  {
+   "id": "rvl.si@2010-04-20",
+   "banner": "RVL_SDK - SI Apr 20 2010 (0x4199_60831)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.si@2010-08-23",
+   "banner": "RVL_SDK - SI Aug 23 2010 (0x4302_145)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.so@2007-06-28",
+   "banner": "RVL_SDK - SO Jun 28 2007 (0x4199_60831)",
+   "seen_in": [
+    "HAFE",
+    "HAFP",
+    "HAGE",
+    "HAGP"
+   ]
+  },
+  {
+   "id": "rvl.so@2007-12-10",
+   "banner": "RVL_SDK - SO Dec 10 2007 (0x4199_60831)",
+   "seen_in": [
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "rvl.so@2008-12-12",
+   "banner": "RVL_SDK - SO Dec 12 2008 (0x4199_60831)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.so@2009-06-09",
+   "banner": "RVL_SDK - SO Jun  9 2009 (0x4199_60831)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.socket@2007-12-10",
+   "banner": "RVL_SDK - SOCKET Dec 10 2007 (0x4199_60831)",
+   "seen_in": [
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "rvl.socket@2008-12-12",
+   "banner": "RVL_SDK - SOCKET Dec 12 2008 (0x4199_60831)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.ssl@2007-06-21",
+   "banner": "RVL_SDK - SSL Jun 21 2007 (0x4199_60726)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.ssl@2007-11-06",
+   "banner": "RVL_SDK - SSL Nov  6 2007 (0x4199_60726)",
+   "seen_in": [
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "rvl.ssl@2009-05-12",
+   "banner": "RVL_SDK - SSL May 12 2009 (0x4199_60831)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.thp@2006-11-30",
+   "banner": "RVL_SDK - THP Nov 30 2006 (0x4199_60831)",
+   "seen_in": [
+    "RM3E01"
+   ]
+  },
+  {
+   "id": "rvl.thp@2007-08-08",
+   "banner": "RVL_SDK - THP Aug  8 2007 (0x4199_60831)",
+   "seen_in": [
+    "R92E01",
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "rvl.thp@2008-07-30",
+   "banner": "RVL_SDK - THP Jul 30 2008 (0x4199_60831)",
+   "seen_in": [
+    "R7PE01"
+   ]
+  },
+  {
+   "id": "rvl.vi@2006-10-27",
+   "banner": "RVL_SDK - VI Oct 27 2006 (0x4199_60831)",
+   "seen_in": [
+    "HAAA"
+   ]
+  },
+  {
+   "id": "rvl.vi@2006-11-30",
+   "banner": "RVL_SDK - VI Nov 30 2006 (0x4199_60831)",
+   "seen_in": [
+    "R8PE01",
+    "RM3E01"
+   ]
+  },
+  {
+   "id": "rvl.vi@2007-06-06",
+   "banner": "RVL_SDK - VI Jun  6 2007 (0x4199_60831)",
+   "seen_in": [
+    "HAFE",
+    "HAFP",
+    "HAGE",
+    "HAGP"
+   ]
+  },
+  {
+   "id": "rvl.vi@2007-07-31",
+   "banner": "RVL_SDK - VI Jul 31 2007 (0x4199_60831)",
+   "seen_in": [
+    "IOS21"
+   ]
+  },
+  {
+   "id": "rvl.vi@2007-08-08",
+   "banner": "RVL_SDK - VI Aug  8 2007 (0x4199_60831)",
+   "seen_in": [
+    "HACA",
+    "R92E01",
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "rvl.vi@2008-09-11",
+   "banner": "RVL_SDK - VI Sep 11 2008 (0x4199_60831)",
+   "seen_in": [
+    "HAYA",
+    "R7PE01"
+   ]
+  },
+  {
+   "id": "rvl.vi@2009-02-27",
+   "banner": "RVL_SDK - VI Feb 27 2009 (0x4302_145)",
+   "seen_in": [
+    "HADE",
+    "SMNE01"
+   ]
+  },
+  {
+   "id": "rvl.vi@2009-12-11",
+   "banner": "RVL_SDK - VI Dec 11 2009 (0x4302_145)",
+   "seen_in": [
+    "SP2E01"
+   ]
+  },
+  {
+   "id": "rvl.vi@2010-04-20",
+   "banner": "RVL_SDK - VI Apr 20 2010 (0x4199_60831)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.vi@2010-08-23",
+   "banner": "RVL_SDK - VI Aug 23 2010 (0x4302_145)",
+   "seen_in": [
+    "HABA"
+   ]
+  },
+  {
+   "id": "rvl.wbc@2008-07-30",
+   "banner": "RVL_SDK - WBC Jul 30 2008 (0x4199_60831)",
+   "seen_in": [
+    "R7PE01"
+   ]
+  },
+  {
+   "id": "rvl.wpad@2006-10-26",
+   "banner": "RVL_SDK - WPAD Oct 26 2006 (0x4199_60831)",
+   "seen_in": [
+    "HAAA"
+   ]
+  },
+  {
+   "id": "rvl.wpad@2007-05-17",
+   "banner": "RVL_SDK - WPAD May 17 2007 (0x4199_60831)",
+   "seen_in": [
+    "R8PE01",
+    "RM3E01"
+   ]
+  },
+  {
+   "id": "rvl.wpad@2007-06-28",
+   "banner": "RVL_SDK - WPAD Jun 28 2007 (0x4199_60831)",
+   "seen_in": [
+    "HAFE",
+    "HAFP",
+    "HAGE",
+    "HAGP"
+   ]
+  },
+  {
+   "id": "rvl.wpad@2007-12-11",
+   "banner": "RVL_SDK - WPAD Dec 11 2007 (0x4199_60831)",
+   "seen_in": [
+    "HACA",
+    "R92E01"
+   ]
+  },
+  {
+   "id": "rvl.wpad@2008-01-29",
+   "banner": "RVL_SDK - WPAD Jan 29 2008 (0x4199_60726)",
+   "seen_in": [
+    "RMCP01"
+   ]
+  },
+  {
+   "id": "rvl.wpad@2008-09-11",
+   "banner": "RVL_SDK - WPAD Sep 11 2008 (0x4199_60831)",
+   "seen_in": [
+    "HAYA",
+    "R7PE01"
+   ]
+  },
+  {
+   "id": "rvl.wpad@2009-06-22",
+   "banner": "RVL_SDK - WPAD Jun 22 2009 (0x4302_145)",
+   "seen_in": [
+    "SMNE01"
+   ]
+  },
+  {
+   "id": "rvl.wpad@2009-12-11",
+   "banner": "RVL_SDK - WPAD Dec 11 2009 (0x4302_145)",
+   "seen_in": [
+    "SP2E01"
+   ]
+  },
+  {
+   "id": "rvl.wpad@2010-04-20",
+   "banner": "RVL_SDK - WPAD Apr 20 2010 (0x4199_60831)",
+   "seen_in": [
+    "SystemMenu"
+   ]
+  },
+  {
+   "id": "rvl.wpad@2010-08-23",
+   "banner": "RVL_SDK - WPAD Aug 23 2010 (0x4302_145)",
+   "seen_in": [
+    "HABA"
+   ]
+  }
+ ]
+}

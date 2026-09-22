@@ -1,0 +1,250 @@
+#!/usr/bin/env python3
+"""Find which library builds a game links, and where its natives' functions are.
+
+    tools/wiinx-scan builds <game.dol>
+    tools/wiinx-scan scan   <game.dol> [--out bindings.json]
+    tools/wiinx-scan sign   <game.dol> <name> <build> <address> <size>
+    tools/wiinx-scan record <game id> <game.dol>...
+    tools/wiinx-scan header
+
+builds  lists the library builds the game names in its startup banners, as
+        build ids: "<< NW4R - LYT final build: Mar 8 2008 ... >>" is
+        nw4r.lyt@2008-03-08.
+scan    finds each native's function in the game - for the builds it links -
+        by code signature, and writes the bindings: native name, build id and
+        address.
+sign    records a function's signature from a game you have, for adding a
+        native. Run it on your own disc's DOL; it prints the entry for
+        data/signatures.json.
+record  adds the builds a game's executables name to data/builds.json, with
+        the game ID as where each was seen.
+header  writes include/wiinx/builds.hpp from data/builds.json: every known
+        build as a LibVersion constant.
+
+A signature holds hashes, never code: the first 16 instructions and the whole
+function, each with the operands that legitimately differ between games masked
+out (branch targets, lis/addis immediates, small-data offsets - the same rules
+as wii-nx's resolve-symbols). A function matches when both hashes do and the
+match is unique in the game.
+"""
+
+import datetime
+import hashlib
+import json
+import os
+import re
+import struct
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+SIGNATURES = os.path.join(HERE, "..", "data", "signatures.json")
+WINDOW = 16  # instructions in the start window
+
+
+class Dol:
+    def __init__(self, path):
+        with open(path, "rb") as handle:
+            self.data = handle.read()
+        if len(self.data) < 0x100:
+            raise SystemExit(f"{path}: not a DOL ({len(self.data)} bytes)")
+        self.offsets = struct.unpack(">18I", self.data[0x00:0x48])
+        self.addresses = struct.unpack(">18I", self.data[0x48:0x90])
+        self.sizes = struct.unpack(">18I", self.data[0x90:0xD8])
+
+    def text(self):
+        for i in range(7):
+            if self.sizes[i]:
+                yield self.addresses[i], self.data[self.offsets[i]:self.offsets[i] + self.sizes[i]]
+
+    def read(self, address, length):
+        for start, blob in self.text():
+            if start <= address and address + length <= start + len(blob):
+                return blob[address - start:address - start + length]
+        return None
+
+
+def mask(word):
+    """Zero the operand bits that differ between two games' copies of a function."""
+    opcode = word >> 26
+    if opcode == 18:                      # b / bl: target
+        return word & 0xFC000003
+    if opcode == 16:                      # bc: target
+        return word & 0xFFFF0003
+    if opcode in (15, 3):                 # lis/addis, twi: immediate
+        return word & 0xFFFF0000
+    if 32 <= opcode <= 55 or opcode in (14, 24, 25, 28, 29):
+        if ((word >> 16) & 31) in (2, 13):  # relative to the small-data registers
+            return word & 0xFFFF0000
+    return word
+
+
+def masked_hash(code):
+    words = struct.unpack(f">{len(code) // 4}I", code[: len(code) // 4 * 4])
+    masked = struct.pack(f">{len(words)}I", *(mask(w) for w in words))
+    return hashlib.sha256(masked).hexdigest()[:16]
+
+
+MONTHS = {m: i + 1 for i, m in enumerate("Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split())}
+BANNER = re.compile(rb"<< (NW4R|RVL_SDK|EGG) +- +([A-Z0-9_]+) \t?[a-z]+ +build: "
+                    rb"([A-Z][a-z]{2}) +(\d{1,2}) (\d{4}) [\d:]+ \((0x[0-9a-f_]+)\)( UNOFFICIAL)? >>")
+
+
+def builds(dol):
+    """{lib: (build id, banner)} for every library banner in the game."""
+    found = {}
+    for m in BANNER.finditer(dol.data):
+        family, lib, month, day, year, code, unofficial = (g.decode() if g else "" for g in m.groups())
+        if unofficial:
+            continue
+        name = f"{'rvl' if family == 'RVL_SDK' else family.lower()}.{lib.lower()}"
+        date = datetime.date(int(year), MONTHS[month], int(day)).isoformat()
+        found[name] = (f"{name}@{date}", f"{family} - {lib} {month} {int(day):>2} {year} ({code})")
+    return found
+
+
+BUILDS = os.path.join(HERE, "..", "data", "builds.json")
+HEADER = os.path.join(HERE, "..", "include", "wiinx", "builds.hpp")
+
+
+def load_builds():
+    if not os.path.exists(BUILDS):
+        return {}
+    with open(BUILDS) as handle:
+        return {b["id"]: b for b in json.load(handle)["builds"]}
+
+
+def save_builds(known):
+    with open(BUILDS, "w") as handle:
+        json.dump({"about": "Every library build seen in a game's startup banners. "
+                            "Add games with tools/wiinx-scan record; regenerate the "
+                            "header with tools/wiinx-scan header.",
+                   "builds": sorted(known.values(), key=lambda b: b["id"])}, handle, indent=1)
+        handle.write("\n")
+
+
+def constant_name(build_id):
+    lib, date = build_id.split("@")
+    family, name = lib.split(".", 1)
+    return f"k{family.capitalize()}{name.capitalize()}_{date.replace('-', '_')}"
+
+
+def write_header(known):
+    lines = [
+        "// Every library build libwii-nx knows, as games name them in their startup",
+        "// banners. Generated by tools/wiinx-scan header from data/builds.json - do",
+        "// not edit by hand.",
+        "#pragma once",
+        "",
+        '#include "wiinx/core/native.hpp"',
+        "",
+        "namespace wiinx::builds {",
+        "",
+    ]
+    family = None
+    for build in sorted(known.values(), key=lambda b: b["id"]):
+        lib = build["id"].split("@")[0]
+        if lib != family:
+            if family is not None:
+                lines.append("")
+            family = lib
+        seen = ", ".join(build["seen_in"])
+        lines.append(f'inline constexpr LibVersion {constant_name(build["id"])}'
+                     f'{{"{build["id"]}", "{lib}", "{build["banner"].split(" ", 3)[-1]}"}};  // {seen}')
+    lines += ["", "}  // namespace wiinx::builds", ""]
+    with open(HEADER, "w") as handle:
+        handle.write("\n".join(lines))
+
+
+def load_signatures():
+    with open(SIGNATURES) as handle:
+        return json.load(handle)["natives"]
+
+
+def scan(dol):
+    linked = {build_id for build_id, _ in builds(dol).values()}
+    candidates = [s for s in load_signatures() if s["build"] in linked]
+    # Index the game's start windows once: every aligned address in its text.
+    by_window = {}
+    for start, blob in dol.text():
+        for offset in range(0, len(blob) - WINDOW * 4 + 1, 4):
+            key = masked_hash(blob[offset:offset + WINDOW * 4])
+            by_window.setdefault(key, []).append(start + offset)
+    bindings, missing = [], []
+    for sig in candidates:
+        hits = [a for a in by_window.get(sig["start"], [])
+                if (code := dol.read(a, sig["size"])) is not None and masked_hash(code) == sig["body"]]
+        if len(hits) == 1:
+            bindings.append({"name": sig["name"], "build": sig["build"], "address": f"0x{hits[0]:08X}"})
+        else:
+            missing.append((sig["name"], sig["build"], len(hits)))
+    return bindings, missing
+
+
+def main(argv):
+    if not argv:
+        print(__doc__.strip())
+        return 2
+    command = argv[0]
+    if command in ("record", "header"):
+        return commands_without_dol(argv)
+    if len(argv) < 2:
+        print(__doc__.strip())
+        return 2
+    dol = Dol(argv[1])
+    if command == "builds":
+        for lib, (build_id, banner) in sorted(builds(dol).items()):
+            print(f"{build_id:<24} {banner}")
+        return 0
+    if command == "scan":
+        bindings, missing = scan(dol)
+        for b in bindings:
+            print(f"{b['address']}  {b['name']}  [{b['build']}]")
+        for name, build_id, hits in missing:
+            print(f"not found  {name}  [{build_id}]  ({hits} matches)")
+        if "--out" in argv:
+            path = argv[argv.index("--out") + 1]
+            with open(path, "w") as handle:
+                json.dump({"bindings": bindings}, handle, indent=1)
+                handle.write("\n")
+            print(f"wrote {path}")
+        return 0 if not missing else 1
+    print(__doc__.strip())
+    return 2
+
+
+def commands_without_dol(argv):
+    command = argv[0]
+    if command == "record" and len(argv) >= 3:
+        game_id, known = argv[1], load_builds()
+        added = 0
+        for path in argv[2:]:
+            for lib, (build_id, banner) in builds(Dol(path)).items():
+                entry = known.setdefault(build_id, {"id": build_id, "banner": banner, "seen_in": []})
+                if game_id not in entry["seen_in"]:
+                    entry["seen_in"].append(game_id)
+                    entry["seen_in"].sort()
+                    added += 1
+        save_builds(known)
+        print(f"{game_id}: {added} build sightings recorded; {len(known)} builds known")
+        return 0
+    if command == "header":
+        known = load_builds()
+        write_header(known)
+        print(f"wrote {HEADER}: {len(known)} builds")
+        return 0
+    if command == "sign" and len(argv) == 6:
+        name, build_id, address, size = argv[2], argv[3], int(argv[4], 16), int(argv[5], 16)
+        code = dol.read(address, size)
+        if code is None or size < WINDOW * 4:
+            print("no function of that size there (functions shorter than 16 instructions are not signed)")
+            return 1
+        entry = {"name": name, "build": build_id, "size": size,
+                 "start": masked_hash(code[:WINDOW * 4]), "body": masked_hash(code)}
+        print(json.dumps(entry))
+        return 0
+    print(__doc__.strip())
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

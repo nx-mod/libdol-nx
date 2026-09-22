@@ -27,8 +27,9 @@ src/
     os  fs  gx  audio  input  system
   accel/           native versions of libraries games link - optional, for speed
     sdk  nw4r  egg  jsystem  rfl
-tools/
-  wiinx-scan       finds library builds and functions in a game's DOL
+data/              builds seen in games, and native signatures (hashes, never code)
+docs/              how things work: builds, signatures, writing a native
+tools/             wiinx-scan (builds, signatures, bindings), wiinx-extract (disc files)
 ```
 
 Every part is its own static library with its own README. Dependencies point one
@@ -127,8 +128,13 @@ machine from their own disc; CI builds the library and tools, never a game.
 | [`accel/sdk`](src/accel/sdk/README.md) | THP decoder ported                             |
 | [`accel/nw4r`](src/accel/nw4r/README.md) | lyt `Pane::CalculateMtx` ported, 2007 and 2008 builds |
 | `accel/nw4r` g3d CalcWorld/CalcView | located in Mario Kart Wii, not written           |
-| `wiinx-scan`                      | not started                                        |
+| [`wiinx-scan`](tools/README.md)   | builds from banners (224 known) and binding by signature; call following next |
 | one-command build                 | its steps exist as scripts in wii-nx               |
+
+## Working on it
+
+[docs/](docs/README.md) explains how builds, signatures and natives work, and
+the rules every part follows.
 
 ## Building
 

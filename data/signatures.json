@@ -1,0 +1,7 @@
+{
+ "about": "Code signatures for libwii-nx natives: hashes of masked instructions, never code. Add entries with tools/wiinx-scan sign on your own disc's DOL.",
+ "natives": [
+  {"name": "nw4r::lyt::Pane::CalculateMtx", "build": "nw4r.lyt@2008-03-08", "size": 768, "start": "541510397e9b2cb9", "body": "9ef42c69bec34bf1", "signed_from": "RMCP01"},
+  {"name": "THPVideoDecode", "build": "rvl.thp@2007-08-08", "size": 704, "start": "c9b9b1122a96b69c", "body": "4b88f757d16ccf15", "signed_from": "RMCP01"}
+ ]
+}
