@@ -16,7 +16,7 @@ that differ between games zeroed:
 
 Opcodes, registers and stack offsets must match exactly. One hash covers the
 first 16 instructions (the start window, used to find candidates quickly), the
-other the whole function. Masking follows wii-nx's `resolve-symbols`.
+other the whole function.
 
 A signature holds no code: only the hashes, the size and the build. That is what
 lets `data/signatures.json` be published.
@@ -50,8 +50,7 @@ native supports needs its own signature, signed from a game that links it.
 
 ## Not yet
 
-- Following calls from a matched function to its callees (how
-  `resolve-symbols` reaches short functions) needs call offsets stored per
-  signature; the format leaves room for them.
-- Turning bindings into the translator's `bindings.json` comes with the runtime
-  using libwii-nx.
+- Following calls from a matched function to its callees - how short
+  functions, too common to match alone, get found - needs call offsets stored
+  per signature; the format leaves room for them.
+- Turning bindings into the translator's input comes with the translator.

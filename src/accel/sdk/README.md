@@ -32,10 +32,9 @@ which never belong in this repository.
 
 ## Notes
 
-- 2026-09-22: ported from wiicompiled-nx's `runtime/src/hle/thp_decode.cpp`
-  (copy; the decoder body is unchanged, the entry reads its arguments through
-  `Host`). Menus with movie buttons in Mario Kart Wii went from ~4 fps to ~40
-  with it.
+- 2026-09-22: ported, the decoder body unchanged and the entry reading its
+  arguments through `Host`. Menus with movie buttons in Mario Kart Wii went from
+  ~4 fps to ~40 with it.
 - Sources: projectPiki/pikmin2's `THPDec.c` (CC0) for THP's departures from
   JPEG; libjpeg's `jidctflt.c` for the IDCT - based in part on the work of the
   Independent JPEG Group.

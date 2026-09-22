@@ -7,3 +7,5 @@ build*/
 *.iso
 *.wbfs
 *.rvz
+/nand/
+__pycache__/

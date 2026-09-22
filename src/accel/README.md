@@ -12,9 +12,7 @@ original's exact results; gameplay code checks them (ghosts, online).
 | `jsystem` | the GameCube-era framework                                | -                                      |
 | `rfl`     | Miis, Home Button menu                                    | -                                      |
 
-Both natives written so far are ported here as copies of wiicompiled-nx's
-(`runtime/src/hle/thp_decode.cpp`, `runtime/src/hle/nw4r/lyt_pane.cpp`); the
-runtime keeps using its own until the SDK builds Mario Kart Wii.
+Where each came from is in [docs/porting.md](../../docs/porting.md).
 
 ## Adding a native
 

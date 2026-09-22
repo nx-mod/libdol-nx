@@ -1,7 +1,7 @@
 // What libwii-nx needs from the program running the game.
 //
-// The library never owns the CPU or guest memory: the embedding runtime
-// (wiicompiled-nx) does, and hands them over once at startup with set_host().
+// Natives never own the CPU or guest memory: the CPU runtime does, and hands
+// them over once at startup with set_host().
 // That keeps every module testable on its own and free of any one runtime's
 // headers.
 #pragma once

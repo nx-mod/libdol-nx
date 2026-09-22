@@ -3,37 +3,41 @@
 The Wii as a library, for statically recompiled Wii games running natively on
 Nintendo Switch.
 
-[wiicompiled-nx](https://github.com/nx-mod/wiicompiled-nx) translates a game's
-PowerPC code to C++ and runs it on a guest CPU runtime. libwii-nx is everything
-else the game expects of the console. Together they are all it takes to build a
-game from the player's own disc:
+It is the whole toolkit: the translator that turns a game's PowerPC code into
+C++, the CPU runtime that code runs on, the console it expects, native versions
+of the libraries it links, and the tools for discs, NANDs and builds. A game
+project needs libwii-nx and nothing else. With it, a game is built from the
+player's own disc:
 
 ```
-translated game code   +   libwii-nx                  +   your own data
-(wiicompiled-nx)           platform + accelerators        disc image, NAND
+your disc  →  libwii-nx translator  →  game code + libwii-nx runtime  →  NRO
 ```
 
 The translated code calls in at the same function boundaries the game called
 Nintendo's SDK at, so a fix here reaches every game that uses what was fixed.
+Parts still being ported in are tracked in [docs/porting.md](docs/porting.md).
 
 ## Design
 
 ```
 include/wiinx/     public headers - all a caller sees
-  core/  platform/  accel/
+  core/  cpu/  platform/  accel/
+translator/        PowerPC → C++, run once per game
 src/
   core/            types, typed guest access, the host interface, the registry
+  cpu/             the guest CPU runtime: registers, memory, calls, threads
   platform/        the console itself - required by every game
     os  fs  gx  audio  input  system
   accel/           native versions of libraries games link - optional, for speed
     sdk  nw4r  egg  jsystem  rfl
+  app/             the program: main loop, settings, the in-game overlay
 data/              builds seen in games, and native signatures (hashes, never code)
 docs/              how things work: builds, signatures, writing a native
-tools/             wiinx-scan (builds, signatures, bindings), wiinx-extract (disc files)
+tools/             discs, NANDs, DOLs, builds and signatures (see tools/README.md)
 ```
 
 Every part is its own static library with its own README. Dependencies point one
-way: `accel` → `platform` → `core`. Underneath, libwii-nx builds on
+way: `app` → `accel` → `platform` → `cpu` → `core`. Underneath, libwii-nx builds on
 [aurora-nx](https://github.com/nx-mod/aurora-nx) (GX to WebGPU),
 [dawn-nx](https://github.com/nx-mod/dawn-nx) (WebGPU to Vulkan),
 [nxvk](https://github.com/nx-mod/nxvk) (the Vulkan driver),
@@ -98,7 +102,7 @@ u8 alpha = pane[PaneLayout2008::alpha];
 ## Binding a game
 
 ```
-wiinx-scan game.dol  →  bindings.json  →  wiicompiled-nx  →  direct native calls
+wiinx-scan game.dol  →  bindings  →  translator  →  direct native calls
 ```
 
 `wiinx-scan` reads the library banners and matches each function's code
@@ -112,7 +116,7 @@ code: an unknown build is slower, never wrong.
 Once complete, one command:
 
 ```
-wii-nx build mygame.iso   →   mygame.nro + sdmc:/wii-nx/games/mygame/
+tools/wiinx-build mygame.iso   →   mygame.nro + sdmc:/wii-nx/games/mygame/
 ```
 
 extracts the disc, identifies the game, scans it, translates it, builds against
@@ -124,12 +128,14 @@ machine from their own disc; CI builds the library and tools, never a game.
 | Part                              | State                                              |
 |-----------------------------------|----------------------------------------------------|
 | [`core`](src/core/README.md)      | done: types, typed access, host, builds, registry  |
-| [`platform`](src/platform/README.md) | working in wiicompiled-nx's runtime, to port here |
+| [`platform`](src/platform/README.md) | being ported in - see [porting](docs/porting.md) |
 | [`accel/sdk`](src/accel/sdk/README.md) | THP decoder ported                             |
 | [`accel/nw4r`](src/accel/nw4r/README.md) | lyt `Pane::CalculateMtx` ported, 2007 and 2008 builds |
 | `accel/nw4r` g3d CalcWorld/CalcView | located in Mario Kart Wii, not written           |
 | [`wiinx-scan`](tools/README.md)   | builds from banners (224 known) and binding by signature; call following next |
-| one-command build                 | its steps exist as scripts in wii-nx               |
+| [tools](tools/README.md)          | disc, DOL and NAND tools in; game tools come with the translator |
+| translator, `cpu`, `app`          | being ported in - see [porting](docs/porting.md)   |
+| `tools/wiinx-build`               | after the translator and runtime                   |
 
 ## Working on it
 
@@ -145,7 +151,7 @@ cmake --build build
 
 ## License
 
-GPL-3.0-or-later, as wiicompiled-nx, which the platform layer comes from.
+GPL-3.0-or-later.
 Behavior and layouts follow the decompilation projects doldecomp/ogws,
 doldecomp/mkw and projectPiki/pikmin2 (all CC0); the THP IDCT is based in part
 on the work of the Independent JPEG Group. See

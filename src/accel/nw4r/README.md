@@ -34,12 +34,10 @@ each build touching only its own offsets.
 
 ## Notes
 
-- 2026-09-22: `Pane::CalculateMtx` ported from wiicompiled-nx's
-  `runtime/src/hle/nw4r/lyt_pane.cpp` (copy; the runtime's stays in use until
-  the SDK builds Mario Kart Wii). The 2007 layout is new, from ogws's
-  `lyt_pane.h`; vtable slot 0x10 and parent at 0x0C match 2008.
-- The runtime copy hard-codes Mario Kart Wii's return address for child calls;
-  here the host sets the link register, since only it knows where a native is
-  bound.
+- 2026-09-22: `Pane::CalculateMtx` ported (2008 layout). The 2007 layout is
+  new, from ogws's `lyt_pane.h`; vtable slot 0x10 and parent at 0x0C match 2008.
+- Child calls go through `Host::call`, which sets the link register: only the
+  runtime knows where a native is bound in a given game, so a native never
+  hard-codes a return address.
 - Next: g3d `CalcWorld` and `CalcView` (located in Mario Kart Wii at 0x800679A0
   and 0x80066AA0). They feed gameplay-visible state, so exact float order.

@@ -1,9 +1,9 @@
 # platform
 
 The console itself: what a game's SDK reaches when it touches hardware or the
-OS. Required by every game; depends only on `core`.
+OS. Required by every game; depends on `cpu` and `core`.
 
-| Module   | Does                                                        | Today, in wiicompiled-nx `runtime/src/hle/` |
+| Module   | Does                                                        | Ported from (see docs/porting.md) |
 |----------|-------------------------------------------------------------|---------------------------------------------|
 | `os`     | threads, alarms, interrupts, time, caches, mutexes          | `os/`                                       |
 | `fs`     | disc reads (DVD), NAND saves, IOS/ES file access            | `storage/`, `ios.cpp`, `esp.cpp`            |

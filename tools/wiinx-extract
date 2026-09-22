@@ -14,8 +14,8 @@ unwraps the title key, and decrypts only the clusters main.dol occupies - second
 and a few MB, instead of a 4 GB extraction. Use it to inspect a game (ID, entry
 point, SDA bases, code signatures) before committing disk space to it.
 
-Plain .iso only. For .wbfs/.rvz, or for the whole disc, use Dolphin's
-dolphin-tool. A copy of wii-nx's example-wii-nx/scripts/extract-dol.
+Plain .iso only. For .wbfs/.rvz, or for the whole disc, use wiinx-extract-disc
+(Dolphin's dolphin-tool).
 
 The AES-128 below is a small, dependency-free implementation (verified against
 the FIPS-197 vector), since a stock Python has no AES.

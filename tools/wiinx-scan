@@ -23,9 +23,8 @@ header  writes include/wiinx/builds.hpp from data/builds.json: every known
 
 A signature holds hashes, never code: the first 16 instructions and the whole
 function, each with the operands that legitimately differ between games masked
-out (branch targets, lis/addis immediates, small-data offsets - the same rules
-as wii-nx's resolve-symbols). A function matches when both hashes do and the
-match is unique in the game.
+out (branch targets, lis/addis immediates, small-data offsets). A function
+matches when both hashes do and the match is unique in the game.
 """
 
 import datetime
