@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# Build a game for Switch: disc to NRO, in one command.
+#
+#   tools/wiinx-build <game folder or disc image> [options]
+#
+# Given a disc image, it creates the project next to this checkout first
+# (wiinx-new-game). Given a game folder, it carries on from wherever that
+# project is. Either way it:
+#
+#   1. scans the game for the natives libwii-nx can bind (bindings.json)
+#   2. translates its code to C++            (wiinx-translate)
+#   3. builds it against libwii-nx           (cmake/game)
+#   4. leaves <game>/build/<game>.nro, ready for sdmc:/wii-nx/games/<game>/
+#
+#   --dawn DIR      dawn-nx checkout     (default: next to libwii-nx)
+#   --aurora DIR    aurora-nx checkout   (default: next to libwii-nx)
+#   --jobs N        parallel compiles    (default 2; translation is memory-hungry)
+#   --skip-translate  build only, when the C++ is already there
+set -euo pipefail
+
+here=$(cd "$(dirname "$0")" && pwd)
+libwiinx=$(cd "$here/.." && pwd)
+
+usage() { sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+[ $# -ge 1 ] || usage
+target=$1; shift
+dawn="$libwiinx/../dawn-nx"
+aurora="$libwiinx/../aurora-nx"
+jobs=2
+translate=1
+while [ $# -gt 0 ]; do
+    case $1 in
+        --dawn) dawn=$2; shift 2 ;;
+        --aurora) aurora=$2; shift 2 ;;
+        --jobs) jobs=$2; shift 2 ;;
+        --skip-translate) translate=0; shift ;;
+        *) usage ;;
+    esac
+done
+
+if [ -f "$target" ]; then
+    echo "== new game from $target"
+    "$here/wiinx-new-game" "$target"
+    game=$(ls -dt "$libwiinx"/../*-nx | head -1)
+else
+    game=$(cd "$target" 2>/dev/null && pwd) || { echo "no such game folder: $target" >&2; exit 1; }
+fi
+[ -f "$game/recomp.yml" ] || { echo "no game project at $game" >&2; exit 1; }
+
+if [ "$translate" = 1 ]; then
+    echo "== scanning $(basename "$game") for natives"
+    "$here/wiinx-scan" scan "$game/disc/sys/main.dol" --out "$game/bindings.json" || true
+    "$here/wiinx-translate" "$game" --threads "$jobs"
+fi
+
+command -v cmake >/dev/null || { echo "cmake not found" >&2; exit 1; }
+: "${DEVKITPRO:=/opt/devkitpro}"
+[ -f "$DEVKITPRO/cmake/Switch.cmake" ] || {
+    echo "devkitPro's Switch toolchain is not at \$DEVKITPRO ($DEVKITPRO)" >&2; exit 1; }
+
+echo "== building $(basename "$game")"
+cmake -S "$libwiinx/cmake/game" -B "$game/build" -G Ninja \
+    -DCMAKE_TOOLCHAIN_FILE="$DEVKITPRO/cmake/Switch.cmake" \
+    -DWIINX_GAME_DIR="$game" -DWIINX_DAWN_DIR="$(cd "$dawn" && pwd)" \
+    -DWIINX_AURORA_DIR="$(cd "$aurora" && pwd)"
+nice -n 10 cmake --build "$game/build" -j "$jobs"
+
+nro=$(find "$game/build" -maxdepth 1 -name "*.nro" | head -1)
+[ -n "$nro" ] || { echo "no .nro was produced" >&2; exit 1; }
+echo
+echo "$nro"
+echo "Copy it, and the game's disc folder, to your SD card:"
+echo "  sdmc:/wii-nx/games/$(basename "$game")/"

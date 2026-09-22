@@ -11,8 +11,9 @@ builds  lists the library builds the game names in its startup banners, as
         build ids: "<< NW4R - LYT final build: Mar 8 2008 ... >>" is
         nw4r.lyt@2008-03-08.
 scan    finds each native's function in the game - for the builds it links -
-        by code signature, and writes the bindings: native name, build id and
-        address.
+        by code signature, and prints what it found. --out writes the game's
+        bindings.json: each native's registration name against the address it
+        has in this game, which is what the translator reads.
 sign    records a function's signature from a game you have, for adding a
         native. Run it on your own disc's DOL; it prints the entry for
         data/signatures.json.
@@ -173,7 +174,8 @@ def scan(dol):
         hits = [a for a in by_window.get(sig["start"], [])
                 if (code := dol.read(a, sig["size"])) is not None and masked_hash(code) == sig["body"]]
         if len(hits) == 1:
-            bindings.append({"name": sig["name"], "build": sig["build"], "address": f"0x{hits[0]:08X}"})
+            bindings.append({"name": sig["name"], "build": sig["build"], "address": f"0x{hits[0]:08X}",
+                             "registration": sig.get("registration")})
         else:
             missing.append((sig["name"], sig["build"], len(hits)))
     return bindings, missing
@@ -202,10 +204,12 @@ def main(argv):
             print(f"not found  {name}  [{build_id}]  ({hits} matches)")
         if "--out" in argv:
             path = argv[argv.index("--out") + 1]
+            # The translator's format: registration name -> address, nothing else.
+            table = {b["registration"]: b["address"] for b in bindings if b.get("registration")}
             with open(path, "w") as handle:
-                json.dump({"bindings": bindings}, handle, indent=1)
+                json.dump(dict(sorted(table.items())), handle, indent=1)
                 handle.write("\n")
-            print(f"wrote {path}")
+            print(f"wrote {path}: {len(table)} bindings")
         return 0 if not missing else 1
     print(__doc__.strip())
     return 2

@@ -26,7 +26,7 @@ upstream.
 | platform: os, fs, gx, audio, input, system | wiicompiled-nx `runtime/src/hle` | `src/platform/*` | copied; building as one runtime library, split next |
 | NAND formats: settings, Miis, saves, archives | wii-nx `wiinand-nx/lib` | `src/platform/fs` | to copy |
 | app shell: main loop, config, settings overlay | wiicompiled-nx `runtime/src` | `src/app` | copied; building as one runtime library, split next |
-| game tools: new-game, translate, audit, manual-adds, make-bindings, profile-report | wii-nx `example-wii-nx/scripts` | `tools/wiinx-*` | with the translator and runtime, pointed at them |
+| game tools: new-game, translate, audit, manual-adds, make-bindings, profile-report | wii-nx `example-wii-nx/scripts` | `tools/wiinx-*` | ported, pointed at libwii-nx's own translator and runtime |
 | port notes, pitfalls | wiicompiled-nx `docs/switch-port-notes.md` | `docs/` | with the runtime |
 | Aurora changes (threaded decode, pipeline memo) | wiicompiled-nx `aurora-main/` | aurora-nx | offered to aurora-nx |
 

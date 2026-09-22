@@ -78,36 +78,63 @@ function(mkw_configure_translated_target target)
     mkw_bound_translated_compiles(${target})
 endfunction()
 
-add_library(mkw_runtime_common OBJECT ${SOURCES})
-mkw_configure_object_target(mkw_runtime_common)
-target_compile_features(mkw_runtime_common PRIVATE cxx_std_20)
-target_compile_definitions(mkw_runtime_common PRIVATE
-    SDL_MAIN_HANDLED
-    _DISABLE_STRING_ANNOTATION _DISABLE_VECTOR_ANNOTATION)
-target_link_libraries(mkw_runtime_common PRIVATE
-    aurora::gx aurora::pad aurora::si aurora::vi aurora::mtx)
-target_link_libraries(mkw_runtime_common PRIVATE mkw_platform mkw::pugixml mkw::toml11 mkw::cryptopp)
-if(MKW_PLATFORM_WINDOWS)
-    target_link_libraries(mkw_runtime_common PRIVATE shell32 windowsapp)
-elseif(MKW_PLATFORM_LINUX)
-    # ${CMAKE_DL_LIBS} for music_attenuation.cpp's dlopen of libdbus-1 (MPRIS
-    # media monitoring). Empty string on glibc >= 2.34 where dl* is in libc.
-    target_link_libraries(mkw_runtime_common PRIVATE mkw::libco ${CMAKE_DL_LIBS})
-endif()
-if(MKW_CPPWINRT_INCLUDE_DIR)
-    if(NOT EXISTS "${MKW_CPPWINRT_INCLUDE_DIR}/winrt/base.h")
-        message(FATAL_ERROR
-            "MKW_CPPWINRT_INCLUDE_DIR does not contain winrt/base.h: ${MKW_CPPWINRT_INCLUDE_DIR}")
+# The runtime as its layers: cpu (the guest CPU), platform (the console) and
+# app (the program), each its own object library with the same settings. They
+# are object libraries, so a product pulls in their objects; the dependency
+# direction (app -> platform -> cpu) is a property of the code, checked by
+# what each layer includes, not by the linker.
+function(wiinx_add_runtime_layer name)
+    add_library(${name} OBJECT ${ARGN})
+    mkw_configure_object_target(${name})
+    target_compile_features(${name} PRIVATE cxx_std_20)
+    target_compile_definitions(${name} PRIVATE
+        SDL_MAIN_HANDLED
+        _DISABLE_STRING_ANNOTATION _DISABLE_VECTOR_ANNOTATION)
+    target_link_libraries(${name} PRIVATE
+        aurora::gx aurora::pad aurora::si aurora::vi aurora::mtx)
+    target_link_libraries(${name} PRIVATE mkw_platform mkw::pugixml mkw::toml11 mkw::cryptopp)
+    target_link_libraries(${name} PRIVATE wiinx::core)
+    if(MKW_PLATFORM_WINDOWS)
+        target_link_libraries(${name} PRIVATE shell32 windowsapp)
+    elseif(MKW_PLATFORM_LINUX)
+        # ${CMAKE_DL_LIBS} for music_attenuation.cpp's dlopen of libdbus-1 (MPRIS
+        # media monitoring). Empty string on glibc >= 2.34 where dl* is in libc.
+        target_link_libraries(${name} PRIVATE mkw::libco ${CMAKE_DL_LIBS})
     endif()
-    target_include_directories(mkw_runtime_common PRIVATE "${MKW_CPPWINRT_INCLUDE_DIR}")
-endif()
+    if(MKW_CPPWINRT_INCLUDE_DIR)
+        if(NOT EXISTS "${MKW_CPPWINRT_INCLUDE_DIR}/winrt/base.h")
+            message(FATAL_ERROR
+                "MKW_CPPWINRT_INCLUDE_DIR does not contain winrt/base.h: ${MKW_CPPWINRT_INCLUDE_DIR}")
+        endif()
+        target_include_directories(${name} PRIVATE "${MKW_CPPWINRT_INCLUDE_DIR}")
+    endif()
+    set_target_properties(${name} PROPERTIES UNITY_BUILD ON UNITY_BUILD_MODE GROUP)
+    mkw_apply_common_compile_options(${name})
+endfunction()
+
+# Sort the sources by layer. accel natives and their runtime bindings ride with
+# the layer that owns what they replace: a library the game links, above the
+# console.
+set(WIINX_CPU_SOURCES "")
+set(WIINX_PLATFORM_SOURCES "")
+set(WIINX_APP_SOURCES "")
+foreach(source IN LISTS SOURCES)
+    string(REPLACE "\\" "/" source_normalized "${source}")
+    if(source_normalized MATCHES "/src/cpu/")
+        list(APPEND WIINX_CPU_SOURCES "${source}")
+    elseif(source_normalized MATCHES "/src/(platform|accel)/")
+        list(APPEND WIINX_PLATFORM_SOURCES "${source}")
+    else()
+        list(APPEND WIINX_APP_SOURCES "${source}")
+    endif()
+endforeach()
 
 # Keep runtime unity units small and semantically related. The old generated-TU
 # batch size put all 57 native runtime sources into one memory-heavy compiler job.
 foreach(source IN LISTS SOURCES)
     get_filename_component(source_name "${source}" NAME_WE)
     string(REPLACE "\\" "/" source_normalized "${source}")
-    if(source_normalized MATCHES "/hle/gx/")
+    if(source_normalized MATCHES "/platform/gx/")
         set(runtime_group "gx_bridge")
     elseif(source_name MATCHES "network|socket|dns|dwc|ios")
         set(runtime_group "network_ios")
@@ -133,9 +160,14 @@ set_source_files_properties(${MKW_PPC_SEMANTIC_RUNTIME_SOURCES} PROPERTIES
     SKIP_UNITY_BUILD_INCLUSION ON
     SKIP_PRECOMPILE_HEADERS ON
     COMPILE_OPTIONS "${MKW_TRANSLATED_PPC_FP_OPTIONS}")
-set_target_properties(mkw_runtime_common PROPERTIES UNITY_BUILD ON UNITY_BUILD_MODE GROUP)
-target_precompile_headers(mkw_runtime_common PRIVATE "${MKW_RUNTIME_SOURCE_DIR}/src/cpu/include/mkw_pch.h")
-mkw_apply_common_compile_options(mkw_runtime_common)
+
+wiinx_add_runtime_layer(wiinx_cpu ${WIINX_CPU_SOURCES})
+wiinx_add_runtime_layer(wiinx_platform ${WIINX_PLATFORM_SOURCES})
+wiinx_add_runtime_layer(wiinx_app ${WIINX_APP_SOURCES})
+target_precompile_headers(wiinx_cpu PRIVATE "${MKW_RUNTIME_SOURCE_DIR}/src/cpu/include/mkw_pch.h")
+target_precompile_headers(wiinx_platform REUSE_FROM wiinx_cpu)
+target_precompile_headers(wiinx_app REUSE_FROM wiinx_cpu)
+set(WIINX_RUNTIME_LAYERS wiinx_cpu wiinx_platform wiinx_app)
 
 # Host ISA guard. Windows and Linux x86_64 product targets use x86-64-v3, so
 # this object deliberately keeps the plain baseline ISA and checks the CPU
@@ -201,7 +233,9 @@ if(MKW_HAVE_RETRO_REWIND)
 endif()
 
 function(mkw_configure_product target)
-    target_sources(${target} PRIVATE $<TARGET_OBJECTS:mkw_runtime_common>)
+    foreach(layer IN LISTS WIINX_RUNTIME_LAYERS)
+        target_sources(${target} PRIVATE $<TARGET_OBJECTS:${layer}>)
+    endforeach()
     if(TARGET mkw_switch_shim)
         target_sources(${target} PRIVATE $<TARGET_OBJECTS:mkw_switch_shim>)
     endif()
@@ -254,8 +288,8 @@ function(mkw_configure_product target)
 
         set_target_properties(${target} PROPERTIES WIN32_EXECUTABLE TRUE)
     elseif(MKW_PLATFORM_LINUX)
-        # mkw_runtime_common is an OBJECT library: WiiCompiled/RetroRewind only pull in its .o
-        # files via $<TARGET_OBJECTS:>, which does not propagate mkw_runtime_common's own
+        # The runtime layers are OBJECT libraries: WiiCompiled/RetroRewind only pull in their .o
+        # files via $<TARGET_OBJECTS:>, which does not propagate their own
         # target_link_libraries (object libraries don't carry usage requirements to a consumer
         # that isn't itself linked against as a target). fiber_manager.cpp's co_* calls live in
         # those objects, so the actual executable link needs mkw::libco directly, same as it
@@ -357,7 +391,7 @@ else()
 endif()
 
 set(MKW_ALL_BUILD_TARGETS
-    mkw_runtime_common mkw_base_shared mkw_base_sensitive mkw_retro_sensitive
+    ${WIINX_RUNTIME_LAYERS} mkw_base_shared mkw_base_sensitive mkw_retro_sensitive
     mkw_retro_rewind_functions WiiCompiled RetroRewind)
 foreach(target IN LISTS MKW_ALL_BUILD_TARGETS)
     if(TARGET ${target} AND MKW_BASELINE_ARCH_FLAG)

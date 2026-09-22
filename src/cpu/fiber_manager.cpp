@@ -9,7 +9,10 @@ void SwitchTraceRing(const char* text) noexcept;
 #endif
 #include "memory.h"
 #include "abi_bridge.h"
-#include "hle_stubs.h"
+// Declared here rather than including the platform's hle_stubs.h: the CPU
+// layer must not depend on the console above it. VI's retrace pump is the one
+// thing a stuck fiber needs from it.
+void VI_HLE_ForceRetrace(CpuContext* cpu);
 #include "host_context.h"
 #include "recomp_mod_loader.h"
 #include "runtime_log.h"

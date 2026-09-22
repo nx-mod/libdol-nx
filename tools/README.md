@@ -15,6 +15,14 @@ installed).
 | `wiinx-fetch-nand` | a reference set of system titles into `nand/` (not tracked), from a menu or by flag |
 | `wiinx-sysconf` | reads and edits a Wii SYSCONF, the console's settings |
 | `wiicrypto.py`, `wiinand.py` | the Wii's AES, keys and title download, shared by the tools above |
+| `wiinx-new-game` | a whole game project from your own disc: `game.toml`, `recomp.yml` pointing back at this checkout, README, `.gitignore` |
+| `wiinx-translate` | the translator's four steps over a game project, with a memory guard |
+| `wiinx-audit` | how universal the natives are: SDK, middleware, or one game's |
+| `wiinx-manual-adds` | what a game still needs by hand, and `--template` to start one |
+| `wiinx-make-bindings` | resolved addresses as the C++ table a game's build links |
+| `wiinx-profile-report` | a device log's profile, with the game's function names |
+| `wiinx-check-layers` | that the layers only depend downward (app → accel → platform → cpu → core) |
+| `wiinx-build` | disc (or game folder) to `.nro`: scan, translate, build, package |
 
 Nothing any tool downloads or extracts is ever committed: it stays with whoever
 owns the disc or console.
@@ -28,7 +36,11 @@ tools/wiinx-extract "Wii Sports + Wii Sports Resort.iso" sports.dol --file US/sy
 
 ## Notes
 
-- 2026-09-22: disc, DOL and NAND tools ported in; the game-project tools (new
-  game, translate, build) come with the translator and runtime.
+- 2026-09-22: disc, DOL, NAND and game-project tools are all here. A game is
+  created, translated and profiled from its own folder, wherever it lives;
+  `wiinx-new-game` writes the path back to this checkout into its `recomp.yml`.
+- `wiinx-build` puts them together: disc to NRO, through `cmake/game`, which
+  composes Dawn, Aurora and libwii-nx the way the working build does. Written
+  from that recipe; the pieces are proven, the one command is not yet.
 - 2026-09-22: `wiinx-scan` and `wiinx-extract` added. A disc image that ends
   before a file does - a truncated copy - reads as `short read: 0 of N bytes`.

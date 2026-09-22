@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# Translate a game's code to C++, ready to build.
+#
+#   tools/wiinx-translate <game folder> [--threads N]
+#
+# The folder is a game project (wiinx-new-game made it) with its disc
+# extracted. Runs libwii-nx's translator over its recomp.yml in four steps:
+#
+#   1. translate-recursive   every function reachable from the entry points
+#   2. emit-base-manifest    the table of translated functions
+#   3. generate-data-init    the game's data sections, as initialisers
+#   4. emit-build-shards     the C++ grouped into build units, natives bound
+#
+# and leaves <game>/generated/, which the build compiles. A re-run only
+# rewrites what changed. Nothing it writes is ever committed.
+#
+# --threads N   translator threads (default 2; each one needs memory)
+set -euo pipefail
+
+here=$(cd "$(dirname "$0")" && pwd)
+libwiinx=$(cd "$here/.." && pwd)
+
+usage() { sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+[ $# -ge 1 ] || usage
+game=$1; shift
+threads=2
+while [ $# -gt 0 ]; do
+    case $1 in
+        --threads) threads=$2; shift 2 ;;
+        *) usage ;;
+    esac
+done
+
+dir=$(cd "$game" 2>/dev/null && pwd) || { echo "no such folder: $game" >&2; exit 1; }
+project="$dir/recomp.yml"
+[ -f "$project" ] || { echo "no game project at $dir (no recomp.yml)" >&2; exit 1; }
+[ -d "$dir/disc" ] || { echo "$dir has no extracted disc: run wiinx-new-game, or wiinx-extract-disc" >&2; exit 1; }
+
+# The natives translated calls bind to, as the project names them.
+registration=$(sed -n 's/^[[:space:]]*native_registration_root:[[:space:]]*//p' "$project" | head -1)
+if [ -n "$registration" ] && [ ! -d "$dir/$registration" ] && [ ! -d "$registration" ]; then
+    echo "recomp.yml's native_registration_root ($registration) is not there." >&2
+    echo "It should point at this libwii-nx checkout's src: $libwiinx/src" >&2
+    exit 1
+fi
+
+# Values the translator takes as arguments rather than from the project.
+entry=$(sed -n '/entry_points:/{n;s/^[[:space:]]*-[[:space:]]*\([0-9A-Fa-fx]*\).*/\1/p;}' "$project" | head -1)
+region=$(sed -n 's/^[[:space:]]*region:[[:space:]]*\([^#[:space:]]*\).*/\1/p' "$project" | head -1)
+[ -n "$entry" ] || { echo "recomp.yml has no translation.entry_points" >&2; exit 1; }
+
+export PATH="$PATH:$HOME/.dotnet" DOTNET_CLI_TELEMETRY_OPTOUT=1
+command -v dotnet >/dev/null || { echo "dotnet not found: install the .NET 8 SDK" >&2; exit 1; }
+cli="$libwiinx/translator/src/Translator.Cli/bin/Release/net8.0/Translator.Cli.dll"
+if [ ! -f "$cli" ]; then
+    echo "building the translator"
+    dotnet build -c Release "$libwiinx/translator/src/Translator.Cli" >/dev/null
+fi
+
+# Translation is memory-hungry: stop cleanly instead of taking the machine
+# down with it (it has crashed small hosts). MIN_FREE_MB overrides.
+min_free_kb=$(( ${MIN_FREE_MB:-600} * 1024 ))
+step() {
+    local name=$1; shift
+    echo "== $name"
+    local start=$SECONDS
+    nice -n 10 dotnet "$cli" "$@" &
+    local pid=$!
+    while kill -0 "$pid" 2>/dev/null; do
+        local free
+        free=$(awk '/MemAvailable/ {print $2}' /proc/meminfo 2>/dev/null || echo "$min_free_kb")
+        if [ "${free:-$min_free_kb}" -lt "$min_free_kb" ]; then
+            kill -9 "$pid" 2>/dev/null
+            echo "   stopped: under $(( min_free_kb / 1024 )) MB free. Try --threads 1." >&2
+            exit 1
+        fi
+        sleep 2
+    done
+    wait "$pid" || { echo "   $name failed" >&2; exit 1; }
+    echo "   done in $(( SECONDS - start ))s"
+}
+
+out="$dir/generated"
+step translate-recursive translate-recursive "$entry" --project "$project" \
+    --outdir "$out/functions" --output-metadata "$out/base_translation_output.json" \
+    --production-source-bundle "$out/base_translation_sources.bin" \
+    --no-function-files --prune-stale --threads "$threads"
+step emit-base-manifest emit-base-manifest --project "$project" --out "$dir/build/base" \
+    --functions-dir "$out/functions" --translation-output-metadata "$out/base_translation_output.json" \
+    ${region:+--region "$region"}
+step generate-data-init generate-data-init --project "$project"
+step emit-build-shards emit-build-shards --project "$project" \
+    --base-metadata "$out/base_translation_output.json" --base-functions-dir "$out/functions" \
+    --native-source-dir "$libwiinx/src" --out "$out/build_shards"
+
+[ -f "$out/build_shards/shards.cmake" ] || { echo "no build_shards/shards.cmake was written" >&2; exit 1; }
+echo "$(basename "$dir") translated."

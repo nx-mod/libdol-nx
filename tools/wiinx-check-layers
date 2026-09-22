@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+"""Check that libwii-nx's layers only depend downward.
+
+    tools/wiinx-check-layers
+
+app -> accel -> platform -> cpu -> core, never the other way: the console may
+use the CPU, the CPU may not use the console. A layer's headers live in its own
+include/ folder, so a violation is a source file including a header that
+belongs to a layer above it.
+
+Prints each violation and exits non-zero, so a build or CI step can run it.
+"""
+
+import os
+import re
+import sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SRC = os.path.join(ROOT, "src")
+# Lowest first; a layer may include its own headers and anything below it.
+LAYERS = ["core", "cpu", "platform", "accel", "app"]
+INCLUDE_DIRS = {"core": os.path.join(ROOT, "include", "wiinx"),
+                "cpu": os.path.join(SRC, "cpu", "include"),
+                "platform": os.path.join(SRC, "platform", "include"),
+                "app": os.path.join(SRC, "app", "include")}
+INCLUDE = re.compile(r'#include "([^"]+)"')
+
+
+def headers_of(layer):
+    """Header names a layer publishes, by their include spelling."""
+    root = INCLUDE_DIRS.get(layer)
+    names = set()
+    if root and os.path.isdir(root):
+        for directory, _, files in os.walk(root):
+            for name in files:
+                if name.endswith((".h", ".hpp", ".inc")):
+                    names.add(os.path.relpath(os.path.join(directory, name), root).replace(os.sep, "/"))
+    return names
+
+
+def main():
+    published = {layer: headers_of(layer) for layer in LAYERS}
+    owner = {}
+    for layer in LAYERS:
+        for name in published[layer]:
+            owner.setdefault(name, layer)
+
+    violations = []
+    for layer in LAYERS:
+        directory = os.path.join(SRC, layer)
+        if not os.path.isdir(directory):
+            continue
+        allowed = LAYERS[: LAYERS.index(layer) + 1]
+        for folder, _, files in os.walk(directory):
+            for name in files:
+                if not name.endswith((".cpp", ".h", ".hpp", ".inc")):
+                    continue
+                path = os.path.join(folder, name)
+                with open(path, encoding="utf-8", errors="replace") as handle:
+                    for number, line in enumerate(handle, 1):
+                        match = INCLUDE.search(line)
+                        if not match:
+                            continue
+                        included = owner.get(match.group(1))
+                        if included and included not in allowed:
+                            violations.append(
+                                f"{os.path.relpath(path, ROOT)}:{number}: {layer} includes "
+                                f"{included}'s {match.group(1)}")
+    for line in violations:
+        print(line)
+    print(f"{len(violations)} violations")
+    return 1 if violations else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -113,30 +113,34 @@ code: an unknown build is slower, never wrong.
 
 ## Building a game
 
-Once complete, one command:
+One command:
 
-```
-tools/wiinx-build mygame.iso   →   mygame.nro + sdmc:/wii-nx/games/mygame/
+```sh
+tools/wiinx-build mygame.iso        # or a game folder made earlier
 ```
 
-extracts the disc, identifies the game, scans it, translates it, builds against
-libwii-nx and packages the NRO. Games are only ever built on the player's
-machine from their own disc; CI builds the library and tools, never a game.
+extracts the disc, writes the project, scans the game for the natives libwii-nx
+can bind, translates its code, builds it and leaves `<game>/build/<game>.nro`
+for `sdmc:/wii-nx/games/<game>/`. It needs dawn-nx and aurora-nx checkouts
+(`--dawn`, `--aurora`) and devkitPro's Switch toolchain.
+
+Games are only ever built on the player's machine from their own disc; CI
+builds the library and tools, never a game.
 
 ## Status
 
 | Part                              | State                                              |
 |-----------------------------------|----------------------------------------------------|
 | [`core`](src/core/README.md)      | done: types, typed access, host, builds, registry  |
-| [`platform`](src/platform/README.md) | being ported in - see [porting](docs/porting.md) |
+| [`platform`](src/platform/README.md) | ported: os, fs, gx, audio, input, net, system |
 | [`accel/sdk`](src/accel/sdk/README.md) | THP decoder ported                             |
 | [`accel/nw4r`](src/accel/nw4r/README.md) | lyt `Pane::CalculateMtx` ported, 2007 and 2008 builds |
 | `accel/nw4r` g3d CalcWorld/CalcView | located in Mario Kart Wii, not written           |
 | [`wiinx-scan`](tools/README.md)   | builds from banners (224 known) and binding by signature; call following next |
-| [tools](tools/README.md)          | disc, DOL and NAND tools in; game tools come with the translator |
+| [tools](tools/README.md)          | disc, DOL, NAND and game-project tools, all here |
 | [translator](translator/README.md) | ported: same output as the original, byte for byte |
-| `cpu`, `app`                      | being ported in - see [porting](docs/porting.md)   |
-| `tools/wiinx-build`               | after the translator and runtime                   |
+| `cpu`, `platform`, `app`          | ported: Mario Kart Wii builds from libwii-nx, layers checked by `wiinx-check-layers` |
+| `tools/wiinx-build`               | written (disc → NRO through `cmake/game`); not yet run end to end |
 
 ## Working on it
 

@@ -32,6 +32,20 @@ tools/wiinx-scan scan game.dol --out bindings.json
 start window at every aligned address, and accepts a function when both hashes
 match at exactly one address. Mario Kart Wii scans in about 3.5 seconds.
 
+`--out` writes the game's `bindings.json` in the translator's format - the name
+the runtime registers a native under, against the address it has in this game:
+
+```json
+{
+ "LytPaneCalculateMtx_HLE": "0x80078EF0",
+ "THPVideoDecode_HLE": "0x801B3BAC"
+}
+```
+
+The game's `recomp.yml` names that file (`runtime.native_bindings`), and the
+translator binds every call to it. Without one, a native keeps the address it
+was registered at, which is the game it was written from.
+
 A native that does not match is left unbound - reported as `not found`, with
 the number of matches - and the game's translated code runs.
 
@@ -44,7 +58,8 @@ symbol map or decompilation):
 tools/wiinx-scan sign main.dol "nw4r::lyt::Pane::CalculateMtx" nw4r.lyt@2008-03-08 80078EF0 300
 ```
 
-prints the entry to add to `data/signatures.json`. Functions shorter than 16
+prints the entry to add to `data/signatures.json`; give it the `registration`
+name the runtime uses for that native. Functions shorter than 16
 instructions are not signed; they are too common to be unique. Every build a
 native supports needs its own signature, signed from a game that links it.
 

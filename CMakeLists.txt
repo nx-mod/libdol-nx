@@ -51,9 +51,6 @@ if(WIINX_RUNTIME)
     # The runtime is an object library, consumed as objects rather than linked,
     # so its usage requirements do not reach the executable: link the native
     # modules into each product instead.
-    if(TARGET mkw_runtime_common)
-        target_link_libraries(mkw_runtime_common PUBLIC wiinx::core)
-    endif()
     foreach(wiinx_product WiiCompiled RetroRewind)
         if(TARGET ${wiinx_product})
             target_link_libraries(${wiinx_product} PRIVATE wiinx::sdk wiinx::nw4r wiinx::core)

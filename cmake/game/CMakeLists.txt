@@ -1,0 +1,90 @@
+# Builds one game: the pieces in order, ending in <game>.nro laid out for
+# sdmc:/wii-nx/games/<game>/. tools/wiinx-build drives this; it holds no logic
+# of its own beyond the order things are added in.
+#
+#   cmake -S cmake/game -B <game>/build -G Ninja \
+#         -DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/cmake/Switch.cmake \
+#         -DWIINX_GAME_DIR=<game> -DWIINX_DAWN_DIR=<dawn-nx> -DWIINX_AURORA_DIR=<aurora-nx>
+cmake_minimum_required(VERSION 3.22)
+
+# Release is the only configuration the runtime supports, and what its flags
+# assume. Set before project() so it reaches the compiler.
+if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
+endif ()
+
+project(wiinx-game LANGUAGES C CXX ASM)
+
+if (NOT CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
+    message(FATAL_ERROR
+        "libwii-nx builds for Nintendo Switch. Configure with:\n"
+        "  -DCMAKE_TOOLCHAIN_FILE=\$DEVKITPRO/cmake/Switch.cmake")
+endif ()
+
+get_filename_component(WIINX_ROOT "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
+set(WIINX_GAME_DIR "" CACHE PATH "The game project to build")
+set(WIINX_DAWN_DIR "${WIINX_ROOT}/../dawn-nx" CACHE PATH "dawn-nx checkout")
+set(WIINX_AURORA_DIR "${WIINX_ROOT}/../aurora-nx" CACHE PATH "aurora-nx checkout")
+
+if (NOT EXISTS "${WIINX_GAME_DIR}/recomp.yml")
+    message(FATAL_ERROR "No game project at ${WIINX_GAME_DIR} (-DWIINX_GAME_DIR=<folder>)")
+endif ()
+if (NOT EXISTS "${WIINX_GAME_DIR}/generated/build_shards/shards.cmake")
+    message(FATAL_ERROR
+        "${WIINX_GAME_DIR} has no translated code yet. Translate it first:\n"
+        "  tools/wiinx-translate ${WIINX_GAME_DIR}")
+endif ()
+foreach (piece DAWN AURORA)
+    if (NOT EXISTS "${WIINX_${piece}_DIR}/CMakeLists.txt")
+        message(FATAL_ERROR "${piece} is missing from ${WIINX_${piece}_DIR} (-DWIINX_${piece}_DIR=<path>)")
+    endif ()
+endforeach ()
+get_filename_component(WIINX_GAME_NAME "${WIINX_GAME_DIR}" NAME)
+
+# WebGPU. Dawn builds a game itself when it is the top-level project; here it is
+# not, so it builds only itself.
+set(DAWN_BUILD_MONOLITHIC_LIBRARY STATIC CACHE STRING "" FORCE)
+set(DAWN_BUILD_SAMPLES OFF CACHE BOOL "" FORCE)
+set(DAWN_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(DAWN_BUILD_PROTOBUF OFF CACHE BOOL "" FORCE)
+set(DAWN_FETCH_DEPENDENCIES OFF CACHE BOOL "" FORCE)
+set(DAWN_ENABLE_VULKAN ON CACHE BOOL "" FORCE)
+set(DAWN_USE_GLFW OFF CACHE BOOL "" FORCE)
+set(DAWN_USE_X11 OFF CACHE BOOL "" FORCE)
+set(DAWN_USE_WAYLAND OFF CACHE BOOL "" FORCE)
+set(TINT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(TINT_BUILD_CMD_TOOLS OFF CACHE BOOL "" FORCE)
+add_subdirectory("${WIINX_DAWN_DIR}" dawn-build)
+
+# Aurora (GX on WebGPU) reuses the Dawn added above rather than fetching its
+# own; its CMake checks for the target before doing so.
+set(AURORA_ENABLE_GX ON CACHE BOOL "" FORCE)
+set(AURORA_ENABLE_DVD OFF CACHE BOOL "" FORCE)
+set(AURORA_ENABLE_CARD OFF CACHE BOOL "" FORCE)
+set(AURORA_DAWN_PROVIDER "vendor" CACHE STRING "" FORCE)
+set(AURORA_SDL3_PROVIDER "vendor" CACHE STRING "" FORCE)
+add_subdirectory("${WIINX_AURORA_DIR}" aurora-build)
+
+# libwii-nx: the CPU runtime, the console, the app, and this game's code.
+set(MKW_BUILD_PRODUCTS ON CACHE BOOL "" FORCE)
+set(MKW_GAME_WORKSPACE_DIR "${WIINX_GAME_DIR}" CACHE PATH "" FORCE)
+add_subdirectory("${WIINX_ROOT}" libwii-nx-build)
+
+if (TARGET WiiCompiled)
+    # The graphics path ends at NVK; dawn-nx knows how it has to be linked.
+    include("${WIINX_DAWN_DIR}/switch_smoke_test/NvkLink.cmake")
+    dawn_switch_link_nvk(WiiCompiled)
+    # Every thread gets a 4 MiB stack instead of libnx's 128 KiB default: the
+    # shader compiler overflows the default.
+    target_link_libraries(WiiCompiled PRIVATE -Wl,--wrap=pthread_create)
+
+    # The folder the game is copied to on the SD card names it, so the runtime
+    # finds its own config, disc, caches and logs.
+    target_compile_definitions(WiiCompiled PRIVATE WIINX_GAME_DIR="${WIINX_GAME_NAME}")
+
+    nx_generate_nacp(${WIINX_GAME_NAME}.nacp
+        NAME "${WIINX_GAME_NAME}" AUTHOR "nx-mod" VERSION "1.0.0")
+    nx_create_nro(${WIINX_GAME_NAME}_nro TARGET WiiCompiled
+        OUTPUT ${WIINX_GAME_NAME}.nro NACP ${WIINX_GAME_NAME}.nacp)
+    message(STATUS "libwii-nx: ${WIINX_GAME_NAME} -> ${WIINX_GAME_NAME}.nro")
+endif ()
