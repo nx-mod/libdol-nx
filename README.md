@@ -79,7 +79,9 @@ A native is registered under the original function's name and the library
 build it matches, in one plain table per module:
 
 ```cpp
-WIINX_NATIVE("nw4r::lyt::Pane::CalculateMtx", kNw4rLyt_2008_03, pane_calculate_mtx_2008)
+// src/accel/nw4r/lyt/pane.cpp
+WIINX_NATIVE("nw4r::lyt::Pane::CalculateMtx", kLyt_2007_06, calculate_mtx<PaneLayout2007>),
+WIINX_NATIVE("nw4r::lyt::Pane::CalculateMtx", kLyt_2008_03, calculate_mtx<PaneLayout2008>),
 ```
 
 Every known build compiles in side by side. When two builds differ only in
@@ -120,10 +122,10 @@ machine from their own disc; CI builds the library and tools, never a game.
 
 | Part                              | State                                              |
 |-----------------------------------|----------------------------------------------------|
-| [`core`](src/core/README.md)      | done: types, typed access, host, registry          |
-| `platform/*`                      | working in wiicompiled-nx's runtime, to move here  |
-| `accel/sdk` THP decoder           | working in wiicompiled-nx, to move here            |
-| `accel/nw4r` lyt Pane::CalculateMtx | working for 2008 in wiicompiled-nx; 2007 to add  |
+| [`core`](src/core/README.md)      | done: types, typed access, host, builds, registry  |
+| [`platform`](src/platform/README.md) | working in wiicompiled-nx's runtime, to port here |
+| [`accel/sdk`](src/accel/sdk/README.md) | THP decoder ported                             |
+| [`accel/nw4r`](src/accel/nw4r/README.md) | lyt `Pane::CalculateMtx` ported, 2007 and 2008 builds |
 | `accel/nw4r` g3d CalcWorld/CalcView | located in Mario Kart Wii, not written           |
 | `wiinx-scan`                      | not started                                        |
 | one-command build                 | its steps exist as scripts in wii-nx               |

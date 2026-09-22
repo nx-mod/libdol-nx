@@ -34,7 +34,10 @@ int main() {
     obj.set(TestLayout::mtx, m);
     assert(obj[TestLayout::mtx].m[2][3] == -7.25f);
 
-    assert(natives().empty());
     assert(find_native("nw4r::lyt::Pane::CalculateMtx", "nw4r.lyt@2008-03-08") == nullptr);
+    static constexpr LibVersion kOs{"rvl.os@test", "rvl.os", "test"};
+    const LibVersion* builds[] = {&kOs};
+    set_detected(builds);
+    assert(detected("rvl.os") == &kOs && detected("nw4r.lyt") == nullptr);
     std::puts("core ok");
 }
