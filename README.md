@@ -134,7 +134,8 @@ machine from their own disc; CI builds the library and tools, never a game.
 | `accel/nw4r` g3d CalcWorld/CalcView | located in Mario Kart Wii, not written           |
 | [`wiinx-scan`](tools/README.md)   | builds from banners (224 known) and binding by signature; call following next |
 | [tools](tools/README.md)          | disc, DOL and NAND tools in; game tools come with the translator |
-| translator, `cpu`, `app`          | being ported in - see [porting](docs/porting.md)   |
+| [translator](translator/README.md) | ported: same output as the original, byte for byte |
+| `cpu`, `app`                      | being ported in - see [porting](docs/porting.md)   |
 | `tools/wiinx-build`               | after the translator and runtime                   |
 
 ## Working on it
@@ -151,7 +152,8 @@ cmake --build build
 
 ## License
 
-GPL-3.0-or-later.
+GPL-3.0-or-later. The translator and runtime are built on
+[WiiCompiled](https://github.com/patchzyy/wiicompiled) by patchzyy and contributors.
 Behavior and layouts follow the decompilation projects doldecomp/ogws,
 doldecomp/mkw and projectPiki/pikmin2 (all CC0); the THP IDCT is based in part
 on the work of the Independent JPEG Group. See

@@ -9,3 +9,5 @@ build*/
 *.rvz
 /nand/
 __pycache__/
+bin/
+obj/

@@ -20,7 +20,8 @@ upstream.
 | builds, signatures, binding | new (masking from wii-nx `resolve-symbols`) | `tools/wiinx-scan`, `data/` | done; call following next |
 | disc tools: extract, extract-disc, inspect-dol, unpack-u8 | wii-nx `example-wii-nx/scripts` | `tools/wiinx-*` | copied |
 | NAND tools: fetch-title, fetch-nand, sysconf, wiinand/wiicrypto | wii-nx `example-wii-nx/scripts` | `tools/` | copied |
-| translator (PowerPC → C++) | wiicompiled-nx `translator/` | `translator/` | to copy |
+| translator (PowerPC → C++) | wiicompiled-nx `translator/` | `translator/` | ported; output identical to the original's |
+| Mario Kart Wii mod support: `translate-mod`, Kamek/Pulsar, Retro WFC | wiicompiled-nx `translator/` | the MKW game project | to split out of `translator/` |
 | CPU runtime: CpuContext, guest memory, dispatch, fibers | wiicompiled-nx `runtime/` | `src/cpu` | to copy |
 | platform: os, fs, gx, audio, input, system | wiicompiled-nx `runtime/src/hle` | `src/platform/*` | to copy |
 | NAND formats: settings, Miis, saves, archives | wii-nx `wiinand-nx/lib` | `src/platform/fs` | to copy |
@@ -44,3 +45,7 @@ upstream.
 - 2026-09-22: inventory written; disc and NAND tools copied; the game tools
   wait for the translator and runtime, which they are wired to, so they are
   ported once.
+- 2026-09-22: translator ported. Its CLI no longer references the launcher
+  (the one command that did, a mod payload check, was dropped with its test
+  and a third-party payload binary). Mario Kart Wii re-translated with it is
+  byte-identical to the original's output.
