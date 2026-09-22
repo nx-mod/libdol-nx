@@ -30,6 +30,30 @@ upstream.
 | port notes, pitfalls | wiicompiled-nx `docs/switch-port-notes.md` | `docs/` | with the runtime |
 | Aurora changes (threaded decode, pipeline memo) | wiicompiled-nx `aurora-main/` | aurora-nx | offered to aurora-nx |
 
+## Runtime file map
+
+wiicompiled-nx's `runtime/` holds the CPU core, the console, the app and Mario
+Kart Wii's own code in one tree and one CMake project. Each file's destination:
+
+| Goes to | From `runtime/` |
+|---|---|
+| `src/cpu` | `abi_bridge`, `fiber_manager`, `guest_flat_memory` (+ macOS), `guest_interrupt_context`, `host_context`, `host_cpu_baseline`, `memory`, `memory_access`, `native_bindings`, `native_cpu_calls.inc`, `ppc_helpers`, `fpu_helpers`, `ppc_runtime`, `ppc_isa_memory`, `include/isa/*`, `timebase_contract`, `mkw_thread_local`, `mkw_visibility`, `src/platform/*/co_switch.S`; `third_party/libco` |
+| `src/platform/os` | `hle/os/*`, `hle/task_thread`, `hle/trk`, `hle/c_stdio`, `guest_printf` |
+| `src/platform/fs` | `hle/storage/*` (DVD, NAND, ISFS, Riivolution), `hle/ios`, `hle/esp`, `wii_es_crypto`, `nand_*`, `console_identity`, `console_region`; `third_party/cryptopp` |
+| `src/platform/gx` | `hle/gx/*`, `gx_guest_write` |
+| `src/platform/audio` | `hle/audio/*`, `audio_backend` |
+| `src/platform/input` | `hle/input/*`, `wii_remote_input`, `input_bindings`, `input_expr`, `controller_status_contract`, `controller_button_names` |
+| `src/platform/system` | `hle/vi`, `hle/sc`, `sc_serial_contract`, `system_bridge`, `hle/net/*` (network, until it earns a module) |
+| `src/accel/egg` | `hle/egg_decomp` |
+| `src/app` | `main`, `settings_overlay`, `controller_mapping_wizard`, `discord_presence`, `music_attenuation`, `runtime_config`, `runtime_log`, `runtime_product`, `product/base_product`, `host_platform`, `platform_switch/*`, `switch_layout`, `switch_account_identity`, `aurora_events`; `third_party/toml11`, `third_party/pugixml` |
+| data | `assets/dsp/dsp_coef.bin`, `assets/wii/shared2/wc24/**` - Dolphin's free data files, GPL-2.0-or-later, credited |
+| the MKW game project | `dynamic_aspect`, `game_graphics_options`, `product/retro_rewind_product`, `recomp_mod_loader`, `assets/pipeline/initial_pipeline_cache.db` (Mario Kart Wii's own shader pipelines) |
+
+Copied into those places and first built as one runtime library with today's
+sources and flags, so Mario Kart Wii keeps building at every step; then split
+into `cpu`, `platform` and `app` libraries, fixing upward dependencies as they
+show up.
+
 ## Order
 
 1. Translator and CPU runtime - nothing builds without them.
