@@ -1,0 +1,9 @@
+build*/
+*.o
+*.a
+# Game code and data never belong here.
+*.dol
+*.rel
+*.iso
+*.wbfs
+*.rvz
