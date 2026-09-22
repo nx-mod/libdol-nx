@@ -22,10 +22,10 @@ upstream.
 | NAND tools: fetch-title, fetch-nand, sysconf, wiinand/wiicrypto | wii-nx `example-wii-nx/scripts` | `tools/` | copied |
 | translator (PowerPC → C++) | wiicompiled-nx `translator/` | `translator/` | ported; output identical to the original's |
 | Mario Kart Wii mod support: `translate-mod`, Kamek/Pulsar, Retro WFC | wiicompiled-nx `translator/` | the MKW game project | to split out of `translator/` |
-| CPU runtime: CpuContext, guest memory, dispatch, fibers | wiicompiled-nx `runtime/` | `src/cpu` | to copy |
-| platform: os, fs, gx, audio, input, system | wiicompiled-nx `runtime/src/hle` | `src/platform/*` | to copy |
+| CPU runtime: CpuContext, guest memory, dispatch, fibers | wiicompiled-nx `runtime/` | `src/cpu` | copied; building as one runtime library, split next |
+| platform: os, fs, gx, audio, input, system | wiicompiled-nx `runtime/src/hle` | `src/platform/*` | copied; building as one runtime library, split next |
 | NAND formats: settings, Miis, saves, archives | wii-nx `wiinand-nx/lib` | `src/platform/fs` | to copy |
-| app shell: main loop, config, settings overlay | wiicompiled-nx `runtime/src` | `src/app` | to copy |
+| app shell: main loop, config, settings overlay | wiicompiled-nx `runtime/src` | `src/app` | copied; building as one runtime library, split next |
 | game tools: new-game, translate, audit, manual-adds, make-bindings, profile-report | wii-nx `example-wii-nx/scripts` | `tools/wiinx-*` | with the translator and runtime, pointed at them |
 | port notes, pitfalls | wiicompiled-nx `docs/switch-port-notes.md` | `docs/` | with the runtime |
 | Aurora changes (threaded decode, pipeline memo) | wiicompiled-nx `aurora-main/` | aurora-nx | offered to aurora-nx |
@@ -69,6 +69,16 @@ show up.
 - 2026-09-22: inventory written; disc and NAND tools copied; the game tools
   wait for the translator and runtime, which they are wired to, so they are
   ported once.
+- 2026-09-22: runtime copied into `src/cpu`, `src/platform/{os,fs,gx,audio,input,net,system}`,
+  `src/accel/egg` and `src/app` by `wiicompiled/tools/local/port_runtime.py`,
+  include paths rewritten (`hle/gx/` -> `gx/` and so on). Headers stay
+  bare-named in one `include/` folder per layer, since translated game code
+  includes them by name. The runtime binds THP and the layout pane through
+  `*_bind.cpp` glue over the accel natives, with the runtime's names and
+  signatures, so translation output is unchanged; `app/wiinx_host.cpp` hands
+  natives the guest memory and CPU. Build: `cmake/runtime/Runtime.cmake`, the
+  upstream CMake with paths moved; the MKW pipeline cache and Retro Rewind
+  product are the game's and only used when the game supplies them.
 - 2026-09-22: translator ported. Its CLI no longer references the launcher
   (the one command that did, a mod payload check, was dropped with its test
   and a third-party payload binary). Mario Kart Wii re-translated with it is

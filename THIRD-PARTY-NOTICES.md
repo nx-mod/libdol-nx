@@ -15,6 +15,28 @@ libwii-nx is GPL-3.0-or-later. What it is built from or follows:
   copies of its `example-wii-nx/scripts/extract-dol` and `wiicrypto.py`; the
   signature masking follows its `resolve-symbols`. <https://github.com/nx-mod/wii-nx>
 
+## Bundled in this repository
+
+Vendored with the runtime, each under its own license, in `third_party/`:
+
+- **Crypto++ 8.9.0** - Boost Software License 1.0 / public domain. Copyright (c)
+  1995-2019 Wei Dai and contributors. <https://github.com/weidai11/cryptopp>
+- **pugixml** - MIT. Copyright (c) 2006-2025 Arseny Kapoulkine.
+  <https://github.com/zeux/pugixml>
+- **toml11 4.4.0** - MIT. Copyright (c) 2017 Toru Niina.
+  <https://github.com/ToruNiina/toml11>
+- **libco** - ISC (`valgrind.h`: BSD-style). Copyright byuu and the higan team.
+  <https://github.com/higan-emu/libco>
+
+## Data files
+
+- **Dolphin Emulator** - GPL-2.0-or-later. Copyright (c) 2003+ Dolphin Emulator
+  Project. `data/dsp/dsp_coef.bin` (the free DSP resampling coefficients, hash
+  checked at build time) and `data/wii/shared2/wc24/**` (the default
+  WiiConnect24 tree a new NAND is seeded from) are Dolphin's `Data/Sys` files,
+  unmodified. Neither holds Nintendo code or game assets.
+  <https://github.com/dolphin-emu/dolphin>
+
 ## Reimplemented natively from other work
 
 Natives here are written for this project; their behavior follows the sources

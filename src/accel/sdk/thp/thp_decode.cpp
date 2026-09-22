@@ -522,6 +522,10 @@ void video_decode(Cpu* cpu) {
 
 }  // namespace
 
+int32_t decode_frame(uint32_t file, uint32_t tileY, uint32_t tileU, uint32_t tileV, uint32_t work) {
+    return Decode(file, tileY, tileU, tileV, work);
+}
+
 extern const Native kThpNatives[] = {
     WIINX_NATIVE("THPVideoDecode", kThp_2007_08, video_decode),
 };
