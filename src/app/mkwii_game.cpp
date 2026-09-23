@@ -3,13 +3,20 @@
 
 #include <algorithm>
 #include "aurora_events.h"
-#include "gx/gx_dynamic_aspect.h"
+#include "game_graphics_options.h"
+#include "runtime_config.h"
+#include "game_hooks.h"
+#include "guest_os_layout.h"
+#include "mkwii_dynamic_aspect_records.h"
 
 #include <dolphin/vi.h>
 
 // Advanced by GXCopyDisp (gx_copy.cpp), defined in gx_utils.cpp. Declared here
 // rather than via gx_internal.h, which is private to the GX HLE sources.
 extern "C" int g_gxFrameCount;
+
+// Whether the canvas follows the display. Read by this file only.
+extern "C" bool g_dynamicAspectRatioEnabled = false;
 
 namespace {
 
@@ -189,3 +196,67 @@ void ConfigureMkwDynamicAspect(bool widescreen, uint32_t surfaceWidth, uint32_t 
     VILockAspectRatio(4, 3);
     ApplyEggScreenRecords(surfaceWidth, surfaceHeight);
 }
+
+// ---------------------------------------------------------------------------
+// This file is Mario Kart Wii's own, and the only place in the build that
+// knows it: the runtime calls the hooks below, never these functions. It moves
+// to that game's project (its native/ folder) once the game is built from
+// libwii-nx alone. See docs/porting.md.
+// ---------------------------------------------------------------------------
+namespace {
+
+// ScnRenderer::createPath in Mario Kart Wii PAL takes the post-processing path
+// mask in r4. Depth of field always goes; bloom goes when the player turned it
+// off (runtime setting).
+constexpr uint32_t kScnRendererCreatePath = 0x8023BD38u;
+constexpr uint32_t kDepthOfFieldPath = 0x20u;
+
+void OnCalling(uint32_t target, CpuContext* ctx) {
+    if (target == kScnRendererCreatePath) {
+        ctx->gpr[4] &= ~(RuntimeGameGraphicsOptions::DisabledPostProcessingPaths() | kDepthOfFieldPath);
+    }
+}
+
+void OnSurfaceResized(uint32_t width, uint32_t height) {
+    static bool configured = false;
+    if (!configured) {
+        configured = true;
+        ConfigureMkwDynamicAspect(RuntimeConfigFile::WidescreenEnabled(true), width, height);
+        return;
+    }
+    UpdateMkwDynamicAspectSurface(width, height);
+}
+
+// Mario Kart Wii PAL's OS globals: where its copy of the Wii's OS put the
+// scheduler's own variables. Another game's are elsewhere, which is why they
+// are the game's to supply (guest_os_layout.h).
+RuntimeGuestOs::Layout MkwGuestOsLayout() {
+    RuntimeGuestOs::Layout layout;
+    layout.run_queue = 0x803477B0u;
+    layout.run_queue_bits = 0x80386920u;
+    layout.reschedule = 0x8038691Cu;
+    layout.scheduler_disable_count = 0x80386918u;
+    layout.default_thread = 0x80347498u;
+    layout.idle_thread = 0x803478B0u;
+    layout.switch_thread_callback_ptr = 0x80385AE0u;
+    layout.interrupt_handler_table_ptr = 0x803868F8u;
+    layout.alarm_queue_r13_offset = 0x6360u;
+    layout.load_context = 0x801A1F58u;
+    layout.deferred_thread_entry = 0x8024373Cu;  // EGG::Thread::start
+    return layout;
+}
+
+struct InstallGameHooks {
+    InstallGameHooks() {
+        RuntimeGuestOs::install(MkwGuestOsLayout());
+
+        RuntimeGameHooks::Hooks hooks;
+        hooks.surface_resized = &OnSurfaceResized;
+        hooks.viewport_about_to_change = &AssertMkwOffscreenScreenBypass;
+        hooks.calling = &OnCalling;
+        RuntimeGameHooks::install(hooks);
+    }
+};
+const InstallGameHooks g_installGameHooks;
+
+}  // namespace

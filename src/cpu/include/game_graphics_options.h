@@ -3,6 +3,9 @@
 #include <atomic>
 #include <cstdint>
 
+// Which post-processing a player turned off. The runtime holds the setting;
+// a game applies it to its own renderer through game_hooks.h, since only the
+// game knows which call carries it and what its bits mean.
 namespace RuntimeGameGraphicsOptions {
 
 inline std::atomic<uint32_t>& DisabledPostProcessingPathsState() noexcept {
@@ -16,10 +19,6 @@ inline uint32_t DisabledPostProcessingPaths() noexcept {
 
 inline void SetDisabledPostProcessingPaths(uint32_t disabledMask) noexcept {
     DisabledPostProcessingPathsState().store(disabledMask, std::memory_order_relaxed);
-}
-
-inline uint32_t FilterScnRendererPathMask(uint32_t pathMask) noexcept {
-    return pathMask & ~(DisabledPostProcessingPaths() | 0x20u);
 }
 
 } // namespace RuntimeGameGraphicsOptions

@@ -12,8 +12,14 @@ one, and the place where the parts are wired together.
 | `music_attenuation`, `discord_presence` | host niceties: ducking the console's music, presence |
 | `switch/` | Switch shims: SDL stand-ins, thread stacks and core placement, the SD-card layout |
 | `product/base_product.cpp` | the executable's entry point |
+| `mkwii_game.cpp` | Mario Kart Wii's own: its aspect handling and its OS layout, installed through the [game hooks](../../docs/game-hooks.md) |
 
 ## Notes
 
-- 2026-09-22: ported. `dynamic_aspect.cpp` is Mario Kart Wii's own aspect
-  handling and moves to that game's project.
+- 2026-09-22: ported. `mkwii_game.cpp` is Mario Kart Wii's own, and moves to
+  that game's `native/` folder at the cut-over.
+- 2026-09-22: nothing outside `mkwii_game.cpp` names a game. It installs
+  `RuntimeGameHooks` at startup - the surface size and the one renderer-path
+  argument the runtime used to reach into Mario Kart Wii for, and the game's OS
+  globals - and keeps the game's records in `mkwii_dynamic_aspect_records.h`.
+  Moving both files to the game's project is all the cut-over needs.

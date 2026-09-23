@@ -1,6 +1,7 @@
 #include "network_internal.h"
 
 #include "fiber_manager.h"
+#include "guest_os_layout.h"
 #include "net/network.h"
 #include "ppc_runtime.h"
 #include "runtime_log.h"
@@ -627,7 +628,7 @@ static bool InitializeDeferredSyncRoute(DeferredNetworkRoute& route, uint32_t wa
     // early scheduler setup. Capture its identity before yielding so a late
     // resolver result cannot wake a stale/reused stack queue after cancellation.
     constexpr uint32_t kOSRunningContextAddr = 0x800000E4u;
-    constexpr uint32_t kDefaultThreadContextAddr = 0x80347498u;
+    const uint32_t kDefaultThreadContextAddr = RuntimeGuestOs::layout().default_thread;
     uint32_t expectedThread = Memory::Read32(kOSRunningContextAddr);
     if (expectedThread == 0) {
         expectedThread = kDefaultThreadContextAddr;

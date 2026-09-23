@@ -83,3 +83,17 @@ show up.
   (the one command that did, a mod payload check, was dropped with its test
   and a third-party payload binary). Mario Kart Wii re-translated with it is
   byte-identical to the original's output.
+- 2026-09-22: the runtime no longer names a game. The Mario Kart Wii functions
+  and addresses `abi_bridge.h`, `aurora_events.h`, `gx_transform.cpp`,
+  `main.cpp` and `game_graphics_options.h` called directly became
+  `RuntimeGameHooks` (`src/cpu/include/game_hooks.h`, see
+  [game hooks](game-hooks.md)); the game's side sits in
+  `src/app/dynamic_aspect.cpp` with its records in
+  `src/app/mkwii_dynamic_aspect_records.h`, ready to move to the game's project
+  as they are. `tools/wiinx-check-layers` reports no violations.
+- 2026-09-22: the guest OS globals left the library too. `os_internal.h`,
+  `fiber_manager.cpp`, `network_deferred.cpp` and `abi_bridge.h` read
+  `RuntimeGuestOs::layout()`, which the game installs; Mario Kart Wii's are in
+  `src/app/mkwii_game.cpp` (renamed from `dynamic_aspect.cpp`). What is left of
+  one game in the library is the ~700 `PPC_NATIVE_OVERRIDE` addresses the
+  platform natives are registered at, which the signature milestone replaces.

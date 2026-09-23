@@ -1,4 +1,5 @@
 // gx_transform.cpp - Viewport, Projection, and Matrix Functions
+#include "game_hooks.h"
 #include "isa/big_endian.h"
 #include "gx_internal.h"
 
@@ -59,7 +60,7 @@ extern "C" void GX__GetViewportv_801733e0(uint32_t oa) {
     static int lastBypassFrame = -1;
     if (lastBypassFrame != g_gxFrameCount) {
         lastBypassFrame = g_gxFrameCount;
-        AssertMkwOffscreenScreenBypass();
+        RuntimeGameHooks::viewport_about_to_change();
     }
     if (!oa) return; for(int i=0; i<6; ++i) WriteGuestFloat(oa + i*4, g_viewportState[i]);
 }

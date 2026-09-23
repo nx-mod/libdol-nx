@@ -63,6 +63,21 @@ name the runtime uses for that native. Functions shorter than 16
 instructions are not signed; they are too common to be unique. Every build a
 native supports needs its own signature, signed from a game that links it.
 
+## The console's own natives
+
+`accel` natives are bound this way today. The `platform` natives - the console
+itself, around 700 of them - are still registered at the addresses they were
+written from, Mario Kart Wii's, by `PPC_NATIVE_OVERRIDE(<address>, ...)`. They
+are the same functions every Wii game links, at each game's own addresses, so
+another game binds none of them and runs its own translated SDK code instead:
+correct, and far slower where it matters (DVD, DSP, VI).
+
+Giving them signatures, so any game binds them by what the code is, is the next
+milestone. Nothing about the natives changes - only how a game finds them - and
+the same applies to the guest OS globals a game's SDK links into its own BSS
+(the run queue, the reschedule counter), which a game supplies through
+[game hooks](game-hooks.md).
+
 ## Not yet
 
 - Following calls from a matched function to its callees - how short

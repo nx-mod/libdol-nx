@@ -3,7 +3,8 @@
 #include "memory.h"
 #include "ppc_runtime.h"
 #include "system_bridge.h"
-#include "game_graphics_options.h"
+#include "game_hooks.h"
+#include "guest_os_layout.h"
 #include "runtime_log.h"
 #include "mkw_thread_local.h"
 
@@ -22,16 +23,13 @@
 
 inline void InvokeIndirectCpu(uint32_t target, CpuContext* ctx);
 
-// Some game-facing runtime options alter arguments at well-defined ABI
-// boundaries. Keep this independent of the dispatch mechanism: generated
-// static calls deliberately bypass InvokeDirectCpu for performance.
-// (used for the path mask filtering in ScnRenderer::createPath: depth of
-// field is always removed, bloom when the user disabled it)
+// A game may adjust its own calls' arguments at well-defined ABI boundaries -
+// the settings for one game's post-processing reach its renderer this way. The
+// runtime names no game function: a game installs the hook (game_hooks.h).
+// Keep this independent of the dispatch mechanism: generated static calls
+// deliberately bypass InvokeDirectCpu for performance.
 inline void ApplyRuntimeCallOptions(uint32_t target, CpuContext* ctx) {
-    if (target == 0x8023BD38u) {
-        // ScnRenderer::createPath receives the post-processing path mask in r4.
-        ctx->gpr[4] = RuntimeGameGraphicsOptions::FilterScnRendererPathMask(ctx->gpr[4]);
-    }
+    RuntimeGameHooks::calling(target, ctx);
 }
 
 // Persistent per-thread CPU context used across translated function calls.
@@ -249,13 +247,14 @@ private:
     std::array<uint32_t, 18> saved_;
 };
 
-// Guest address of OSLoadContext, which models rfi-style context restoration
-// and intentionally replaces the full guest register file instead of returning
-// like a normal ABI call. It can never be guarded.
-inline constexpr uint32_t kOSLoadContextAddress = 0x801A1F58u;
-
+// OSLoadContext models rfi-style context restoration and intentionally
+// replaces the full guest register file instead of returning like a normal ABI
+// call, so it can never be guarded. Its address is the game's
+// (guest_os_layout.h); a game that installed no layout guards everything,
+// which is safe.
 inline bool ShouldPreserveNonvolatileGprsForRawCpuCall(const TranslatedFunctionInfo* info) noexcept {
-    return info->kind == FunctionKind::Native && info->address != kOSLoadContextAddress;
+    return info->kind == FunctionKind::Native &&
+           info->address != RuntimeGuestOs::layout().load_context;
 }
 
 inline uint32_t NonvolatileFprGuardMaskFor(const TranslatedFunctionInfo* info) noexcept {

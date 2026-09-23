@@ -111,6 +111,14 @@ answers each address. The translator bakes that in, so a bound call costs
 nothing at runtime. A function nothing matches stays the game's own translated
 code: an unknown build is slower, never wrong.
 
+## What a game brings of its own
+
+A game is its disc, its `bindings.json`, and - only if it needs one - its own
+native code. libwii-nx names no game: where one needs something the console
+does not do (scaling its canvas to the display, a renderer argument a setting
+has to reach), it fills in a [hook](docs/game-hooks.md) at startup, and it says
+there where its own copy of the Wii's OS keeps the scheduler's globals.
+
 ## Building a game
 
 One command:
@@ -132,7 +140,7 @@ builds the library and tools, never a game.
 | Part                              | State                                              |
 |-----------------------------------|----------------------------------------------------|
 | [`core`](src/core/README.md)      | done: types, typed access, host, builds, registry  |
-| [`platform`](src/platform/README.md) | ported: os, fs, gx, audio, input, net, system |
+| [`platform`](src/platform/README.md) | ported: os, fs, gx, audio, input, net, system; its natives still bound at one game's addresses |
 | [`accel/sdk`](src/accel/sdk/README.md) | THP decoder ported                             |
 | [`accel/nw4r`](src/accel/nw4r/README.md) | lyt `Pane::CalculateMtx` ported, 2007 and 2008 builds |
 | `accel/nw4r` g3d CalcWorld/CalcView | located in Mario Kart Wii, not written           |
@@ -140,6 +148,7 @@ builds the library and tools, never a game.
 | [tools](tools/README.md)          | disc, DOL, NAND and game-project tools, all here |
 | [translator](translator/README.md) | ported: same output as the original, byte for byte |
 | `cpu`, `platform`, `app`          | ported: Mario Kart Wii builds from libwii-nx, layers checked by `wiinx-check-layers` |
+| [game hooks](docs/game-hooks.md)  | done: hooks and the guest OS layout come from the game, in one file per game |
 | `tools/wiinx-build`               | written (disc → NRO through `cmake/game`); not yet run end to end |
 
 ## Working on it

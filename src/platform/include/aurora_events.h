@@ -15,14 +15,11 @@
 #include <windows.h>
 #endif
 
-extern "C" bool g_dynamicAspectRatioEnabled;
-void ConfigureMkwDynamicAspect(bool widescreen, uint32_t surfaceWidth, uint32_t surfaceHeight);
-void UpdateMkwDynamicAspectSurface(uint32_t surfaceWidth, uint32_t surfaceHeight);
-// Arms the "keep EGG::Frustum's projection scale" flag on every screen that
-// renders to a fixed-size offscreen target. Cheap and idempotent; called from
-// the GX viewport path so it beats bakes that never cross a frame boundary.
-void AssertMkwOffscreenScreenBypass();
-inline std::atomic_bool g_mkwDynamicAspectSurfacePending{false};
+#include "game_hooks.h"
+
+// The newest surface size, when an event arrived at a moment a game's hook
+// could not be run yet (see below).
+inline std::atomic_bool g_surfaceSizePending{false};
 
 namespace WindowPlacementPersistence {
 inline bool sizeDirty = false;
@@ -112,28 +109,28 @@ inline void ProcessAuroraEvents(const AuroraEvent* events) {
         // frame worker is intentionally waiting for begin permission. Joining
         // it here creates a circular wait. Record the newest native size and
         // apply it immediately after the next frame has been prepared.
-        g_mkwDynamicAspectSurfacePending.store(true, std::memory_order_release);
+        g_surfaceSizePending.store(true, std::memory_order_release);
     }
     settings_overlay::HandleEvents(events);
 }
 
-inline void ApplyPendingMkwDynamicAspectSurface() {
+inline void ApplyPendingSurfaceSize() {
     // The OS can adjust a window without a resize event reaching the queue
     // (observed with hidden windows clamped to the work area), so re-read the
-    // surface at every frame boundary instead of only on queued events.
-    // UpdateMkwDynamicAspectSurface is idempotent and cheap for a stable size.
-    (void)g_mkwDynamicAspectSurfacePending.exchange(false, std::memory_order_acq_rel);
+    // surface at every frame boundary instead of only on queued events. A
+    // game's hook is idempotent and cheap for a stable size.
+    (void)g_surfaceSizePending.exchange(false, std::memory_order_acq_rel);
     uint32_t surfaceWidth = 0;
     uint32_t surfaceHeight = 0;
     AuroraGetSurfaceSize(&surfaceWidth, &surfaceHeight);
-    UpdateMkwDynamicAspectSurface(surfaceWidth, surfaceHeight);
+    RuntimeGameHooks::surface_resized(surfaceWidth, surfaceHeight);
 }
 
 inline bool BeginAuroraFrame() {
     if (!aurora_begin_frame()) {
         return false;
     }
-    ApplyPendingMkwDynamicAspectSurface();
+    ApplyPendingSurfaceSize();
     return true;
 }
 

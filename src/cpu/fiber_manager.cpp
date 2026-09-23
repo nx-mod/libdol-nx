@@ -9,6 +9,7 @@ void SwitchTraceRing(const char* text) noexcept;
 #endif
 #include "memory.h"
 #include "abi_bridge.h"
+#include "guest_os_layout.h"
 // Declared here rather than including the platform's hle_stubs.h: the CPU
 // layer must not depend on the console above it. VI's retrace pump is the one
 // thing a stuck fiber needs from it.
@@ -57,12 +58,14 @@ std::atomic<uint32_t> g_viRetracePendingCount{0};
 // Guest OS memory layout constants
 // =============================================================================
 namespace {
+// Console lowmem: the same on every Wii.
 constexpr uint32_t kOSCurrentContextAddr = 0x800000d4u;
 constexpr uint32_t kOSRunningContextAddr = 0x800000e4u;  // OSGetCurrentThread reads this
-constexpr uint32_t kThreadQueueArrayAddr = 0x803477b0u;
-constexpr uint32_t kSchedulerPendingFlagAddr = 0x80386920u;
-constexpr uint32_t kSchedulerReschedCounterAddr = 0x8038691cu;
-constexpr uint32_t kSchedulerIdleFlagAddr = 0x80386918u;
+// The game's OS globals, from the layout it installed (guest_os_layout.h).
+const uint32_t& kThreadQueueArrayAddr = RuntimeGuestOs::g_layout.run_queue;
+const uint32_t& kSchedulerPendingFlagAddr = RuntimeGuestOs::g_layout.run_queue_bits;
+const uint32_t& kSchedulerReschedCounterAddr = RuntimeGuestOs::g_layout.reschedule;
+const uint32_t& kSchedulerIdleFlagAddr = RuntimeGuestOs::g_layout.scheduler_disable_count;
 
 // OSThread structure offsets
 constexpr uint32_t kThreadStateOffset = 0x2C8u;
@@ -625,7 +628,11 @@ void GuestFiberManager::FiberProc(void* param)
     CpuContextScope scope(cpu);
     
     int startDeferAttempts = 0;
-    while (entryPoint == 0x8024373c) { // EGG::Thread::start
+    // A thread entry that reads its real function from an object's vtable, which
+    // the object may not have filled in yet (EGG::Thread::start); zero when the
+    // game has none, and no entry point is ever zero.
+    const uint32_t deferredEntry = RuntimeGuestOs::layout().deferred_thread_entry;
+    while (deferredEntry != 0 && entryPoint == deferredEntry) {
         uint32_t vtable = 0;
         uint32_t startFn = 0;
         try {
@@ -644,7 +651,7 @@ void GuestFiberManager::FiberProc(void* param)
         }
 
         if (startDeferAttempts++ > 50) {
-            RT_LOG(RT_TAG_OS) << "EGG::Thread::start target still invalid (vtable=0x" << std::hex << vtable
+            RT_LOG(RT_TAG_OS) << "deferred thread entry still invalid (vtable=0x" << std::hex << vtable
                       << ", fn=0x" << startFn << ") after retries; continuing anyway." << std::dec << std::endl;
             break;
         }

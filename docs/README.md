@@ -8,6 +8,7 @@ need.
 | [Builds](builds.md) | a game links a library build libwii-nx has not seen, or behavior depends on a build |
 | [Signatures and scanning](signatures.md) | binding a game, or a native is not found in a game |
 | [Writing a native](natives.md) | adding a native, or a new build of one |
+| [Game hooks](game-hooks.md) | a game needs something of its own from the runtime |
 | [Tools](../tools/README.md) | what each tool in `tools/` does |
 
 Each part of the library also has a README next to its code, with notes kept

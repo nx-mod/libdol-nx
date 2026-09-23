@@ -12,10 +12,15 @@ OS. Required by every game; depends on `cpu` and `core`.
 | `input`  | GameCube pad, Wii Remote (KPAD/WPAD) from Joy-Con           | `input/`                                    |
 | `system` | VI timing, SC settings, IPC, STM power                      | `vi.cpp`, `sc.cpp`                          |
 
-Each module moves here whole, keeps its behavior, and trades its hard-wired
-Mario Kart Wii addresses for bindings by name.
+Each module came here whole and keeps its behavior.
 
 ## Notes
 
-- Not moved yet. `fs` goes first (most self-contained), `gx` last (tied to
-  Aurora and the threaded decode).
+- 2026-09-22: ported, all seven modules, and building as `wiinx_platform`.
+- 2026-09-22: the guest OS globals in `os/os_internal.h` are the game's now,
+  read from the layout it installs ([game hooks](../../docs/game-hooks.md)).
+- The natives are still registered at the addresses they were written from -
+  Mario Kart Wii's - by `PPC_NATIVE_OVERRIDE(<address>, ...)`. Another game
+  binds none of them and runs its own translated SDK code: correct, slower.
+  Signing them so any game binds them by code is the next milestone
+  ([signatures](../../docs/signatures.md)).

@@ -83,6 +83,7 @@ extern std::atomic<uint32_t> g_viPollNotDue;
 #include "system_bridge.h"
 #include "ppc_runtime.h"
 #include "aurora_events.h"
+#include "guest_os_layout.h"
 #include "wii_remote_input.h"
 #include "discord_presence.h"
 #include "fiber_manager.h"
@@ -2232,7 +2233,6 @@ int RuntimeMain(int argc, char** argv) {
         // No vsync knob: aurora always configures a non-blocking present mode.
         auroraConfig.desiredBackend = BACKEND_AUTO;
         const float resolutionMultiplier = RuntimeConfigFile::ResolutionMultiplier(1.0f);
-        ConfigureMkwDynamicAspect(configWidescreen, auroraConfig.windowWidth, auroraConfig.windowHeight);
         VISetFrameBufferScale(resolutionMultiplier);
         // One table for both directions. RuntimeConfigFile::IsSupportedGraphicsApi
         // whitelists exactly these config names, so an unrecognised value has
@@ -2306,8 +2306,14 @@ int RuntimeMain(int argc, char** argv) {
         aurora_set_frame_worker_wait_callback(ServiceGuestTimingDuringAuroraFrameWait);
         GxGuestWrite::InstallAuroraHooks();
         WiinxInstallHost();
-        UpdateMkwDynamicAspectSurface(auroraInfo.windowSize.native_fb_width,
-                                      auroraInfo.windowSize.native_fb_height);
+        if (!RuntimeGuestOs::installed()) {
+            // Every Wii game links the OS, so every game has these; libwii-nx
+            // just does not know where this one put them (guest_os_layout.h).
+            RT_LOG(RT_TAG_OS) << "no guest OS layout installed: the scheduler's globals are unknown, "
+                                 "threading will not work" << std::endl;
+        }
+        RuntimeGameHooks::surface_resized(auroraInfo.windowSize.native_fb_width,
+                                          auroraInfo.windowSize.native_fb_height);
         settings_overlay::InitializeRuntimeSettings();
         RT_LOG(RT_TAG_CONFIG) << "video.widescreen=" << (configWidescreen ? "true" : "false")
                   << " SCGetAspectRatio=" << (configWidescreen ? 1 : 0)
@@ -2315,9 +2321,9 @@ int RuntimeMain(int argc, char** argv) {
                   << " window=" << auroraInfo.windowSize.width << "x" << auroraInfo.windowSize.height
                   << " native=" << auroraInfo.windowSize.native_fb_width << "x"
                   << auroraInfo.windowSize.native_fb_height
-                  << " viewportPolicy=" << (g_dynamicAspectRatioEnabled ? "stretch" : "fit")
+                  << " viewportPolicy=" << (configWidescreen ? "stretch" : "fit")
                   << " presentAspect="
-                  << (g_dynamicAspectRatioEnabled ? "surface (dynamic EGG canvas)" : "4:3")
+                  << (configWidescreen ? "surface" : "4:3")
                   << std::endl;
         g_auroraInitialized.store(true, std::memory_order_release);
 
@@ -2396,4 +2402,3 @@ int RuntimeMain(int argc, char** argv) {
 int main(int argc, char** argv) {
     return RuntimeMain(argc, argv);
 }
-extern "C" bool g_dynamicAspectRatioEnabled = false;

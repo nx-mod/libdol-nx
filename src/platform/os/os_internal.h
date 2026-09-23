@@ -12,6 +12,7 @@
 #include <iostream>
 
 #include "abi_bridge.h"
+#include "guest_os_layout.h"
 #include "memory.h"
 #include "runtime_log.h"
 
@@ -24,7 +25,10 @@ extern std::atomic<bool> g_interrupts_enabled;
 // observable state, not just bookkeeping.
 extern std::atomic<uint32_t> g_interrupt_mask;
 
-constexpr uint32_t kInterruptHandlerTablePtrAddr = 0x803868f8u;
+// The game's, not the console's: see cpu/include/guest_os_layout.h. These are
+// references into the layout the game installed, so the names read the same as
+// when they were that one game's constants.
+inline const uint32_t& kInterruptHandlerTablePtrAddr = RuntimeGuestOs::g_layout.interrupt_handler_table_ptr;
 constexpr uint32_t kInterruptHandlerTableAddr = 0x80003040u;
 constexpr size_t kInterruptHandlerTableBytes = 0x80u;
 constexpr uint32_t kInterruptMaskLoAddr = 0x800000c4u;
@@ -36,17 +40,17 @@ constexpr uint32_t kThreadListHeadAddr = 0x800000dcu;    // First thread in thre
 constexpr uint32_t kThreadListTailAddr = 0x800000e0u;    // Last added thread (tail of thread list)
 constexpr uint32_t kOSRunningContextAddr = 0x800000e4u;  // Currently running thread context
 
-constexpr uint32_t kDefaultThreadContextAddr = 0x80347498u;
-constexpr uint32_t kIdleThreadContextAddr = 0x803478b0u;
-constexpr uint32_t kThreadQueueArrayAddr = 0x803477b0u;
-constexpr size_t kThreadQueueArrayBytes = 0x100u;
-constexpr uint32_t kSwitchThreadCallbackPtrAddr = 0x80385ae0u;
-constexpr uint32_t kSchedulerReschedCounterAddr = 0x8038691cu;
-constexpr uint32_t kSchedulerPendingFlagAddr = 0x80386920u;
+inline const uint32_t& kDefaultThreadContextAddr = RuntimeGuestOs::g_layout.default_thread;
+inline const uint32_t& kIdleThreadContextAddr = RuntimeGuestOs::g_layout.idle_thread;
+inline const uint32_t& kThreadQueueArrayAddr = RuntimeGuestOs::g_layout.run_queue;
+constexpr size_t kThreadQueueArrayBytes = 0x100u;  // 32 priorities, head and tail each
+inline const uint32_t& kSwitchThreadCallbackPtrAddr = RuntimeGuestOs::g_layout.switch_thread_callback_ptr;
+inline const uint32_t& kSchedulerReschedCounterAddr = RuntimeGuestOs::g_layout.reschedule;
+inline const uint32_t& kSchedulerPendingFlagAddr = RuntimeGuestOs::g_layout.run_queue_bits;
 // RVL OS uses this as the OSDisableScheduler/OSEnableScheduler nesting count.
 // SelectThread exits early while the count is non-zero.
-constexpr uint32_t kSchedulerIdleFlagAddr = 0x80386918u;
-constexpr uint32_t kAlarmQueueOffsetFromR13 = 0x6360u;
+inline const uint32_t& kSchedulerIdleFlagAddr = RuntimeGuestOs::g_layout.scheduler_disable_count;
+inline const uint32_t& kAlarmQueueOffsetFromR13 = RuntimeGuestOs::g_layout.alarm_queue_r13_offset;
 
 constexpr uint32_t kThreadStateOffset = 0x2C8u;
 constexpr uint32_t kThreadAttrOffset = 0x2CAu;
