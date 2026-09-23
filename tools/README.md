@@ -6,7 +6,7 @@ installed).
 
 | Tool | Does |
 |---|---|
-| `wiinx-scan` | lists a DOL's library builds; finds natives by signature; finds where a game's functions start, in its own code (`functions`); signs functions; records builds and generates `include/wiinx/builds.hpp`. See [docs/signatures.md](../docs/signatures.md) and [docs/builds.md](../docs/builds.md) |
+| `wiinx-scan` | lists a DOL's library builds; finds natives by signature; finds where a game's functions start, in its own code (`functions`); finds where its copy of the Wii's OS keeps the scheduler's globals (`os-globals`); signs functions; records builds and generates `include/wiinx/builds.hpp`. See [docs/signatures.md](../docs/signatures.md) and [docs/builds.md](../docs/builds.md) |
 | `wiinx-extract` | pulls `main.dol`, or any file with `--file <path>`, out of a Wii `.iso` without extracting the disc: decrypts only the clusters it needs |
 | `wiinx-extract-disc` | the whole disc (ISO/WBFS/RVZ/GCZ/CISO), through Dolphin's `dolphin-tool`, with a free-space check |
 | `wiinx-inspect-dol` | a DOL's entry point, sections, BSS and small-data bases; `--yaml` for a project file |

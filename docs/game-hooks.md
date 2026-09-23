@@ -49,11 +49,31 @@ RuntimeGuestOs::install(layout);
 
 The runtime says so at startup when a game installed none, and the platform
 natives that walk those structures then have nothing to walk: a game needs its
-layout before its threads run. Finding one for a new game is reverse
-engineering today; following the calls from a signed `OSInit` would give it,
-and is part of the signature milestone ([signatures](signatures.md)).
+layout before its threads run.
+
+Most of it is found in the game's own code rather than by hand:
+
+```sh
+tools/wiinx-scan os-globals disc/sys/main.dol
+```
+
+prints the layout to install. It works from the shape of `SelectThread`, which
+every RVL OS build has and nothing else looks like - the run-queue mask read
+from small data, `cntlzw` to get the highest waiting priority, the queue array
+indexed by that priority times eight - and from the order `OSThread.c` puts its
+variables in memory: the thread the game booted on, the 32 queues, the idle
+thread. Every address it reports is one the game's own code builds somewhere.
+
+On Mario Kart Wii it reproduces all six known values exactly, which is the
+check that it is reading the game and not guessing. The rest of the layout -
+the switch-thread callback and interrupt table slots, the alarm queue's r13
+offset, `OSLoadContext` - is still found by hand, and follows from the
+signature milestone ([signatures](signatures.md)).
 
 ## Notes
+
+- 2026-09-23: `wiinx-scan os-globals` added; New Super Mario Bros. Wii's layout
+  came out of it, and is installed by `nsmbwii-nx/native/nsmbwii_game.cpp`.
 
 - 2026-09-22: the guest OS layout followed the hooks out of the library:
   `os_internal.h` and `fiber_manager.cpp` read the installed layout through

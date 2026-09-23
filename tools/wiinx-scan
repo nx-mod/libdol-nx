@@ -4,6 +4,7 @@
     tools/wiinx-scan builds <game.dol>
     tools/wiinx-scan scan   <game.dol> [--out bindings.json]
     tools/wiinx-scan functions <game.dol> [--out functions.map]
+    tools/wiinx-scan os-globals <game.dol>
     tools/wiinx-scan sign   <game.dol> <name> <build> <address> <size>
     tools/wiinx-scan record <game id> <game.dol>...
     tools/wiinx-scan header
@@ -21,6 +22,10 @@ functions
         return (vtables, jump tables). --out writes the translator's function
         map, which is how a game without a symbol map gets translated whole
         instead of only as far as direct calls reach.
+os-globals
+        finds where this game's copy of the Wii's OS keeps the scheduler's
+        globals, from the shape of SelectThread, and prints the layout the
+        game installs (see libwii-nx docs/game-hooks.md).
 sign    records a function's signature from a game you have, for adding a
         native. Run it on your own disc's DOL; it prints the entry for
         data/signatures.json.
@@ -139,6 +144,171 @@ def function_starts(dol):
                 starts.add(candidate)
 
     return sorted(starts)
+
+
+def _sda_base(dol):
+    """_SDA_BASE_ (r13) from the startup code: lis r13 / addi r13 near the entry."""
+    entry = struct.unpack(">I", dol.data[0xE0:0xE4])[0]
+    address = entry
+    for _ in range(4096):
+        raw = dol.read(address, 8)
+        if raw is None:
+            return None
+        instruction, following = struct.unpack(">II", raw)
+        if instruction >> 26 == 15 and (instruction >> 16) & 31 == 0 and (instruction >> 21) & 31 == 13:
+            if following >> 26 in (14, 24) and (following >> 21) & 31 == 13:
+                low = following & 0xFFFF
+                if following >> 26 == 14 and low >= 0x8000:
+                    low -= 0x10000
+                return (((instruction & 0xFFFF) << 16) + low) & 0xFFFFFFFF
+        address += 4
+    return None
+
+
+def os_globals(dol):
+    """Where this game's copy of the Wii's OS keeps the scheduler's globals.
+
+    Found from the shape of SelectThread, which every RVL OS build has and no
+    other code looks like: it reads the mask of non-empty run queues from a
+    small-data global, counts its leading zeros to get the highest priority
+    waiting, and indexes the run queue array by that priority times eight.
+
+      lwz   rX, -d(r13)     <- RunQueueBits
+      cntlzw rX, rX
+      lis   rY, hi          <- RunQueue, built a few instructions later
+      addi  rY, rY, lo         (the compiler puts other work between them)
+      rlwinm rZ, rZ, 3
+
+    The three words the scheduler keeps together - how deep
+    OSDisableScheduler is nested, whether a switch is owed, and that mask -
+    are declared in that order in one file, so the other two sit just below
+    the mask; both are confirmed by finding code that touches them.
+    """
+    sda = _sda_base(dol)
+    if sda is None:
+        return None
+
+    text = list(dol.text())
+
+    def word_at(address):
+        raw = dol.read(address, 4)
+        return struct.unpack(">I", raw)[0] if raw else None
+
+    def signed(value):
+        return value - 0x10000 if value & 0x8000 else value
+
+    def sda_offsets_touched():
+        """Every r13-relative load/store offset the game's code uses."""
+        offsets = set()
+        for _, blob in text:
+            for position in range(0, len(blob) & ~3, 4):
+                instruction = struct.unpack(">I", blob[position:position + 4])[0]
+                if instruction >> 26 in (32, 36) and (instruction >> 16) & 31 == 13:
+                    offsets.add(signed(instruction & 0xFFFF))
+        return offsets
+
+    candidates = {}
+    for start, blob in text:
+        for position in range(0, len(blob) & ~3, 4):
+            instruction = struct.unpack(">I", blob[position:position + 4])[0]
+            if instruction >> 26 != 31 or (instruction >> 1) & 0x3FF != 26:
+                continue  # cntlzw
+            address = start + position
+            source = (instruction >> 21) & 31
+
+            bits = None
+            for back in range(4, 40, 4):
+                previous = word_at(address - back)
+                if previous is None:
+                    continue
+                if (previous >> 26 == 32 and (previous >> 16) & 31 == 13
+                        and (previous >> 21) & 31 == source):
+                    bits = (sda + signed(previous & 0xFFFF)) & 0xFFFFFFFF
+                    break
+            if bits is None:
+                continue
+
+            # The base is a lis and an addi to the same register, which the
+            # compiler is free to separate.
+            queue = None
+            scaled = False
+            for forward in range(4, 80, 4):
+                following = word_at(address + forward)
+                if following is None:
+                    continue
+                if following >> 26 == 21 and (following >> 11) & 31 == 3:
+                    scaled = True  # the priority scaled to the queue's stride
+                if queue is None and following >> 26 == 15 and (following >> 16) & 31 == 0:
+                    register = (following >> 21) & 31
+                    high = (following & 0xFFFF) << 16
+                    for tail in range(4, 32, 4):
+                        low_instruction = word_at(address + forward + tail)
+                        if low_instruction is None:
+                            continue
+                        if (low_instruction >> 26 in (14, 24)
+                                and (low_instruction >> 21) & 31 == register
+                                and (low_instruction >> 16) & 31 == register):
+                            low = low_instruction & 0xFFFF
+                            queue = ((high + signed(low)) if low_instruction >> 26 == 14
+                                     else (high | low)) & 0xFFFFFFFF
+                            break
+            if queue is not None and scaled:
+                candidates.setdefault((bits, queue), []).append(address)
+
+    if not candidates:
+        return None
+    (bits, queue), sites = max(candidates.items(), key=lambda item: len(item[1]))
+
+    touched = sda_offsets_touched()
+    def below(distance):
+        address = (bits - distance) & 0xFFFFFFFF
+        return address if signed((address - sda) & 0xFFFF) in touched else 0
+
+    materialised = addresses_materialised(text)
+
+    # OSThread.c declares DefaultThread, then RunQueue[32], then IdleThread, and
+    # the linker keeps that order: the thread the game booted on ends where the
+    # queues begin, and the idle thread starts where they end. Each is reported
+    # only when the game's code builds that address somewhere.
+    def neighbour(distance):
+        address = (queue + distance) & 0xFFFFFFFF
+        return address if address in materialised else 0
+
+    return {
+        "run_queue": queue,
+        "run_queue_bits": bits,
+        "reschedule": below(4),
+        "scheduler_disable_count": below(8),
+        "default_thread": neighbour(-0x318),   # sizeof(OSThread)
+        "idle_thread": neighbour(0x100),       # 32 queues, head and tail each
+        "sda_base": sda,
+        "found_at": sites,
+    }
+
+
+def addresses_materialised(text):
+    """Every address the code builds with a lis and an addi or ori."""
+    built = set()
+    pending = {}
+    for start, blob in text:
+        pending.clear()
+        for position in range(0, len(blob) & ~3, 4):
+            instruction = struct.unpack(">I", blob[position:position + 4])[0]
+            opcode = instruction >> 26
+            target = (instruction >> 21) & 31
+            if opcode == 15 and (instruction >> 16) & 31 == 0:
+                pending[target] = (instruction & 0xFFFF) << 16
+            elif opcode in (14, 24) and (instruction >> 16) & 31 == target and target in pending:
+                low = instruction & 0xFFFF
+                if opcode == 14:
+                    built.add((pending[target] + (low - 0x10000 if low & 0x8000 else low)) & 0xFFFFFFFF)
+                else:
+                    built.add(pending[target] | low)
+                del pending[target]
+            elif target in pending and opcode in (15, 32, 36, 14, 24):
+                # The register was reused for something else.
+                del pending[target]
+    return built
 
 
 def mask(word):
@@ -273,6 +443,20 @@ def main(argv):
     if command == "builds":
         for lib, (build_id, banner) in sorted(builds(dol).items()):
             print(f"{build_id:<24} {banner}")
+        return 0
+    if command == "os-globals":
+        found = os_globals(dol)
+        if not found:
+            print("no OS scheduler globals found: this game's SelectThread was not recognised")
+            return 1
+        print(f"# from {argv[1]}, found at " +
+              ", ".join(f"0x{site:08X}" for site in found["found_at"][:3]))
+        print("RuntimeGuestOs::Layout layout;")
+        for field in ("run_queue", "run_queue_bits", "reschedule", "scheduler_disable_count",
+                      "default_thread", "idle_thread"):
+            value = found[field]
+            print(f"layout.{field} = 0x{value:08X}u;" if value
+                  else f"// layout.{field} = ?;  not confirmed")
         return 0
     if command == "functions":
         starts = function_starts(dol)
