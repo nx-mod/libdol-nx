@@ -60,6 +60,36 @@ Brawl's is 2007-12, Mario Kart Wii's is 2008-03, and these particular functions
 differ enough between those builds that signatures do not carry the names
 across. Their neighbours place them.
 
+## The FIFO counters, which say more than the sampler
+
+`[gxfifo]` reports what decoding the guest's graphics commands costs. In a
+race:
+
+```
+per frame: writes=10255 decode=15231us
+split: bp=1379x 93us  cp=96x 3us  xf=1791x 608us
+       calldl=1492x 12649us  draw=0x 0us  vertex=1491x 1086us
+```
+
+**15.2 ms of a ~66 ms frame is FIFO decode, and 12.6 ms of it is display-list
+calls** - 1,492 a frame, about 8.5 us each. Two things follow:
+
+- `draw=0x`. Nothing is drawn immediate-mode in a race; every draw is inside a
+  display list. The raw direct-draw fast path in `gx_fifo.cpp`
+  (`TryGetRawDirectFifoVertexSize`, which gives up when any attribute is
+  indexed) therefore cannot help here, whatever it is made to accept.
+- The sampling profiler blames this on the game. It charges FIFO decode to
+  whichever guest function wrote the words, which is why `nw4r::g3d`'s material
+  and state loaders looked like the hot spots - they are the code emitting and
+  calling these lists.
+
+The scan of a list is already cached (`DlScanCache`: digests keyed by write
+tracking, CP writes replayed, flattening kept), so what remains is Aurora
+parsing the list's bytes again on every call and re-submitting its draws. The
+work that would move it is caching the *decoded* result - replaying a list's
+draws without re-parsing - keyed on the same layout state the scan cache
+already uses.
+
 ## Where a frame goes (threaded off, menus)
 
 | | |
