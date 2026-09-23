@@ -228,11 +228,16 @@ What it is worth, measured:
 | From | Into | Named |
 |---|---|---|
 | Mario Kart: Double Dash!! (`debugInfoS.MAP`, on the disc) | Super Mario Sunshine | 336 |
-| the whole set | New Super Mario Bros. Wii | 2,266 |
-| the whole set | a WiiWare game's payload (Crystal Defenders) | 2,526 |
+| the whole set | New Super Mario Bros. Wii | 2,262 |
+| the whole set | a WiiWare game's payload (Crystal Defenders) | 2,610 |
+| the whole set | Need for Speed: Most Wanted, GameCube | 1,625 |
+| the whole set | Mario Smash Football's own executable | 5,600 |
 
 Every game measured here is one the set does not contain: a game already in it
-would be naming itself.
+would be naming itself. Six maps and symbol tables are in it - Mario Kart Wii,
+Mario Kart: Double Dash!!, Super Mario Sunshine, Twilight Princess, Mario Smash
+Football and Medal of Honor: Rising Sun - which between them cover both
+consoles, Nintendo's own middleware and a third-party engine.
 
 A name is a hypothesis, not a fact: a short function can match another game's
 code by coincidence. Natives are never bound this way - they bind by verified
