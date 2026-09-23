@@ -21,13 +21,28 @@ recognised by its first bytes, and the ones that need no decompressor are read:
 | `.iso`, `.gcm` | the image itself | **read** |
 | `.ciso`, `.cso` | the image with its empty blocks left out | **read** |
 | `.wbfs` | the USB loaders' layout, one game to a file | **read** |
-| `.gcz` | Dolphin's older format: zlib blocks | recognised; needs zlib |
-| `.wia` | its predecessor to RVZ | recognised; needs LZMA |
-| `.rvz` | Dolphin's current one: zstd blocks, with the disc's padding thrown away and regrown from its id | recognised; needs zstd |
+| `.rvz`, `.wia` | Dolphin's own: the disc in compressed chunks, with its padding thrown away | **read**, with a decompressor the caller supplies |
+| `.gcz` | Dolphin's older format: zlib blocks | recognised; to write |
 | `.nkit.iso`, `.nkit.gcz` | a preservation format that rebuilds the original exactly | recognised; convert it first |
 
 A file that is recognised and not readable yet is reported by name, which is
 more use to whoever is holding it than a failure to open.
+
+### RVZ and WIA
+
+These are what a dump made in the last few years almost always is, so they are
+read here - with two things left to the caller, as encryption is:
+
+- **the decompressor.** A `Decompressor` is handed in, so this library depends
+  on no compressor and a program links only the methods it wants. Zstandard is
+  what RVZ uses in practice.
+- **the padding.** A dump throws away the filler between a disc's files and
+  keeps only the seed it can be regrown from. That filler lies where no file
+  does, so it is written as zeros and every real byte still reads correctly.
+  Regenerating it matters only for verifying a dump against its hashes.
+
+A Wii disc in these formats needs no cipher at all: the partitions are stored
+decrypted, and `Image` is told so.
 
 A Wii image is a GameCube image plus the middle layer, so one reader serves
 both.

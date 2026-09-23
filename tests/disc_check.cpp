@@ -4,6 +4,7 @@
 // partition, clusters and a stand-in cipher - so the layout logic is checked on
 // any machine, with nothing Nintendo made involved.
 #include "wiinx/format/disc/container.hpp"
+#include "wiinx/format/disc/rvz.hpp"
 #include "wiinx/format/disc/image.hpp"
 
 #include <algorithm>
@@ -64,6 +65,56 @@ std::vector<std::uint8_t> BuildFst(const std::vector<File>& files, std::uint32_t
     }
     std::memcpy(fst.data() + count * 12, names.data(), names.size());
     return fst;
+}
+
+// An RVZ file holding one image, uncompressed: the header, the disc, a raw-data
+// region covering the whole of it, and one group per chunk.
+std::vector<std::uint8_t> BuildRvz(const std::vector<std::uint8_t>& image, std::uint32_t chunk) {
+    const std::uint32_t groups =
+        static_cast<std::uint32_t>((image.size() + chunk - 1) / chunk);
+
+    std::vector<std::uint8_t> file(0x48 + 0xDC, 0);
+    std::memcpy(file.data(), "RVZ\x01", 4);
+    Put32(file, 0x04, 1);                                   // version
+    Put32(file, 0x08, 1);                                   // version_compatible
+    Put32(file, 0x0C, 0xDC);                                // the disc struct's size
+    Put32(file, 0x24 + 4, static_cast<std::uint32_t>(image.size()));  // iso_file_size, low word
+
+    const std::size_t disc = 0x48;
+    Put32(file, disc + 0x00, 1);                            // a GameCube disc
+    Put32(file, disc + 0x04, 0);                            // stored, not compressed
+    Put32(file, disc + 0x0C, chunk);
+    std::memcpy(file.data() + disc + 0x10, image.data(), 128);
+    Put32(file, disc + 0x90, 0);                            // no partitions
+    Put32(file, disc + 0xB4, 1);                            // one raw-data region
+    Put32(file, disc + 0xC4, groups);
+
+    // The three tables follow, then the chunks themselves.
+    const std::uint32_t raw_at = static_cast<std::uint32_t>(file.size());
+    file.resize(raw_at + 24, 0);
+    Put32(file, raw_at + 4, 0);                             // at the start of the disc
+    Put32(file, raw_at + 12, static_cast<std::uint32_t>(image.size()));
+    Put32(file, raw_at + 16, 0);                            // its first group
+    Put32(file, raw_at + 20, groups);
+
+    const std::uint32_t group_at = static_cast<std::uint32_t>(file.size());
+    file.resize(group_at + groups * 12, 0);
+
+    Put32(file, disc + 0xB8 + 4, raw_at);                   // raw_data_off, low word
+    Put32(file, disc + 0xC0, 24);
+    Put32(file, disc + 0xC8 + 4, group_at);                 // group_off, low word
+    Put32(file, disc + 0xD0, groups * 12);
+
+    for (std::uint32_t index = 0; index < groups; index++) {
+        const std::size_t take = std::min<std::size_t>(chunk, image.size() - index * chunk);
+        const std::uint32_t at = static_cast<std::uint32_t>(file.size());
+        file.insert(file.end(), image.begin() + static_cast<std::ptrdiff_t>(index * chunk),
+                    image.begin() + static_cast<std::ptrdiff_t>(index * chunk + take));
+        file.resize((file.size() + 3) & ~std::size_t{3}, 0);
+        Put32(file, group_at + index * 12, at >> 2);        // where the chunk is
+        Put32(file, group_at + index * 12 + 4, static_cast<std::uint32_t>(take));  // stored plain
+    }
+    return file;
 }
 
 std::vector<std::uint8_t> BuildGameCubeDisc(const std::vector<File>& files) {
@@ -258,6 +309,29 @@ int main() {
                       image->ReadFileTable() && image->Files().size() == files.size());
                 const auto course = image->ReadFile("course.szs");
                 Check("  a file reads back", course && course->size() == 5000);
+            }
+        }
+    }
+
+    {   // The same disc, written as an uncompressed RVZ.
+        const auto raw = BuildGameCubeDisc(files);
+        const auto rvz = BuildRvz(raw, 0x8000);
+
+        Check("RVZ is recognised", Identify(FromMemory(rvz.data(), rvz.size())) == ContainerKind::Rvz);
+        auto reader = Rvz::Open(FromMemory(rvz.data(), rvz.size()), Decompressor{});
+        Check("RVZ opens", reader.has_value());
+        if (reader) {
+            Check("  console", reader->GetConsole() == Console::GameCube);
+            Check("  needs no compressor for a stored file", reader->Supported());
+            auto image = Image::Open(reader->AsSource(), Options{{}, reader->Decrypted()});
+            Check("  the disc inside reads", image.has_value());
+            if (image) {
+                Check("  id", image->GetHeader().id == "GM4E01");
+                Check("  file table",
+                      image->ReadFileTable() && image->Files().size() == files.size());
+                const auto course = image->ReadFile("course.szs");
+                Check("  a file spanning chunks reads back",
+                      course && course->size() == 5000 && (*course)[4999] == 'C');
             }
         }
     }

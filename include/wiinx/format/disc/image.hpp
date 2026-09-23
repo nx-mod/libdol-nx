@@ -85,11 +85,22 @@ struct Partition {
 };
 
 // A disc, read through whatever source was given.
+// How to read what the source hands out.
+struct Options {
+    // Needed only for a Wii disc whose clusters are encrypted.
+    Cipher cipher{};
+    // True when a partition's data arrives already decrypted and without its
+    // hash blocks - what a dump in Dolphin's formats gives, and what an
+    // extracted partition is.
+    bool partitions_plain = false;
+};
+
 class Image {
   public:
     // Reads the header. Returns nothing when the bytes are not a disc: the
     // magic at 0x1C says GameCube, the one at 0x18 says Wii.
     static std::optional<Image> Open(Source source, Cipher cipher = {});
+    static std::optional<Image> Open(Source source, Options options);
 
     const Header& GetHeader() const { return mHeader; }
     Console GetConsole() const { return mHeader.console; }
@@ -120,6 +131,7 @@ class Image {
 
     Source mSource;
     Cipher mCipher;
+    bool mPlainPartitions = false;
     Header mHeader;
     std::vector<Partition> mPartitions;
     std::vector<Entry> mFiles;

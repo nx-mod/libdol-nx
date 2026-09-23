@@ -7,10 +7,15 @@
 - [x] CISO and WBFS: the same image with the empty parts left out
 - [x] Recognise every common container by name, so an unreadable one says which
       it is
-- [ ] RVZ, the one most dumps are kept in now: zstd blocks, plus regenerating
-      the padding it throws away from the disc id. Dolphin is GPL-2-or-later, so
-      its generator can be followed and credited
-- [ ] WIA, which is RVZ's predecessor and shares most of its structure
+- [x] RVZ and WIA, through a decompressor the caller supplies
+- [ ] A zstd decompressor in the app and the tools, which is what makes RVZ work
+      in practice rather than in principle
+- [ ] LZMA and bzip2, for older WIA files
+- [ ] Regenerate a disc's padding from its seed, for verifying a dump against
+      its hashes. Dolphin is GPL-2-or-later, so its generator can be followed
+      and credited
+- [ ] Check RVZ against a real dump: the structure is read from the format's
+      own documentation and has not met a file made by Dolphin yet
 - [ ] GCZ, common in older GameCube collections: zlib blocks, no scrubbing
 - [ ] Split files - `.wbf1`, `.part1.iso` - joined before the container sees
       them, since FAT32 stops at 4 GB

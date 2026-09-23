@@ -63,6 +63,10 @@ Source FromMemory(const std::uint8_t* data, std::size_t size) {
 }
 
 std::optional<Image> Image::Open(Source source, Cipher cipher) {
+    return Open(source, Options{cipher, false});
+}
+
+std::optional<Image> Image::Open(Source source, Options options) {
     std::uint8_t head[0x460];
     if (!source.Read(0, head, sizeof(head))) {
         return std::nullopt;
@@ -70,7 +74,8 @@ std::optional<Image> Image::Open(Source source, Cipher cipher) {
 
     Image image;
     image.mSource = source;
-    image.mCipher = cipher;
+    image.mCipher = options.cipher;
+    image.mPlainPartitions = options.partitions_plain;
 
     const std::uint32_t wii = Read32(head + 0x18);
     const std::uint32_t gamecube = Read32(head + 0x1C);
@@ -147,7 +152,7 @@ bool Image::OpenGamePartition() {
     std::memcpy(mTitleKey, ticket + 0x1BF, sizeof(mTitleKey));
     const std::uint8_t key_index = ticket[0x1F1];
 
-    if (mCipher.cbc_decrypt != nullptr && mCipher.common_key != nullptr) {
+    if (!mPlainPartitions && mCipher.cbc_decrypt != nullptr && mCipher.common_key != nullptr) {
         const std::uint8_t* common = mCipher.common_key(mCipher.context, key_index);
         if (common != nullptr) {
             std::uint8_t iv[16] = {};
@@ -202,6 +207,11 @@ bool Image::ReadCluster(std::uint64_t cluster, std::uint8_t* out) {
 bool Image::ReadData(std::uint64_t offset, std::uint8_t* out, std::size_t size) {
     if (mHeader.console == Console::GameCube) {
         return mSource.Read(offset, out, size);
+    }
+    if (mPlainPartitions) {
+        // The source already did the work: the partition's data is a plain
+        // stream beginning where the partition's data begins.
+        return mSource.Read(mDataOffset + offset, out, size);
     }
     if (mCipher.cbc_decrypt == nullptr && mEncrypted) {
         return false;
