@@ -64,19 +64,19 @@ static std::array<SslSession, kMaxSslSessions> g_sslSessions;
 // Logging wrapper around the platform handshake implementation; see below.
 static int32_t SslHandshake(SslSession& ssl);
 
-static bool IsRetroNasSslHost(std::string_view hostname) {
-    if (!RetroRewindProfileActive()) {
+static bool IsModNasSslHost(std::string_view hostname) {
+    if (!ModOnlineServiceActive()) {
         return false;
     }
     const std::string lowered = Lower(hostname);
     return StartsWith(lowered, "nas.") || StartsWith(lowered, "naswii.");
 }
 
-static bool IsRetroPlaintextSslHost(std::string_view hostname) {
-    if (IsRetroNasSslHost(hostname)) {
+static bool IsModPlaintextSslHost(std::string_view hostname) {
+    if (IsModNasSslHost(hostname)) {
         return true;
     }
-    if (!RetroRewindProfileActive()) {
+    if (!ModOnlineServiceActive()) {
         return false;
     }
 
@@ -170,7 +170,7 @@ static bool StartsNasAuthRequest(const uint8_t* data, uint32_t size) {
 }
 
 // SSL route: the session carries the hostname the guest asked for, so the NAS
-// host is identified by name. Deliberately not IsRetroNasSslHost - the SSL write
+// host is identified by name. Deliberately not IsModNasSslHost - the SSL write
 // path re-assembles NAS auth regardless of which profile is active.
 static NasSslWriteAction PrepareNasSslWrite(SslSession& ssl, const uint8_t* data, uint32_t size,
                                             std::vector<uint8_t>& patched) {
@@ -625,7 +625,7 @@ int32_t HandleSslIoctlv(uint32_t cmd, const std::vector<IoVector>& in, const std
         ssl.plaintextWfc = false;
         socket->nonblocking = false;
         SetNonBlocking(socket->native, false);
-        if (IsRetroPlaintextSslHost(ssl.hostname) && socket->peerPort == 443) {
+        if (IsModPlaintextSslHost(ssl.hostname) && socket->peerPort == 443) {
             const int32_t reroute = ReconnectWiiSocket(*socket, 80);
             if (reroute != 0) {
                 WriteSslReturn(in, SSL_ERR_SYSCALL);

@@ -134,14 +134,14 @@ std::vector<RuntimeRiivolution::Overlay> RiivoDiscoverRoots() {
                      "command line or Config.toml");
     }
 
-    // The one canonical Retro Rewind installation setup recorded. Only the
-    // Retro Rewind product applies it: overlaying the base product with the
-    // pack's menu archives made "base game" boot as a half-Retro-Rewind build.
-    if (const auto retroRewindRoot =
-            RuntimeProduct::IsRetroRewind() ? RuntimeConfigFile::RetroRewindRoot() : std::string{};
-        !retroRewindRoot.empty()) {
-        RiivoAddRoot(overlays, RuntimeNandPath::ResolveConfiguredPath(retroRewindRoot),
-                     "canonical Retro Rewind installation");
+    // The mod installation the frontend recorded. Only a product that means to
+    // overlay the disc applies it: laying a pack's menu archives over the base
+    // game made it boot as half a mod.
+    if (const auto modRoot =
+            RuntimeProduct::OverlaysDisc() ? RuntimeConfigFile::ModRoot() : std::string{};
+        !modRoot.empty()) {
+        RiivoAddRoot(overlays, RuntimeNandPath::ResolveConfiguredPath(modRoot),
+                     "the recorded mod installation");
     }
 
     for (const auto& root : RecompMod::DvdOverlayRoots()) {

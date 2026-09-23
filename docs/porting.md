@@ -103,3 +103,15 @@ show up.
   submodule. Translating it there reproduces all 29,637 functions byte for
   byte, so the move changed nothing about the game. New Super Mario Bros. Wii
   was built the same way from its own disc, in `nx-mod/nsmbwii-nx`.
+- 2026-09-23: one game's mod left the library. `RuntimeProduct::Descriptor`
+  now says what a product is - its name, whether it overlays the disc with a
+  mod's files, the setting naming where they are, and any low-memory markers -
+  instead of an enum with `RetroRewind` in it. Retro Rewind's descriptor is in
+  `mkwii-nx/native/product/`, its profile is back in that game's `recomp.yml`,
+  and `[paths] retro_rewind_root` became `mod_root` (the old key still reads).
+  The translator's `Mods/Mkwii` (Retro WFC) is still here, driven by that
+  game's profile: a fan service's protocol, which no other game will want.
+- 2026-09-23: low memory no longer claims to be Mario Kart Wii. The disc game
+  code at 0x80000000 and the app code mirrors at 0x80003180/0x80003194 came
+  from a constant `RMCP`; they are read from the disc's own boot.bin now, and
+  a game with no readable disc header gets a line saying so.

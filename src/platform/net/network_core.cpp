@@ -9,7 +9,7 @@
 
 namespace NetworkHle {
 
-bool RetroRewindProfileActive();
+bool ModOnlineServiceActive();
 
 static std::mutex g_mutex;
 static std::map<int32_t, DeviceKind> g_devices;
@@ -72,8 +72,11 @@ std::string Lower(std::string_view text) {
     return RuntimeHle::Lower(text);
 }
 
-bool RetroRewindProfileActive() {
-    return RuntimeProduct::IsRetroRewind();
+// A mod that replaces Nintendo's online service with one of its own: its NAS
+// and its game servers answer under names the disc never knew, so the SSL path
+// has to treat them as the real thing.
+bool ModOnlineServiceActive() {
+    return RuntimeProduct::OverlaysDisc();
 }
 
 bool StartsWith(std::string_view text, std::string_view prefix) {

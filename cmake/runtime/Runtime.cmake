@@ -341,8 +341,14 @@ else()
 endif()
 set(MKW_PLATFORM_SOURCE "${WIINX_ROOT}/src/cpu/platform/host_platform.cpp")
 set(MKW_BASE_PRODUCT_SOURCE "${WIINX_ROOT}/src/app/product/base_product.cpp")
-set(MKW_RETRO_REWIND_PRODUCT_SOURCE "${MKW_GAME_WORKSPACE_DIR}/native/product/retro_rewind_product.cpp" CACHE FILEPATH
-    "The Retro Rewind product entry point - Mario Kart Wii's own, kept with that game")
+# A game's extra product definition, if it has one (a mod that ships as its own
+# executable). Follows the workspace for the same reason as the manifest above.
+set(MKW_RETRO_REWIND_PRODUCT_SOURCE "" CACHE FILEPATH
+    "A game's own extra product entry point, when it ships one (a mod as its own executable)")
+if(NOT MKW_RETRO_REWIND_PRODUCT_SOURCE)
+    set(MKW_RETRO_REWIND_PRODUCT_SOURCE
+        "${MKW_GAME_WORKSPACE_DIR}/native/product/retro_rewind_product.cpp")
+endif()
 # The host ISA guard is the one translation unit that must not receive the
 # x86-64-v3 flags, so it gets its own object library instead of riding along in
 # mkw_runtime_common. See cmake/PublicProducts.cmake and the file's own header.
@@ -451,9 +457,15 @@ endif()
 # this one manifest keeps configure independent of the 28k generated function
 # files and of optional Retro Rewind artifacts such as code.map.
 if(MKW_BUILD_PRODUCTS)
-    set(MKW_TRANSLATED_SHARD_MANIFEST
-        "${MKW_GAME_WORKSPACE_DIR}/generated/build_shards/shards.cmake"
-        CACHE FILEPATH "Translator-owned aggregate shard manifest")
+    # Follows the game workspace unless it is set on purpose: cached against
+    # the first workspace, a build directory pointed at another game went on
+    # compiling the first game's translation.
+    set(MKW_TRANSLATED_SHARD_MANIFEST "" CACHE FILEPATH
+        "Translator-owned aggregate shard manifest")
+    if(NOT MKW_TRANSLATED_SHARD_MANIFEST)
+        set(MKW_TRANSLATED_SHARD_MANIFEST
+            "${MKW_GAME_WORKSPACE_DIR}/generated/build_shards/shards.cmake")
+    endif()
     # The prebuilt export only needs the aurora/third-party closure configured above, so a
     # packaging machine without a translation stops here instead of failing.
     if(MKW_NATIVE_PREBUILT_EXPORT_DIR AND NOT EXISTS "${MKW_TRANSLATED_SHARD_MANIFEST}")

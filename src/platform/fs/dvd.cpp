@@ -849,13 +849,12 @@ extern "C" void DVDInit_8015EA1C()
     }
 
     const auto& overlays = RuntimeRiivolution::Overlays();
-    if (overlays.empty() && RuntimeProduct::IsRetroRewind()) {
-        RT_LOG(RT_TAG_DVD) << "WARNING: no Retro Rewind overlay root was found. "
-                     "File replacements (menu archives, karts, drivers, courses) will not apply "
-                     "and the game will look and play like the unmodded disc. Set "
-                     "[paths] retro_rewind_root in Config.toml "
-                     "with the RetroRewind6 folder."
-                  << std::endl;
+    if (overlays.empty() && RuntimeProduct::OverlaysDisc()) {
+        const auto& product = RuntimeProduct::Active();
+        RT_LOG(RT_TAG_DVD) << "WARNING: " << product.displayName << " found no files of its own to "
+                     "overlay. File replacements will not apply and the game will look and play "
+                     "like the unmodded disc. Set [paths] " << product.fileRootSetting
+                  << " in Config.toml to where they are." << std::endl;
     }
     // RegisterFileEntry lets the last registration win, so apply the roots in
     // reverse discovery order: the explicitly configured root outranks the mod

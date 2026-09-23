@@ -24,3 +24,6 @@ Each module came here whole and keeps its behavior.
   binds none of them and runs its own translated SDK code: correct, slower.
   Signing them so any game binds them by code is the next milestone
   ([signatures](../../docs/signatures.md)).
+- 2026-09-23: `system` seeds low memory from the disc's own header rather than
+  from one game's ID, and `fs`/`net` ask the product whether it overlays the
+  disc instead of asking whether it is Retro Rewind.

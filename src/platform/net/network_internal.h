@@ -187,7 +187,7 @@ enum NetIoctl {
 };
 
 // network_core.cpp
-bool RetroRewindProfileActive();
+bool ModOnlineServiceActive();
 const std::array<uint8_t, 6>& RuntimeMacAddress();
 uint64_t RuntimeGeneratedUserId();
 void ZeroMemoryRange(uint32_t addr, uint32_t size);

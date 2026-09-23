@@ -23,6 +23,7 @@
 #include "recomp_mod_loader.h"
 #include "runtime_config.h"
 #include "runtime_log.h"
+#include "console_region.h"
 #include "runtime_product.h"
 #include "timebase_contract.h"
 
@@ -505,15 +506,30 @@ void SystemBridge::SeedLowMemDefaults(const Memory::Config& config) {
     constexpr uint32_t kIosReservedSize = 0x20000u;
 
     // The boot code exposes the current disc ID in low memory before DVDInit.
-    // Retro Rewind reads the region byte directly from here while building its
-    // Retro-WFC payload URL, and OSGetAppGamename reads the app code mirrors
-    // at 0x80003180/0x80003194 while building NAS auth fields.
-    entries.push_back({0x80000000u, 0x524D4350u, "Disc game code"}); // RMCP
-    entries.push_back({0x80000004u, 0x30310100u, "Disc maker/id"});  // 01 + disc 1
-    entries.push_back({0x80003180u, 0x524D4350u, "OS app game code"}); // RMCP
-    entries.push_back({0x80003194u, 0x524D4350u, "OS app gamename"});  // RMCP
-    if (RuntimeProduct::IsRetroRewind()) {
-        entries.push_back({0x800017D8u, 0x00000001u, "Retro Rewind recomp runtime marker", true});
+    // A game reads the region byte straight from here, and OSGetAppGamename
+    // reads the app code mirrors at 0x80003180/0x80003194 while building NAS
+    // auth fields. The values are this disc's own, from its boot.bin.
+    const std::string discId = ConsoleRegion::DiscGameId();
+    if (discId.size() >= 6) {
+        const auto code = static_cast<uint32_t>(
+            (static_cast<unsigned char>(discId[0]) << 24) |
+            (static_cast<unsigned char>(discId[1]) << 16) |
+            (static_cast<unsigned char>(discId[2]) << 8) |
+            static_cast<unsigned char>(discId[3]));
+        // Maker code, then disc number 0 and version 1, as the boot code leaves them.
+        const auto maker = static_cast<uint32_t>(
+            (static_cast<unsigned char>(discId[4]) << 24) |
+            (static_cast<unsigned char>(discId[5]) << 16) | 0x0100u);
+        entries.push_back({0x80000000u, code, "Disc game code"});
+        entries.push_back({0x80000004u, maker, "Disc maker/id"});
+        entries.push_back({0x80003180u, code, "OS app game code"});
+        entries.push_back({0x80003194u, code, "OS app gamename"});
+    } else {
+        RT_LOG(RT_TAG_RUNTIME) << "no disc header to seed low memory from: "
+                                 "the game's own ID is unknown" << std::endl;
+    }
+    for (const auto& marker : RuntimeProduct::Active().bootMarkers) {
+        entries.push_back({marker.address, marker.value, marker.label, true});
     }
 
     for (const auto& reservation : RecompMod::MemoryReservations()) {

@@ -80,15 +80,18 @@ struct RuntimeUserConfig {
     std::optional<bool> wiiAccelTrace;
     std::optional<bool> networkEnabled;
     std::optional<bool> discordPresenceEnabled;
-    // The application ID of the WiiCompiled Discord application. This is only
-    // used by the base product; Retro Rewind supplies its own ID through the
-    // standard Dolphin /dev/dolphin interface.
+    // The application ID of the WiiCompiled Discord application, used by the
+    // base product. A mod supplies its own through the standard Dolphin
+    // /dev/dolphin interface.
     std::optional<std::string> discordClientId;
     std::optional<std::string> nandRoot;
     std::optional<std::string> dvdRoot;
-    // The one canonical Retro Rewind installation, owned and updated by the frontend. Setup records
-    // it here instead of copying the pack, so an asset-only update is visible on the next launch.
-    std::optional<std::string> retroRewindRoot;
+    // Recorded by setup instead of copying the mod's files, so an asset-only
+    // update to them is visible on the next launch.
+    // Where a product that overlays the disc keeps its own files. Named
+    // mod_root; the older retro_rewind_root still reads, for configs that have
+    // it (runtime_product.h names the setting a product expects).
+    std::optional<std::string> modRoot;
     std::vector<std::string> overlayRoots;
     // Controller mappings use Wii/GameCube button names as keys and up to two
     // comma-separated SDL-style physical button names ("south", or
@@ -368,7 +371,7 @@ inline void EnsureConfigFile() {
               "[paths]\n"
               "# dvd_root = \"D:\\\\MarioKartWii\\\\DATA\"\n"
               "# nand_root = \"D:\\\\WiiNand\"\n"
-              "# retro_rewind_root = \"D:\\\\RetroRewind\\\\RetroRewind6\"\n"
+              "# mod_root = \"D:\\\\RetroRewind\\\\RetroRewind6\"\n"
               "# overlay_roots = [\"D:\\\\RetroRewind\"]\n";
 }
 
@@ -526,7 +529,10 @@ inline RuntimeUserConfig ParseConfigDocument(const toml::value& document) {
 
     config.nandRoot = FindConfigValue<std::string>(document, "paths", "nand_root");
     config.dvdRoot = FindConfigValue<std::string>(document, "paths", "dvd_root");
-    config.retroRewindRoot = FindConfigValue<std::string>(document, "paths", "retro_rewind_root");
+    config.modRoot = FindConfigValue<std::string>(document, "paths", "mod_root");
+    if (!config.modRoot) {
+        config.modRoot = FindConfigValue<std::string>(document, "paths", "retro_rewind_root");
+    }
     if (auto roots = FindConfigValue<std::vector<std::string>>(document, "paths", "overlay_roots")) {
         for (auto& root : *roots) {
             root = Trim(root);
@@ -1054,9 +1060,9 @@ inline std::filesystem::path ResolvedDvdRoot() {
     return configured.empty() ? std::filesystem::path{} : ResolveRelativeToConfig(configured);
 }
 
-/// The canonical Retro Rewind installation the frontend owns, or "" when none is recorded.
-inline std::string RetroRewindRoot(std::string fallback = "") {
-    return Get().retroRewindRoot.value_or(std::move(fallback));
+/// Where a disc-overlaying product's own files are, or "" when none is recorded.
+inline std::string ModRoot(std::string fallback = "") {
+    return Get().modRoot.value_or(std::move(fallback));
 }
 
 inline bool DiscordPresenceEnabled(bool fallback = true) {
@@ -1129,8 +1135,8 @@ inline void LogLoadedConfig() {
             if (config.nandRoot) {
                 std::cout << " nand_root=" << *config.nandRoot;
             }
-            if (config.retroRewindRoot) {
-                std::cout << " retro_rewind_root=" << *config.retroRewindRoot;
+            if (config.modRoot) {
+                std::cout << " mod_root=" << *config.modRoot;
             }
         }
         std::cout << std::endl;

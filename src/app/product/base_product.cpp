@@ -2,9 +2,9 @@
 
 namespace RuntimeProduct {
 
+// The game as the disc has it: no overlay, nothing seeded, nothing renamed.
 const Descriptor& Active() noexcept {
     static constexpr Descriptor descriptor{
-        Kind::BaseGame,
         "WiiCompiled",
     };
     return descriptor;
