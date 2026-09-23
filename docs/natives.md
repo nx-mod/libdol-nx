@@ -75,3 +75,30 @@ the expected results, both builds. Game data never goes in a test.
 3. Registered for every build, with a signature for each (`wiinx-scan sign`).
 4. A test.
 5. Credits in `THIRD-PARTY-NOTICES.md`; a note in the module's README.
+
+## Bindings write themselves
+
+A native has to be registered at the address the game has, before that game is
+translated - the translator skips emitting a function it knows is replaced, and
+a registration added afterwards collides with the code already emitted.
+
+That used to mean a hand-written file of near-identical wrappers per module,
+each carrying one game's addresses, which is how Mario Kart Wii's addresses
+ended up inside the library twice.
+
+`tools/wiinx-emit-bindings` writes them instead, into
+`<game>/native/wiinx_bindings.cpp`, and `wiinx-translate` runs it first. It
+finds each native's address in that game by:
+
+1. the game's `bindings.json`, where a scan put what it matched by code, and
+2. the game's symbol map, if it has one, matched by name.
+
+It registers a native written for a particular build only in a game that links
+that build, and leaves alone any native a hand-written binding already claims -
+some need setup the generated form cannot know about, like the layout pane's
+resume address.
+
+So adding a native is three things: write it, list it in the module's table,
+and sign it once from a game whose symbols are known. Every other game picks it
+up, with or without a map of its own - Punch-Out!!, which has none, binds them
+by code.

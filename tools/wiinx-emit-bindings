@@ -1,0 +1,218 @@
+#!/usr/bin/env python3
+"""Write a game's native bindings from its scan, so none are written by hand.
+
+    tools/wiinx-emit-bindings <game folder> [--src DIR]
+
+A native takes effect only if the runtime registers it at the address the game
+has, and only if that registration exists before the game is translated - the
+translator skips emitting a function it knows is replaced. Writing those
+registrations by hand meant a file of near-identical wrappers per module, each
+carrying one game's addresses, which is why the library still had Mario Kart
+Wii's addresses in it.
+
+This writes them instead, into <game>/native/wiinx_bindings.cpp: one wrapper per
+native the game's bindings.json resolved, naming the native and the build it
+belongs to. wiinx-translate runs it first, so a game picks up every native the
+library has without anyone editing a binding again.
+"""
+import json
+import os
+import re
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+NATIVE = re.compile(r'WIINX_NATIVE\(\s*"([^"]+)"\s*,\s*([A-Za-z_][\w:]*)\s*,')
+VERSION = re.compile(r'inline constexpr (?:const )?LibVersion\s*&?\s*(\w+)\s*(?:=\s*[\w:.]+;|\{\s*"([^"]+)")')
+
+
+def library_natives(src_root):
+    """[(name, version symbol)] for every native the library registers."""
+    found = []
+    for root, _, names in os.walk(src_root):
+        for name in names:
+            if not name.endswith(".cpp"):
+                continue
+            with open(os.path.join(root, name), errors="ignore") as handle:
+                for native, version in NATIVE.findall(handle.read()):
+                    found.append((native, version.split("::")[-1]))
+    return found
+
+
+def version_ids(src_root):
+    """{version symbol: its id string}, from the module headers."""
+    ids = {}
+    include = os.path.join(os.path.dirname(src_root), "include", "wiinx", "accel")
+    for root, _, names in os.walk(include):
+        for name in names:
+            with open(os.path.join(root, name), errors="ignore") as handle:
+                text = handle.read()
+            for symbol, literal in VERSION.findall(text):
+                if literal:
+                    ids[symbol] = literal
+                else:
+                    # An alias of a generated build constant: resolve it through
+                    # builds.hpp, where every known build has its id.
+                    match = re.search(rf"{symbol}\s*=\s*builds::(\w+);", text)
+                    if match:
+                        ids[symbol] = build_id(match.group(1))
+    return ids
+
+
+def build_id(constant):
+    """The id string behind a generated build constant ("nw4r.lyt@2008-03-08")."""
+    header = os.path.join(HERE, "..", "include", "wiinx", "builds.hpp")
+    try:
+        text = open(header, errors="ignore").read()
+    except OSError:
+        return constant
+    pattern = re.escape(constant) + r'\s*\{\s*"([^"]+)"'
+    match = re.search(pattern, text)
+    return match.group(1) if match else constant
+
+
+def already_bound(src_root):
+    """Natives a hand-written binding already registers: some need setup the
+    generated form has no way to know about, so those files stay."""
+    names = set()
+    for root, _, files in os.walk(src_root):
+        for name in files:
+            if not name.endswith("_bind.cpp"):
+                continue
+            with open(os.path.join(root, name), errors="ignore") as handle:
+                names.update(re.findall(r'find_native\(\s*"([^"]+)"', handle.read()))
+    return names
+
+
+def load_scan():
+    """The scanner, for the build banners a game carries."""
+    source = open(os.path.join(HERE, "wiinx-scan")).read()
+    module = type(sys)("wiinx_scan")
+    module.__dict__["__file__"] = os.path.join(HERE, "wiinx-scan")
+    exec(compile(source.replace("def main(argv):", "def _unused(argv):"), "wiinx-scan", "exec"),
+         module.__dict__)
+    return module
+
+
+def linked_builds(game):
+    """The build ids this game's executable names in its startup banners."""
+    dol = os.path.join(game, "disc", "sys", "main.dol")
+    if not os.path.exists(dol):
+        return None
+    scan = load_scan()
+    return {build_id for build_id, _ in scan.builds(scan.Dol(dol)).values()}
+
+
+def canonical(name):
+    """A name as either side spells it: MTX::PSMTXConcat and PSMTXConcat."""
+    name = name.split("::")[-1]
+    name = re.split(r"__[A-Z0-9]", name)[0]
+    return name.replace("_", "").lower()
+
+
+def symbol_map(game):
+    """[(address, name)] from whatever map the game's project names, if any."""
+    project = os.path.join(game, "recomp.yml")
+    if not os.path.exists(project):
+        return []
+    text = open(project, errors="ignore").read()
+    match = re.search(r"function_map:\s*\n\s*path:\s*(\S+)", text)
+    # The configured map may be the one the scanner found, which has addresses
+    # and no names; a game whose symbols someone published keeps that beside it
+    # as MAP.txt, and names are the point here.
+    candidates = [os.path.join(game, "MAP.txt")]
+    if match:
+        candidates.insert(0 if match.group(1).endswith("MAP.txt") else 1,
+                          os.path.join(game, match.group(1)))
+    path = next((c for c in candidates if os.path.exists(c)), None)
+    if path is None:
+        return []
+    entries = []
+    line = re.compile(r"^([0-9a-fA-F]{8})\s+(\S.*)$")
+    for raw in open(path, errors="ignore"):
+        found = line.match(raw.strip())
+        if found:
+            entries.append((int(found.group(1), 16), found.group(2).strip()))
+    return entries
+
+
+def main(argv):
+    if not argv:
+        print(__doc__.strip())
+        return 2
+    game = os.path.abspath(argv[0])
+    src_root = argv[argv.index("--src") + 1] if "--src" in argv else os.path.join(HERE, "..", "src")
+    bindings = {}
+    bindings_path = os.path.join(game, "bindings.json")
+    if os.path.exists(bindings_path):
+        with open(bindings_path) as handle:
+            bindings = json.load(handle)
+
+    # A game whose symbols are known needs no scan for these: the map names the
+    # very functions the natives replace.
+    by_name = {}
+    for address, name in symbol_map(game):
+        by_name.setdefault(canonical(name), address)
+
+    natives = library_natives(src_root)
+    ids = version_ids(src_root)
+
+    # A native written for one build of a library must not be registered in a
+    # game that links another: both variants would claim the same address.
+    builds = linked_builds(game)
+
+    handwritten = already_bound(src_root)
+
+    emitted = []
+    seen = set()
+    for index, (name, version) in enumerate(natives):
+        if name in handwritten:
+            continue
+        version_id = ids.get(version, version)
+        if builds is not None and not version_id.endswith("@any") and version_id not in builds:
+            continue
+        # A scan writes an address under the native's own name when it knows the
+        # build, and under the registration symbol for the natives that predate
+        # this. Either resolves here.
+        address = bindings.get(name) or bindings.get(f"{name}@{ids.get(version, version)}")
+        if address is None:
+            mapped = by_name.get(canonical(name))
+            address = f"0x{mapped:08X}" if mapped is not None else None
+        if not address:
+            continue
+        if address in seen:
+            continue
+        seen.add(address)
+        emitted.append((f"wiinx_native_{index}", name, version, address))
+
+    out_dir = os.path.join(game, "native")
+    os.makedirs(out_dir, exist_ok=True)
+    out = os.path.join(out_dir, "wiinx_bindings.cpp")
+    with open(out, "w") as handle:
+        handle.write("// Written by tools/wiinx-emit-bindings. Do not edit: it is\n"
+                     "// regenerated from this game's bindings.json every translation.\n"
+                     '#include "hle_stubs.h"\n'
+                     '#include "abi_bridge.h"\n'
+                     '#include "wiinx/accel/nw4r.hpp"\n'
+                     '#include "wiinx/accel/sdk.hpp"\n\n')
+        for symbol, name, version, address in emitted:
+            handle.write(
+                f'// {name}\n'
+                f'extern "C" void {symbol}(CpuContext* ctx) {{\n'
+                f'    static const wiinx::Native* const native =\n'
+                f'        wiinx::find_native("{name}", {version_expression(version)}.id);\n'
+                f'    native->entry(reinterpret_cast<wiinx::Cpu*>(ctx));\n'
+                f'}}\n'
+                f'PPC_NATIVE_OVERRIDE_VOID({int(address, 16):08X}, {symbol}, (CpuContext* ctx), (ctx));\n\n')
+    print(f"wrote {out}: {len(emitted)} of {len(natives)} natives bound in this game")
+    return 0
+
+
+def version_expression(symbol):
+    """How the generated file names a build constant."""
+    if symbol.startswith("kLyt") or symbol.startswith("kG3d"):
+        return f"wiinx::nw4r::{symbol}"
+    return f"wiinx::sdk::{symbol}"
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

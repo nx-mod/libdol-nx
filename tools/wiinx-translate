@@ -85,6 +85,12 @@ step() {
     echo "   done in $(( SECONDS - start ))s"
 }
 
+# The bindings a game needs are written from its scan and its map before the
+# translator looks at anything: a native only takes effect if its registration
+# exists when the game is translated.
+"$libwiinx/tools/wiinx-emit-bindings" "$dir" || {
+    echo "could not write this game's native bindings" >&2; exit 1; }
+
 out="$dir/generated"
 step translate-recursive translate-recursive "$entry" --project "$project" \
     --outdir "$out/functions" --output-metadata "$out/base_translation_output.json" \

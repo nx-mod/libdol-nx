@@ -42,7 +42,9 @@ map has no address for it, so nothing binds it yet.
   float argument in f1-f3, and a native that can only read general registers
   cannot implement `PSMTXTrans` at all - an earlier attempt read them from a
   pointer that was never there.
-- The binding is `mtx_bind.pending.cpp` and is not built. A native only takes
-  effect if its registration existed when the game was translated, so switching
-  one on costs a re-translation and a full rebuild; bindings are promoted in
-  batches.
+- 2026-09-23: the hand-written binding is gone. `tools/wiinx-emit-bindings`
+  writes each game's registrations from its own `bindings.json` and symbol map,
+  and `wiinx-translate` runs it first, because a native only takes effect if
+  its registration exists when the game is translated. Adding a native is now
+  writing it, listing it in the module table, and signing it once from a game
+  whose symbols are known.

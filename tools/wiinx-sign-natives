@@ -38,6 +38,20 @@ def load_scan():
     return module
 
 
+def library_natives(src_root):
+    """Natives the library registers through its module tables, by name. These
+    have no PPC_NATIVE_OVERRIDE of their own - their bindings are generated per
+    game - so they are signed under their own names."""
+    pattern = re.compile(r'WIINX_NATIVE\(\s*"([^"]+)"')
+    found = set()
+    for root, _, names in os.walk(src_root):
+        for name in names:
+            if name.endswith(".cpp"):
+                with open(os.path.join(root, name), errors="ignore") as handle:
+                    found.update(pattern.findall(handle.read()))
+    return found
+
+
 def registrations(src_root):
     """{address: registration name} for every PPC_NATIVE_OVERRIDE in the library."""
     pattern = re.compile(r"PPC_NATIVE_OVERRIDE[A-Z_]*\(\s*([0-9A-Fa-f]{8})\s*,\s*([A-Za-z_]\w*)")
@@ -66,7 +80,7 @@ def by_name(src_root, entries, known):
     for address, name in entries:
         index.setdefault(canonical(name), address)
     found = {}
-    for registration in registrations(src_root).values():
+    for registration in list(registrations(src_root).values()) + sorted(library_natives(src_root)):
         keys = [canonical(registration)]
         keys += [canonical(name) for name, reg in known if reg == registration]
         for key in keys:

@@ -592,7 +592,10 @@ def main(argv):
         if "--out" in argv:
             path = argv[argv.index("--out") + 1]
             # The translator's format: registration name -> address, nothing else.
-            table = {b["registration"]: b["address"] for b in bindings if b.get("registration")}
+            # Older natives are keyed by the symbol the runtime registers them
+            # under; the ones whose bindings are generated are keyed by their
+            # own name, which is what the generator looks for.
+            table = {b.get("registration") or b["name"]: b["address"] for b in bindings}
             with open(path, "w") as handle:
                 json.dump(dict(sorted(table.items())), handle, indent=1)
                 handle.write("\n")
