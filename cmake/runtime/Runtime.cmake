@@ -1,6 +1,6 @@
-# The CPU runtime and the app: included by libwii-nx's CMakeLists when Aurora
+# The CPU runtime and the app: included by libdol-nx's CMakeLists when Aurora
 # is available. Its sources and flags are the Switch build's as they were in
-# wiicompiled-nx; paths follow libwii-nx's layout (see docs/porting.md).
+# wiicompiled-nx; paths follow libdol-nx's layout (see docs/porting.md).
 if(WIN32 AND MINGW AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(AMD64|amd64|x86_64|X86_64)$")
     set(MKW_PLATFORM_WINDOWS TRUE)
 elseif(APPLE AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|ARM64)$")

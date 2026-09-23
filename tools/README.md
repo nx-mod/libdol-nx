@@ -1,6 +1,6 @@
 # tools
 
-Helpers for working on libwii-nx and binding games to it. Python 3, no
+Helpers for working on libdol-nx and binding games to it. Python 3, no
 dependencies beyond the standard library (openssl speeds up extraction when
 installed).
 
@@ -43,7 +43,7 @@ tools/wiinx-extract "Wii Sports + Wii Sports Resort.iso" sports.dol --file US/sy
   created, translated and profiled from its own folder, wherever it lives;
   `wiinx-new-game` writes the path back to this checkout into its `recomp.yml`.
 - `wiinx-build` puts them together: disc to NRO, through `cmake/game`, which
-  composes Dawn, Aurora and libwii-nx the way the working build does. Written
+  composes Dawn, Aurora and libdol-nx the way the working build does. Written
   from that recipe; the pieces are proven, the one command is not yet.
 - 2026-09-22: `wiinx-scan` and `wiinx-extract` added. A disc image that ends
   before a file does - a truncated copy - reads as `short read: 0 of N bytes`.

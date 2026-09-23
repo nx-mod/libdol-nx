@@ -2,7 +2,7 @@
 
 Turns a game's PowerPC code into C++. It parses the DOL (and a REL when the
 game has one), decodes every reachable function, lifts it through IR and SSA,
-and emits C++ that is compiled for Switch together with libwii-nx's CPU runtime.
+and emits C++ that is compiled for Switch together with libdol-nx's CPU runtime.
 Everything game-specific - paths, addresses, the small-data bases - comes from
 the game's `recomp.yml`; the translator holds no game data.
 
@@ -59,4 +59,4 @@ dotnet test -c Release translator/Translator.sln
   third-party binary and a launcher library. `translate-mod` and the Kamek/Pulsar
   parsers are Mario Kart Wii mod support too; they move to that game's project.
 - `runtime.native_registration_root` still names the natives as source files to
-  scan; it will name libwii-nx's native tables once the runtime is ported.
+  scan; it will name libdol-nx's native tables once the runtime is ported.

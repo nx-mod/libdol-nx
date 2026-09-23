@@ -1,4 +1,4 @@
-// Hands the CPU runtime's guest memory and CPU to libwii-nx's natives, and
+// Hands the CPU runtime's guest memory and CPU to libdol-nx's natives, and
 // adds the native modules this program links. Called once at startup, after
 // guest memory and the renderer exist and before the game runs.
 #include "wiinx/accel/nw4r.hpp"

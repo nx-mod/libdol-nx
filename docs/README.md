@@ -1,11 +1,11 @@
-# Working with libwii-nx
+# Working with libdol-nx
 
 How the parts work, for anyone adding to the library. Start with the one you
 need.
 
 | Topic | Read when |
 |---|---|
-| [Builds](builds.md) | a game links a library build libwii-nx has not seen, or behavior depends on a build |
+| [Builds](builds.md) | a game links a library build libdol-nx has not seen, or behavior depends on a build |
 | [Signatures and scanning](signatures.md) | binding a game, or a native is not found in a game |
 | [Writing a native](natives.md) | adding a native, or a new build of one |
 | [Game hooks](game-hooks.md) | a game needs something of its own from the runtime |

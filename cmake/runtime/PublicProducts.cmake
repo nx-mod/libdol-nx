@@ -349,7 +349,7 @@ function(mkw_configure_product target)
         set(MKW_INITIAL_PIPELINE_CACHE "${MKW_GAME_WORKSPACE_DIR}/cache/initial_pipeline_cache.db")
     endif()
     if(MKW_INITIAL_PIPELINE_CACHE AND EXISTS "${MKW_INITIAL_PIPELINE_CACHE}")
-        message(STATUS "libwii-nx: shipping pipelines from ${MKW_INITIAL_PIPELINE_CACHE}")
+        message(STATUS "libdol-nx: shipping pipelines from ${MKW_INITIAL_PIPELINE_CACHE}")
         add_custom_command(TARGET ${target} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${MKW_INITIAL_PIPELINE_CACHE}"
             "$<TARGET_FILE_DIR:${target}>/initial_pipeline_cache.db")

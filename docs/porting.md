@@ -1,10 +1,10 @@
-# Porting into libwii-nx
+# Porting into libdol-nx
 
-libwii-nx is the toolkit: everything it needs to turn a Wii disc into a Switch
-game lives here, and other projects use libwii-nx instead of keeping their own
+libdol-nx is the toolkit: everything it needs to turn a Wii disc into a Switch
+game lives here, and other projects use libdol-nx instead of keeping their own
 copy. wii-nx ends up as the games and one build that consumes it.
 
-Until libwii-nx builds Mario Kart Wii on its own, pieces come in as **copies**:
+Until libdol-nx builds Mario Kart Wii on its own, pieces come in as **copies**:
 the originals keep running the game unchanged, and are retired only after the
 cut-over. Graphics backends stay separate libraries underneath (aurora-nx,
 dawn-nx, nxvk, sqlite-nx), since each is general-purpose and has its own
@@ -26,7 +26,7 @@ upstream.
 | platform: os, fs, gx, audio, input, system | wiicompiled-nx `runtime/src/hle` | `src/platform/*` | copied; building as one runtime library, split next |
 | NAND formats: settings, Miis, saves, archives | wii-nx `wiinand-nx/lib` | `src/platform/fs` | to copy |
 | app shell: main loop, config, settings overlay | wiicompiled-nx `runtime/src` | `src/app` | copied; building as one runtime library, split next |
-| game tools: new-game, translate, audit, manual-adds, make-bindings, profile-report | wii-nx `example-wii-nx/scripts` | `tools/wiinx-*` | ported, pointed at libwii-nx's own translator and runtime |
+| game tools: new-game, translate, audit, manual-adds, make-bindings, profile-report | wii-nx `example-wii-nx/scripts` | `tools/wiinx-*` | ported, pointed at libdol-nx's own translator and runtime |
 | port notes, pitfalls | wiicompiled-nx `docs/switch-port-notes.md` | `docs/` | with the runtime |
 | Aurora changes (threaded decode, pipeline memo) | wiicompiled-nx `aurora-main/` | aurora-nx | offered to aurora-nx |
 
@@ -59,9 +59,9 @@ show up.
 1. Translator and CPU runtime - nothing builds without them.
 2. Platform, module by module: fs, input, audio, system, os, gx (last: most
    tied to Aurora).
-3. App shell, then the game tools, pointed at libwii-nx's own translator and
+3. App shell, then the game tools, pointed at libdol-nx's own translator and
    runtime.
-4. Build Mario Kart Wii from libwii-nx alone, compare with the working build,
+4. Build Mario Kart Wii from libdol-nx alone, compare with the working build,
    then cut wii-nx over and retire the copies.
 
 ## Notes
@@ -99,7 +99,7 @@ show up.
   platform natives are registered at, which the signature milestone replaces.
 - 2026-09-23: the cut-over happened for Mario Kart Wii. Its project, its symbol
   map and its natives (including `mkwii_game.cpp` and its records, which came
-  out of `src/app`) are in `nx-mod/mkwii-nx`, which has libwii-nx as a
+  out of `src/app`) are in `nx-mod/mkwii-nx`, which has libdol-nx as a
   submodule. Translating it there reproduces all 29,637 functions byte for
   byte, so the move changed nothing about the game. New Super Mario Bros. Wii
   was built the same way from its own disc, in `nx-mod/nsmbwii-nx`.

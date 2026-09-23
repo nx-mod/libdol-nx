@@ -1,6 +1,6 @@
 #pragma once
 
-// libwii-nx: the Wii as a library.
+// libdol-nx: the machine the GameCube and the Wii both are.
 //
 // The SDK is six sections, each one a folder of headers under `wiinx/` and a
 // static library of the same name. They stack, and dependencies only ever point

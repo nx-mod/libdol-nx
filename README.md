@@ -21,7 +21,7 @@ Two consoles, one library, because they are one machine: the CPU core is the
 same, the graphics pipeline is the same, the sound hardware is the same, and of
 the libraries Nintendo shipped in the two SDKs, sixteen appear in both under the
 same names. What differs is peripherals and system software, and that lives in
-[libwii-nx](https://github.com/nx-mod/libwii-nx) and
+[libdol-nx](https://github.com/nx-mod/libwii-nx) and
 [libgc-nx](https://github.com/nx-mod/libgc-nx).
 
 ## Design
@@ -174,7 +174,7 @@ builds the library and tools, never a game.
 | Section | State |
 |---|---|
 | [`core`](src/core/README.md) | types, typed guest access, the host interface, the build table, the native registry |
-| [`format`](src/format/README.md) | NAND: SYSCONF, Miis, paths and title ids, tickets, TMDs, WADs. Disc, archive and media to come |
+| [`format`](src/format/README.md) | discs (raw, CISO, WBFS, RVZ, WIA), the NAND's files and WADs, Yaz0, THP |
 | [`cpu`](src/cpu/README.md) | registers, memory, calls, threads, the guest OS layout a game installs |
 | [`platform`](src/platform/README.md) | os, fs, gx, audio, input, net, system |
 | [`accel/sdk`](src/accel/sdk/README.md) | the C library, the matrix library, the THP decoder |

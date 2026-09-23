@@ -7,13 +7,13 @@
 # (wiinx-new-game). Given a game folder, it carries on from wherever that
 # project is. Either way it:
 #
-#   1. scans the game for the natives libwii-nx can bind (bindings.json)
+#   1. scans the game for the natives libdol-nx can bind (bindings.json)
 #   2. translates its code to C++            (wiinx-translate)
-#   3. builds it against libwii-nx           (cmake/game)
+#   3. builds it against libdol-nx           (cmake/game)
 #   4. leaves <game>/build/<game>.nro, ready for sdmc:/wii-nx/games/<game>/
 #
-#   --dawn DIR      dawn-nx checkout     (default: next to libwii-nx)
-#   --aurora DIR    aurora-nx checkout   (default: next to libwii-nx)
+#   --dawn DIR      dawn-nx checkout     (default: next to libdol-nx)
+#   --aurora DIR    aurora-nx checkout   (default: next to libdol-nx)
 #   --jobs N        parallel compiles    (default 2; translation is memory-hungry)
 #   --into DIR      put a new game's project here (its own repository, say)
 #   --skip-translate  build only, when the C++ is already there
@@ -44,7 +44,7 @@ done
 if [ -f "$target" ]; then
     echo "== new game from $target"
     # Next to this checkout by default, or into --into, which is where a game
-    # with libwii-nx as its submodule wants it: the repository it already has.
+    # with libdol-nx as its submodule wants it: the repository it already has.
     if [ -n "$into" ]; then
         "$here/wiinx-new-game" "$target" "$into"
         game=$(cd "$into" && pwd)

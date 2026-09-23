@@ -1,6 +1,6 @@
 # Game hooks
 
-libwii-nx knows no game. It never names a game's function, address or quirk:
+libdol-nx knows no game. It never names a game's function, address or quirk:
 the same library is what every disc is built against. The few places where one
 game needs something of its own from the runtime are hooks it fills in, from
 its own native code in its project's `native/` folder.

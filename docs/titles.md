@@ -55,7 +55,7 @@ What it needs that a disc game does not:
 3. **A NAND to run against.** A channel expects `/title/<id>/data` to exist and
    to be writable, and expects the settings and Mii database to be there.
 4. **ES.** Titles ask IOS which titles exist, what their versions are, and for
-   permission to launch one. That is libwii-nx's `es`.
+   permission to launch one. That is libdol-nx's `es`.
 
 ## What installing one takes
 

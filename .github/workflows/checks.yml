@@ -1,0 +1,26 @@
+# The sections that need only the standard library build anywhere, and their
+# checks run there. No game, no disc, no Switch: nothing here touches anything
+# a runner may not have.
+name: checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install what the tools use
+        run: sudo apt-get update && sudo apt-get install -y ninja-build libzstd-dev
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Check
+        run: ctest --test-dir build --output-on-failure

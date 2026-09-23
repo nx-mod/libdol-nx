@@ -1,4 +1,4 @@
-// What libwii-nx needs from the program running the game.
+// What libdol-nx needs from the program running the game.
 //
 // Natives never own the CPU or guest memory: the CPU runtime does, and hands
 // them over once at startup with set_host().

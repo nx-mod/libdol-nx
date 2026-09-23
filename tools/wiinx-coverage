@@ -4,7 +4,7 @@
     tools/wiinx-coverage <game folder> [--profile FILE] [--markdown]
 
 Reads the game's symbol map, groups its functions into the libraries they came
-from, and says how much of each libwii-nx has taken over: natively, by a
+from, and says how much of each libdol-nx has taken over: natively, by a
 binding, or not at all. With a network log from a run (--profile), the share
 each library took of the main thread is shown beside it, so the gaps are
 ordered by what they cost rather than by how many functions they have.

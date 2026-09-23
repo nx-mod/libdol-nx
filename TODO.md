@@ -14,8 +14,10 @@ The large moves, newest work first. Each section's own TODO.md has its detail.
 
 ## Sections
 
-- [ ] `format/disc` - read a dump directly, so nothing has to be extracted
-      ([detail](src/format/disc/TODO.md))
+- [x] `format/disc` - a dump is read where it lies: raw images, CISO, WBFS, RVZ
+      and WIA, both consoles ([detail](src/format/disc/TODO.md))
+- [ ] `platform/fs` - serve a game's files from a dump, so nothing is extracted
+      at all
 - [ ] `format/nand` - install a title, not only read one
       ([detail](src/format/nand/TODO.md))
 - [ ] `format/archive` - U8, and a Yaz0 encoder

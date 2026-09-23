@@ -8,7 +8,7 @@ one per library it links:
 << RVL_SDK - THP 	release build: Aug  8 2007 01:31:54 (0x4199_60831) >>
 ```
 
-libwii-nx names a build by its library and banner date: `nw4r.lyt@2008-03-08`,
+libdol-nx names a build by its library and banner date: `nw4r.lyt@2008-03-08`,
 `rvl.thp@2007-08-08`. The hex code (`0x4201_127`) is the SDK release the library
 was built against; the date is what separates builds of one library.
 

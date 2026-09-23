@@ -4,7 +4,7 @@
 #   tools/wiinx-translate <game folder> [--threads N]
 #
 # The folder is a game project (wiinx-new-game made it) with its disc
-# extracted. Runs libwii-nx's translator over its recomp.yml in four steps:
+# extracted. Runs libdol-nx's translator over its recomp.yml in four steps:
 #
 #   1. translate-recursive   every function reachable from the entry points
 #   2. emit-base-manifest    the table of translated functions
@@ -40,7 +40,7 @@ project="$dir/recomp.yml"
 registration=$(sed -n 's/^[[:space:]]*native_registration_root:[[:space:]]*//p' "$project" | head -1)
 if [ -n "$registration" ] && [ ! -d "$dir/$registration" ] && [ ! -d "$registration" ]; then
     echo "recomp.yml's native_registration_root ($registration) is not there." >&2
-    echo "It should point at this libwii-nx checkout's src: $libwiinx/src" >&2
+    echo "It should point at this libdol-nx checkout's src: $libwiinx/src" >&2
     exit 1
 fi
 

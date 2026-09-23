@@ -2307,7 +2307,7 @@ int RuntimeMain(int argc, char** argv) {
         GxGuestWrite::InstallAuroraHooks();
         WiinxInstallHost();
         if (!RuntimeGuestOs::installed()) {
-            // Every Wii game links the OS, so every game has these; libwii-nx
+            // Every Wii game links the OS, so every game has these; libdol-nx
             // just does not know where this one put them (guest_os_layout.h).
             RT_LOG(RT_TAG_OS) << "no guest OS layout installed: the scheduler's globals are unknown, "
                                  "threading will not work" << std::endl;

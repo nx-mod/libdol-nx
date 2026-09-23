@@ -12,11 +12,11 @@ here. Library: `wiinx::core`.
 
 ## Host
 
-libwii-nx never owns the CPU or memory. The runtime running the game fills a
+libdol-nx never owns the CPU or memory. The runtime running the game fills a
 `Host` once at startup and passes it to `set_host()`: a flat mapping of guest
 memory and its bounds, register access, a way to call guest functions (the host
 chooses the link register), a notification for memory native code rewrote, and
-an optional log. Nothing in libwii-nx includes a runtime's headers.
+an optional log. Nothing in libdol-nx includes a runtime's headers.
 
 ## Typed guest access
 

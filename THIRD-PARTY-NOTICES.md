@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-libwii-nx is GPL-3.0-or-later. What it is built from or follows:
+libdol-nx is GPL-3.0-or-later. What it is built from or follows:
 
 ## Code this library comes from
 

@@ -17,7 +17,7 @@ project(wiinx-game LANGUAGES C CXX ASM)
 
 if (NOT CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
     message(FATAL_ERROR
-        "libwii-nx builds for Nintendo Switch. Configure with:\n"
+        "libdol-nx builds for Nintendo Switch. Configure with:\n"
         "  -DCMAKE_TOOLCHAIN_FILE=\$DEVKITPRO/cmake/Switch.cmake")
 endif ()
 
@@ -65,10 +65,10 @@ set(AURORA_DAWN_PROVIDER "vendor" CACHE STRING "" FORCE)
 set(AURORA_SDL3_PROVIDER "vendor" CACHE STRING "" FORCE)
 add_subdirectory("${WIINX_AURORA_DIR}" aurora-build)
 
-# libwii-nx: the CPU runtime, the console, the app, and this game's code.
+# libdol-nx: the CPU runtime, the console, the app, and this game's code.
 set(MKW_BUILD_PRODUCTS ON CACHE BOOL "" FORCE)
 set(MKW_GAME_WORKSPACE_DIR "${WIINX_GAME_DIR}" CACHE PATH "" FORCE)
-add_subdirectory("${WIINX_ROOT}" libwii-nx-build)
+add_subdirectory("${WIINX_ROOT}" libdol-nx-build)
 
 if (TARGET WiiCompiled)
     # The graphics path ends at NVK; dawn-nx knows how it has to be linked.
@@ -86,5 +86,5 @@ if (TARGET WiiCompiled)
         NAME "${WIINX_GAME_NAME}" AUTHOR "nx-mod" VERSION "1.0.0")
     nx_create_nro(${WIINX_GAME_NAME}_nro TARGET WiiCompiled
         OUTPUT ${WIINX_GAME_NAME}.nro NACP ${WIINX_GAME_NAME}.nacp)
-    message(STATUS "libwii-nx: ${WIINX_GAME_NAME} -> ${WIINX_GAME_NAME}.nro")
+    message(STATUS "libdol-nx: ${WIINX_GAME_NAME} -> ${WIINX_GAME_NAME}.nro")
 endif ()

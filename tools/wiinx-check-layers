@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check that libwii-nx's layers only depend downward.
+"""Check that libdol-nx's layers only depend downward.
 
     tools/wiinx-check-layers
 

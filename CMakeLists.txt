@@ -1,4 +1,4 @@
-# libwii-nx: the Wii as a library.
+# libdol-nx: the GameCube and the Wii, as one library.
 #
 # Six sections, each a target of its own. The three that depend on nothing but
 # the standard library - core, accel and format - build on any machine and are
@@ -12,7 +12,7 @@
 #   cmake -S . -B build-switch -G Ninja \
 #         -DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/cmake/Switch.cmake   # everything
 cmake_minimum_required(VERSION 3.20)
-project(libwii-nx LANGUAGES C CXX VERSION 2.0.0)
+project(libdol-nx LANGUAGES C CXX VERSION 2.0.0)
 
 set(WIINX_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
 

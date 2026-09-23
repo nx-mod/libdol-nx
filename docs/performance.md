@@ -1,6 +1,6 @@
 # Performance, and what has been measured
 
-Numbers here come from a Switch running Mario Kart Wii built from libwii-nx,
+Numbers here come from a Switch running Mario Kart Wii built from libdol-nx,
 with the runtime's own per-frame counters sent over the network log
 (`wii-nx/config/loghost.txt` names a host; the runtime then reports every
 second and arms its sampling profiler after 30 seconds).
@@ -153,6 +153,6 @@ cache keyed on a display list's bytes (measured: the bytes differ every frame).
 - 2026-09-23: the graphics-command worker is not the thing to fix. It lives in
   the 20% the native runtime costs, and the whole graphics path is under 2.5 ms
   of a ~66 ms frame; the 53 ms is translated code.
-- 2026-09-23: first measurements of a libwii-nx build on hardware. The game
+- 2026-09-23: first measurements of a libdol-nx build on hardware. The game
   reaches a race; it runs about four times slower than the console, which is
   where it was before the port, so the move cost nothing measurable.

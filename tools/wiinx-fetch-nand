@@ -9,7 +9,7 @@
 
 Run with no selection and it lists every title and asks which to download: single
 numbers, ranges (3-9), group names (ios, channels, menu), all, or q. Default
-folder: nand/ in libwii-nx, which is not tracked by git.
+folder: nand/ in libdol-nx, which is not tracked by git.
 
 Why keep one: the system titles are the largest body of Nintendo SDK code
 available - where library builds are recorded and natives signed from - and
