@@ -10,6 +10,7 @@ need.
 | [Writing a native](natives.md) | adding a native, or a new build of one |
 | [Game hooks](game-hooks.md) | a game needs something of its own from the runtime |
 | [Performance](performance.md) | what a frame costs on hardware, and the settings that have been measured |
+| [Where names come from](symbol-sources.md) | naming a game's functions: the maps and symbol tables discs already carry |
 | [Titles](titles.md) | installing or running the console's own software: system titles, channels, WiiWare, Virtual Console |
 | [Homebrew](homebrew.md) | running GameCube and Wii homebrew, from source or from its executable |
 | [Coverage](coverage.md) | which SDK libraries the library has taken over, and what the gaps cost |
