@@ -95,6 +95,18 @@ void calculate_mtx(Cpu* cpu) {
     const Guest<L> self{h.gpr(cpu, 3)};
     const Guest<DrawInfo> info{h.gpr(cpu, 4)};
 
+    // These reads go straight to guest memory, where the original's went
+    // through the runtime's checked accessors: a pointer that is not really a
+    // pane was reported there, and would fault here. Check the two the game
+    // hands us once, and every child before it is walked into.
+    const auto readable = [&h](GuestAddr address, u32 size) {
+        return h.valid == nullptr || h.valid(address, size);
+    };
+    if (!readable(self.addr, L::flag.offset + 1) ||
+        !readable(info.addr, DrawInfo::flags.offset + 1)) {
+        return;
+    }
+
     const u8 flag = self[L::flag];
     const u8 infoFlags = info[DrawInfo::flags];
     if (!(flag & L::kVisible) && !(infoFlags & DrawInfo::kInvisiblePaneCalculateMtx)) {
@@ -148,6 +160,9 @@ void calculate_mtx(Cpu* cpu) {
     const GuestAddr sentinel = self.addr + L::childListNode.offset;
     for (GuestAddr link = load<u32>(sentinel); link != sentinel && link != 0; link = load<u32>(link)) {
         const GuestAddr child = link - L::kChildLinkOffset;
+        if (!readable(child, L::flag.offset + 1)) {
+            break;
+        }
         const GuestAddr method = load<u32>(load<u32>(child) + L::kVtableCalculateMtx);
         h.set_gpr(cpu, 3, child);
         h.set_gpr(cpu, 4, info.addr);

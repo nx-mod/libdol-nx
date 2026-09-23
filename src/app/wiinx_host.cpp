@@ -8,6 +8,7 @@
 
 #include "abi_bridge.h"
 #include "guest_flat_memory.h"
+#include "native_guest_return.h"
 #include "memory.h"
 
 #include <cstdio>
@@ -27,9 +28,17 @@ void WiinxInstallHost() {
     host.valid = [](wiinx::GuestAddr addr, wiinx::u32 size) { return Memory::Contains(addr, size); };
     host.gpr = [](wiinx::Cpu* cpu, int index) { return static_cast<wiinx::u32>(context(cpu)->gpr[index]); };
     host.set_gpr = [](wiinx::Cpu* cpu, int index, wiinx::u32 value) { context(cpu)->gpr[index] = value; };
-    // The link register is left as the native's own caller set it: the callee
-    // returns to the native, which is all a translated function needs.
-    host.call = [](wiinx::Cpu* cpu, wiinx::GuestAddr target) { InvokeIndirectCpu(target, context(cpu)); };
+    // A callee dispatched as a jump resumes through the link register, and the
+    // original function's own code continues there, so the binding's return
+    // address is put in place for the call (native_guest_return.h). Without it
+    // the callee resumed wherever the last caller happened to leave lr.
+    host.call = [](wiinx::Cpu* cpu, wiinx::GuestAddr target) {
+        CpuContext* ctx = context(cpu);
+        if (const uint32_t resume = RuntimeNativeGuestReturn::Current(); resume != 0) {
+            ctx->lr = resume;
+        }
+        InvokeIndirectCpu(target, ctx);
+    };
     host.notify_write = [](wiinx::GuestAddr addr, wiinx::u32 size) { GxNotifyGuestRamDmaWrite(addr, size); };
 #if defined(__SWITCH__)
     host.log = [](const char* line) { SwitchBootLogExternal(line); };
