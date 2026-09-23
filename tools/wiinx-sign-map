@@ -21,7 +21,10 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 SYMBOLS = os.path.join(HERE, "..", "data", "symbols.json.gz")
 WINDOW_BYTES = 16 * 4
-NOT_A_FUNCTION = re.compile(r"_case[0-9A-Za-z]*_|_switch$|^\.|^@|^_ctors|^_dtors")
+# A map often lists what it could not name as the address itself, and the
+# compiler's own maps carry jump tables and section markers. None of those are
+# names worth following.
+NOT_A_FUNCTION = re.compile(r"_case[0-9A-Za-z]*_|_switch$|^\.|^@|^_ctors|^_dtors|^0x[0-9a-fA-F]+$")
 
 
 def load_scan():

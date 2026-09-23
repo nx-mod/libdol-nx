@@ -277,8 +277,14 @@ int main(int argc, char** argv) {
             std::printf("%s: not on this disc\n", argv[3]);
             return 1;
         }
-        const char* out = argc > 4 ? argv[4] : std::strrchr(argv[3], '/');
-        const std::string name = out != nullptr ? (out[0] == '/' ? out + 1 : out) : argv[3];
+        // Where it goes: what was asked for, or the file's own name here.
+        std::string name;
+        if (argc > 4) {
+            name = argv[4];
+        } else {
+            const char* slash = std::strrchr(argv[3], '/');
+            name = slash != nullptr ? slash + 1 : argv[3];
+        }
         if (!Write(name, *bytes)) {
             return 1;
         }

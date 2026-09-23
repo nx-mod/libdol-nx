@@ -209,3 +209,25 @@ the same applies to the guest OS globals a game's SDK links into its own BSS
   functions, too common to match alone, get found - needs call offsets stored
   per signature; the format leaves room for them.
 - Turning bindings into the translator's input comes with the translator.
+
+## Naming a game's functions
+
+Signatures bind natives. The same idea, with the verification relaxed, also
+carries *names*: `data/symbols.json.gz` holds one signature per named function
+from every game whose symbol map anyone has, and `wiinx-name` gives those names
+to a game nobody has mapped.
+
+The maps come from two places. Some are reconstructed by decompilation projects;
+others shipped on the disc, because a few GameCube games were pressed with the
+compiler's own link map still in their filesystem.
+
+What it is worth, measured:
+
+| From | Into | Named |
+|---|---|---|
+| Mario Kart: Double Dash!! (`debugInfoS.MAP`, on the disc) | Super Mario Sunshine | 336 |
+| Mario Kart Wii | New Super Mario Bros. Wii | 2,282 |
+
+A name is a hypothesis, not a fact: a short function can match another game's
+code by coincidence. Natives are never bound this way - they bind by verified
+signature - so a wrong name costs nothing but a wrong label.
