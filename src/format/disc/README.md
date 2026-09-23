@@ -6,9 +6,28 @@ Three layers, each usable on its own:
 
 | Layer | Is |
 |---|---|
-| container | the file as it sits on a card: raw (`.iso`, `.gcm`), WBFS, CISO |
+| container | the shape the dump was written in |
 | partition | the Wii's partition table, and the encryption over its clusters. A GameCube disc has neither |
 | filesystem | the FST both consoles share, and the files in it |
+
+## Containers
+
+Almost nobody keeps a raw image - a GameCube disc is 1.35 GB and a Wii disc is
+4.4 GB - so a dump arrives in whatever the tool of the day wrote. Each is
+recognised by its first bytes, and the ones that need no decompressor are read:
+
+| | Is | State |
+|---|---|---|
+| `.iso`, `.gcm` | the image itself | **read** |
+| `.ciso`, `.cso` | the image with its empty blocks left out | **read** |
+| `.wbfs` | the USB loaders' layout, one game to a file | **read** |
+| `.gcz` | Dolphin's older format: zlib blocks | recognised; needs zlib |
+| `.wia` | its predecessor to RVZ | recognised; needs LZMA |
+| `.rvz` | Dolphin's current one: zstd blocks, with the disc's padding thrown away and regrown from its id | recognised; needs zstd |
+| `.nkit.iso`, `.nkit.gcz` | a preservation format that rebuilds the original exactly | recognised; convert it first |
+
+A file that is recognised and not readable yet is reported by name, which is
+more use to whoever is holding it than a failure to open.
 
 A Wii image is a GameCube image plus the middle layer, so one reader serves
 both.

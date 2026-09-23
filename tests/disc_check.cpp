@@ -3,8 +3,10 @@
 // Two discs are assembled in memory - a GameCube one, and a Wii one with a
 // partition, clusters and a stand-in cipher - so the layout logic is checked on
 // any machine, with nothing Nintendo made involved.
+#include "wiinx/format/disc/container.hpp"
 #include "wiinx/format/disc/image.hpp"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -220,6 +222,55 @@ int main() {
             Check("  a file reads back through the cipher",
                   sound && std::string(sound->begin(), sound->end()) == "music");
         }
+    }
+
+    {   // The same GameCube disc, written as CISO: a flag per block, and the
+        // present blocks back to back after the header.
+        const auto raw = BuildGameCubeDisc(files);
+        constexpr std::uint32_t kBlock = 0x800;
+        const std::size_t blocks = raw.size() / kBlock;
+
+        std::vector<std::uint8_t> ciso(0x8000, 0);
+        std::memcpy(ciso.data(), "CISO", 4);
+        for (int index = 0; index < 4; index++) {
+            ciso[4 + static_cast<std::size_t>(index)] =
+                static_cast<std::uint8_t>(kBlock >> (index * 8));  // little-endian
+        }
+        for (std::size_t block = 0; block < blocks; block++) {
+            const std::uint8_t* at = raw.data() + block * kBlock;
+            const bool empty = std::all_of(at, at + kBlock, [](std::uint8_t b) { return b == 0; });
+            if (!empty) {
+                ciso[8 + block] = 1;
+                ciso.insert(ciso.end(), at, at + kBlock);
+            }
+        }
+
+        Check("CISO is recognised",
+              Identify(FromMemory(ciso.data(), ciso.size())) == ContainerKind::Ciso);
+        auto container = Container::Open(FromMemory(ciso.data(), ciso.size()));
+        Check("CISO opens", container.has_value());
+        if (container) {
+            auto image = Image::Open(container->AsSource());
+            Check("  the disc inside reads", image.has_value());
+            if (image) {
+                Check("  id", image->GetHeader().id == "GM4E01");
+                Check("  file table",
+                      image->ReadFileTable() && image->Files().size() == files.size());
+                const auto course = image->ReadFile("course.szs");
+                Check("  a file reads back", course && course->size() == 5000);
+            }
+        }
+    }
+
+    {   // The formats that are recognised and not read yet: a caller can say
+        // which one it is instead of failing blankly.
+        std::vector<std::uint8_t> rvz(0x400, 0);
+        std::memcpy(rvz.data(), "RVZ\x01", 4);
+        const auto kind = Identify(FromMemory(rvz.data(), rvz.size()));
+        Check("RVZ is recognised", kind == ContainerKind::Rvz);
+        Check("  and named", Name(kind) == "RVZ");
+        Check("  and reported as not readable yet", !Readable(kind));
+        Check("raw images are readable", Readable(ContainerKind::Raw));
     }
 
     {   // Something that is not a disc at all.

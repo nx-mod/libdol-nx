@@ -47,6 +47,7 @@ add_library(wiinx_format STATIC
     src/format/media/thp.cpp
     src/format/archive/yaz0.cpp
     src/format/disc/image.cpp
+    src/format/disc/container.cpp
 )
 wiinx_section(wiinx_format)
 add_library(wiinx::format ALIAS wiinx_format)

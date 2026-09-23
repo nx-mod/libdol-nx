@@ -4,9 +4,17 @@
 - [x] Wii partitions, their clusters, and decryption through the caller's cipher
 - [x] A cluster cache, since a game reading a file reads one many times over
 - [x] Synthetic images under test
-- [ ] WBFS and CISO: the same image with the empty parts left out
-- [ ] RVZ, which needs zstd or LZMA and the regeneration of the padding Dolphin
-      throws away
+- [x] CISO and WBFS: the same image with the empty parts left out
+- [x] Recognise every common container by name, so an unreadable one says which
+      it is
+- [ ] RVZ, the one most dumps are kept in now: zstd blocks, plus regenerating
+      the padding it throws away from the disc id. Dolphin is GPL-2-or-later, so
+      its generator can be followed and credited
+- [ ] WIA, which is RVZ's predecessor and shares most of its structure
+- [ ] GCZ, common in older GameCube collections: zlib blocks, no scrubbing
+- [ ] Split files - `.wbf1`, `.part1.iso` - joined before the container sees
+      them, since FAT32 stops at 4 GB
+- [ ] NKit: recognised today. Reading it means rebuilding what it removed
 - [ ] The apploader, for a GameCube disc's boot path
 - [ ] Verify a partition against its hashes, for a dump that may be damaged
 - [ ] A check against a real dump, on a machine that has one
