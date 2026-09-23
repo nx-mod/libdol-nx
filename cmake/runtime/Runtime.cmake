@@ -302,8 +302,17 @@ list(FILTER SOURCES EXCLUDE REGEX "/src/app/(switch|product)/")
 # bound to each game's addresses by a table; a genuine quirk of one game belongs
 # with the game instead. Mario Kart Wii's are its strap screen and its mod
 # loader hook.
-set(MKW_GAME_NATIVE_DIR "${MKW_GAME_WORKSPACE_DIR}/native" CACHE PATH
+# Follows the game workspace unless it is set on purpose: caching it against
+# the first workspace configured left a later one building the previous game's
+# natives.
+set(MKW_GAME_NATIVE_DIR "" CACHE PATH
     "This game's own native replacements, compiled only into its build")
+if(MKW_GAME_NATIVE_DIR)
+    set(WIINX_GAME_NATIVE_DIR "${MKW_GAME_NATIVE_DIR}")
+else()
+    set(WIINX_GAME_NATIVE_DIR "${MKW_GAME_WORKSPACE_DIR}/native")
+endif()
+set(MKW_GAME_NATIVE_DIR "${WIINX_GAME_NATIVE_DIR}")
 if(EXISTS "${MKW_GAME_NATIVE_DIR}")
     file(GLOB_RECURSE MKW_GAME_NATIVE_SOURCES CONFIGURE_DEPENDS
         "${MKW_GAME_NATIVE_DIR}/*.cpp")
