@@ -24,6 +24,10 @@ beside them come from work other people did:
   were first signed from. <https://github.com/doldecomp/mkw>
 - **doldecomp/ogws** - CC0-1.0. Wii Sports' symbol map, and the reason a second
   build of the SDK could be signed. <https://github.com/doldecomp/ogws>
+- **doldecomp/dolsdk2004** - CC0-1.0. The Dolphin SDK decompiled; `src/mtx`
+  is what `src/accel/sdk/mtx` follows, instruction for instruction, so the
+  matrix natives round the way the originals do.
+  <https://github.com/doldecomp/dolsdk2004>
 - **RootCubed/NSMBW-Maps** - no license given, so nothing of it is kept here.
   New Super Mario Bros. Wii's maps are fetched by that game's own project when
   its owner wants them, and the signatures taken with their help carry the

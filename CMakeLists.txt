@@ -20,9 +20,10 @@ add_library(wiinx_nw4r STATIC
 target_link_libraries(wiinx_nw4r PUBLIC wiinx_core)
 add_library(wiinx::nw4r ALIAS wiinx_nw4r)
 
-# accel/sdk: natives for the RVL SDK (THP so far).
+# accel/sdk: natives for the RVL SDK (THP video, the matrix library).
 add_library(wiinx_sdk STATIC
     src/accel/sdk/sdk.cpp
+    src/accel/sdk/mtx/mtx.cpp
     src/accel/sdk/thp/thp_decode.cpp
 )
 target_link_libraries(wiinx_sdk PUBLIC wiinx_core)

@@ -29,6 +29,12 @@ struct Host {
     u32 (*gpr)(Cpu* cpu, int index) = nullptr;
     void (*set_gpr)(Cpu* cpu, int index, u32 value) = nullptr;
 
+    // Floating-point registers, as doubles: that is how the ABI passes a float
+    // argument, and how a float return leaves a function. Absent in a host
+    // that has no use for them, so a native that reads floats checks first.
+    f64 (*fpr)(Cpu* cpu, int index) = nullptr;
+    void (*set_fpr)(Cpu* cpu, int index, f64 value) = nullptr;
+
     // Calls guest function `target` as a guest call would. Arguments are
     // whatever set_gpr put in r3.. beforehand. The host chooses the link
     // register: only it knows where the calling native is bound in this game.

@@ -38,6 +38,9 @@ void WiinxInstallHost() {
     host.valid = [](wiinx::GuestAddr addr, wiinx::u32 size) { return Memory::Contains(addr, size); };
     host.gpr = [](wiinx::Cpu* cpu, int index) { return static_cast<wiinx::u32>(context(cpu)->gpr[index]); };
     host.set_gpr = [](wiinx::Cpu* cpu, int index, wiinx::u32 value) { context(cpu)->gpr[index] = value; };
+    // A float argument arrives as a double, which is what the union's `d` is.
+    host.fpr = [](wiinx::Cpu* cpu, int index) { return context(cpu)->fpr[index].d; };
+    host.set_fpr = [](wiinx::Cpu* cpu, int index, double value) { context(cpu)->fpr[index].d = value; };
     // A callee dispatched as a jump resumes through the link register, and the
     // original function's own code continues there, so the binding's return
     // address is put in place for the call (native_guest_return.h). Without it
