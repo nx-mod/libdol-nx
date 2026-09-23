@@ -30,8 +30,12 @@ command -v dolphin-tool >/dev/null || {
 echo ">> $image"
 dolphin-tool header -i "$image"
 
+if [ -f "$disc_dir/sys/main.dol" ]; then
+    echo ">> $disc_dir is already extracted"
+    exit 0
+fi
 if [ -e "$disc_dir" ]; then
-    echo ">> $disc_dir already exists; remove it to re-extract" >&2
+    echo ">> $disc_dir exists but holds no sys/main.dol; remove it to re-extract" >&2
     exit 1
 fi
 
@@ -46,6 +50,20 @@ fi
 mkdir -p "$disc_dir"
 # -g: the game (DATA) partition only, which is what the runtime serves.
 dolphin-tool extract -g -i "$image" -o "$disc_dir"
+
+if [ ! -f "$disc_dir/sys/main.dol" ]; then
+    # Some dolphin-tool builds put the partition in a folder named after it
+    # (DATA/) even when asked for the game partition alone, and others write
+    # files/ and sys/ straight out. Flatten the one that has the game in it, so
+    # every game's disc/ has the same shape and recomp.yml can name one path.
+    partition=$(find "$disc_dir" -mindepth 2 -maxdepth 2 -type d -name sys \
+        -printf '%h\n' 2>/dev/null | head -1)
+    if [ -n "$partition" ] && [ -f "$partition/sys/main.dol" ]; then
+        echo ">> flattening $(basename "$partition")/ into disc/"
+        mv "$partition"/* "$disc_dir"/
+        rmdir "$partition" 2>/dev/null || true
+    fi
+fi
 
 if [ ! -f "$disc_dir/sys/main.dol" ]; then
     echo ">> extraction finished but $disc_dir/sys/main.dol is missing" >&2
