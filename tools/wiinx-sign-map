@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+"""Turn a game's symbol map into code signatures every other game can use.
+
+    tools/wiinx-sign-map <game.dol> <symbol map> [--out FILE] [--write]
+
+A map names functions at addresses, which is only true of the game it came
+from. Signing each named function - the masked hashes, never the code - makes
+the name follow the code instead, so a game nobody has mapped can be named by
+matching. The library carries the result, and every mapped game added to it
+names more of the next disc.
+
+Names are not natives: this is `data/symbols.json.gz`, separate from
+`data/signatures.json`, which stays the small, verified set that binds natives.
+"""
+import gzip
+import json
+import os
+import re
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+SYMBOLS = os.path.join(HERE, "..", "data", "symbols.json.gz")
+WINDOW_BYTES = 16 * 4
+NOT_A_FUNCTION = re.compile(r"_case[0-9A-Za-z]*_|_switch$|^\.|^@|^_ctors|^_dtors")
+
+
+def load_scan():
+    source = open(os.path.join(HERE, "wiinx-scan")).read()
+    module = type(sys)("wiinx_scan")
+    module.__dict__["__file__"] = os.path.join(HERE, "wiinx-scan")
+    exec(compile(source.replace("def main(argv):", "def _unused(argv):"), "wiinx-scan", "exec"),
+         module.__dict__)
+    return module
+
+
+def symbol_map(path):
+    entries = []
+    line = re.compile(r"^([0-9a-fA-F]{8})\s+(\S.*)$")
+    for raw in open(path, errors="ignore"):
+        match = line.match(raw.strip())
+        if match:
+            entries.append((int(match.group(1), 16), match.group(2).strip()))
+    return sorted(set(entries))
+
+
+def sign(scan, dol, entries):
+    """One signature per named function, spanning neighbours when it is short."""
+    signed = {}
+    for index, (address, name) in enumerate(entries):
+        if NOT_A_FUNCTION.search(name):
+            continue
+        size = entries[index + 1][0] - address if index + 1 < len(entries) else 0
+        span = 1
+        while size < WINDOW_BYTES and index + span < len(entries):
+            size = entries[index + span][0] - address
+            span += 1
+        if size < WINDOW_BYTES or size > 0x4000:
+            continue
+        code = dol.read(address, size)
+        if code is None:
+            continue
+        key = scan.masked_hash(code[:WINDOW_BYTES])
+        signed.setdefault(key, []).append({
+            "name": name,
+            "size": size,
+            "body": scan.masked_hash(code),
+            "spans": span,
+        })
+    return signed
+
+
+def main(argv):
+    if len(argv) < 2:
+        print(__doc__.strip())
+        return 2
+    scan = load_scan()
+    dol = scan.Dol(argv[0])
+    entries = symbol_map(argv[1])
+    signed = sign(scan, dol, entries)
+    out = argv[argv.index("--out") + 1] if "--out" in argv else SYMBOLS
+
+    total = sum(len(v) for v in signed.values())
+    print(f"named functions in the map: {len(entries)}")
+    print(f"signed:                     {total}")
+
+    if "--write" in argv:
+        existing = {}
+        if os.path.exists(out):
+            with gzip.open(out, "rt") as handle:
+                existing = json.load(handle)["functions"]
+        for key, items in signed.items():
+            known = existing.setdefault(key, [])
+            for item in items:
+                # The same code under the same name from two games is one fact.
+                if not any(k["body"] == item["body"] and k["name"] == item["name"] for k in known):
+                    known.append(item)
+        with gzip.open(out, "wt") as handle:
+            json.dump({"about": "Function names by code, signed from games whose symbols are known."
+                                " Hashes, never code.", "functions": existing}, handle)
+        print(f"wrote {out}: {sum(len(v) for v in existing.values())} signatures, "
+              f"{os.path.getsize(out) / 1048576:.1f} MB")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

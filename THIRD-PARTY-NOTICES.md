@@ -15,6 +15,20 @@ libwii-nx is GPL-3.0-or-later. What it is built from or follows:
   copies of its `example-wii-nx/scripts/extract-dol` and `wiicrypto.py`; the
   signature masking follows its `resolve-symbols`. <https://github.com/nx-mod/wii-nx>
 
+## Symbols these signatures were taken from
+
+A signature is a hash of masked instructions and carries no code. The names
+beside them come from work other people did:
+
+- **doldecomp/mkw** - CC0-1.0. Mario Kart Wii's symbol map, which the natives
+  were first signed from. <https://github.com/doldecomp/mkw>
+- **doldecomp/ogws** - CC0-1.0. Wii Sports' symbol map, and the reason a second
+  build of the SDK could be signed. <https://github.com/doldecomp/ogws>
+- **RootCubed/NSMBW-Maps** - no license given, so nothing of it is kept here.
+  New Super Mario Bros. Wii's maps are fetched by that game's own project when
+  its owner wants them, and the signatures taken with their help carry the
+  library's own names. <https://github.com/RootCubed/NSMBW-Maps>
+
 ## Bundled in this repository
 
 Vendored with the runtime, each under its own license, in `third_party/`:

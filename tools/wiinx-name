@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+"""Name a game's functions by matching code against games whose symbols are known.
+
+    tools/wiinx-name <game.dol> [--out MAP.txt] [--check <real map>] [--db FILE]
+
+The names come from `data/symbols.json.gz`, which `wiinx-sign-map` fills from
+games that have a symbol map. A game nobody has mapped gets the names of every
+library function it shares with them - the SDK, nw4r, anything else linked in -
+without anyone mapping it.
+
+--check compares the result against a map you already trust, and reports how
+much of it is right. Every claim in the README about this was measured that way.
+"""
+import gzip
+import json
+import os
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+SYMBOLS = os.path.join(HERE, "..", "data", "symbols.json.gz")
+WINDOW_BYTES = 16 * 4
+
+
+def load_scan():
+    source = open(os.path.join(HERE, "wiinx-scan")).read()
+    module = type(sys)("wiinx_scan")
+    module.__dict__["__file__"] = os.path.join(HERE, "wiinx-scan")
+    exec(compile(source.replace("def main(argv):", "def _unused(argv):"), "wiinx-scan", "exec"),
+         module.__dict__)
+    return module
+
+
+def name_functions(scan, dol, database):
+    """{address: name}, keeping only what one name and one address agree on."""
+    windows = {}
+    for start, blob in dol.text():
+        for offset in range(0, len(blob) - WINDOW_BYTES + 1, 4):
+            key = scan.masked_hash(blob[offset:offset + WINDOW_BYTES])
+            if key in database:
+                windows.setdefault(key, []).append(start + offset)
+
+    found = {}
+    for key, addresses in windows.items():
+        for candidate in database[key]:
+            hits = [a for a in addresses
+                    if (code := dol.read(a, candidate["size"])) is not None
+                    and scan.masked_hash(code) == candidate["body"]]
+            if len(hits) == 1:
+                found.setdefault(hits[0], set()).add(candidate["name"])
+
+    # An address two names disagree about is not named at all.
+    return {address: next(iter(names)) for address, names in found.items() if len(names) == 1}
+
+
+def read_map(path):
+    entries = {}
+    for raw in open(path, errors="ignore"):
+        parts = raw.split(maxsplit=1)
+        if len(parts) == 2 and len(parts[0]) == 8:
+            try:
+                entries[int(parts[0], 16)] = parts[1].strip()
+            except ValueError:
+                pass
+    return entries
+
+
+def main(argv):
+    if not argv:
+        print(__doc__.strip())
+        return 2
+    scan = load_scan()
+    dol = scan.Dol(argv[0])
+    path = argv[argv.index("--db") + 1] if "--db" in argv else SYMBOLS
+    with gzip.open(path, "rt") as handle:
+        database = json.load(handle)["functions"]
+
+    named = name_functions(scan, dol, database)
+    print(f"functions named: {len(named)}")
+
+    if "--check" in argv:
+        truth = read_map(argv[argv.index("--check") + 1])
+        agree = sum(1 for address, name in named.items() if truth.get(address) == name)
+        elsewhere = sum(1 for address in named if address not in truth)
+        differ = [(hex(a), named[a], truth[a]) for a in named
+                  if a in truth and truth[a] != named[a]]
+        print(f"  the map agrees:       {agree}")
+        print(f"  the map calls it else:{len(differ)}")
+        print(f"  not a start in the map:{elsewhere}")
+        for row in differ[:8]:
+            print(f"     {row[0]}  said {row[1]}  map says {row[2]}")
+
+    if "--out" in argv:
+        out = argv[argv.index("--out") + 1]
+        with open(out, "w") as handle:
+            for address in sorted(named):
+                handle.write(f"{address:08x} {named[address]}\n")
+        print(f"wrote {out}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

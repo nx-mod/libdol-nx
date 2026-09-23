@@ -589,7 +589,7 @@
    "registration": "DVDInit_8015EA1C"
   },
   {
-   "name": "DVDInit",
+   "name": "DVD::Init",
    "build": "any",
    "size": 352,
    "start": "2b817c5874fdc2f4",
@@ -607,7 +607,7 @@
    "registration": "DVDLowClearCoverInterrupt_80166964"
   },
   {
-   "name": "DVDLowClearCoverInterrupt",
+   "name": "DVD::LowClearCoverInterrupt",
    "build": "any",
    "size": 368,
    "start": "804c9d7fc8fe44f7",
@@ -625,7 +625,7 @@
    "registration": "DVDLowInit_80164848"
   },
   {
-   "name": "DVDLowInit",
+   "name": "DVD::LowInit",
    "build": "any",
    "size": 624,
    "start": "ef3b675dc4816b87",
@@ -643,7 +643,7 @@
    "registration": "DVDLowInquiry_80165A30"
   },
   {
-   "name": "DVDLowInquiry",
+   "name": "DVD::LowInquiry",
    "build": "any",
    "size": 368,
    "start": "cf99e77175815416",
@@ -661,7 +661,7 @@
    "registration": "DVDLowRead_80166330"
   },
   {
-   "name": "DVDLowRead",
+   "name": "DVD::LowRead",
    "build": "any",
    "size": 432,
    "start": "74f73543ab2157e6",
@@ -679,7 +679,7 @@
    "registration": "DVDLowReadDiskID_80164AAC"
   },
   {
-   "name": "DVDLowReadDiskID",
+   "name": "DVD::LowReadDiskID",
    "build": "any",
    "size": 400,
    "start": "4bdd84bd314491aa",
@@ -697,7 +697,7 @@
    "registration": "DVDLowUnencryptedRead_80165708"
   },
   {
-   "name": "DVDLowUnencryptedRead",
+   "name": "DVD::LowUnencryptedRead",
    "build": "any",
    "size": 416,
    "start": "a39dffd9d2066cb6",
@@ -715,7 +715,7 @@
    "registration": "DVD__ReadAbsAsyncPrio_HLE_801628cc"
   },
   {
-   "name": "DVDReadAbsAsyncPrio",
+   "name": "DVD::ReadAbsAsyncPrio",
    "build": "any",
    "size": 240,
    "start": "fc3447c0ad41c397",
@@ -733,7 +733,7 @@
    "registration": "DVD__ReadAsyncPrio_HLE_8015e74c"
   },
   {
-   "name": "DVDReadAsyncPrio",
+   "name": "DVD::ReadAsyncPrio",
    "build": "any",
    "size": 208,
    "start": "b99d4f854fb92f5c",
@@ -2229,7 +2229,7 @@
    "registration": "gx_stub_8016e848"
   },
   {
-   "name": "GXAbortFrame",
+   "name": "GX::AbortFrame",
    "build": "any",
    "size": 448,
    "start": "dd59c97e9c0c827f",
@@ -2247,7 +2247,7 @@
    "registration": "GX__Begin_8016f0f0"
   },
   {
-   "name": "GXBegin",
+   "name": "GX::Begin",
    "build": "any",
    "size": 336,
    "start": "f9aa98b38c5a9e09",
@@ -2265,7 +2265,7 @@
    "registration": "GX__BeginDisplayList_80172e00"
   },
   {
-   "name": "GXBeginDisplayList",
+   "name": "GX::BeginDisplayList",
    "build": "any",
    "size": 192,
    "start": "57c7aa0470bc7cbb",
@@ -2283,7 +2283,7 @@
    "registration": "gx_stub_8016c668"
   },
   {
-   "name": "GXCPInterruptHandler",
+   "name": "GX::CPInterruptHandler",
    "build": "any",
    "size": 352,
    "start": "abceb551148ec151",
@@ -2301,7 +2301,7 @@
    "registration": "GX__CallDisplayList_80172f64"
   },
   {
-   "name": "GXCallDisplayList",
+   "name": "GX::CallDisplayList",
    "build": "any",
    "size": 128,
    "start": "84430e8653ffceb2",
@@ -2320,7 +2320,7 @@
    "spans": 3
   },
   {
-   "name": "GXClearBoundingBox",
+   "name": "GX::ClearBoundingBox",
    "build": "any",
    "size": 64,
    "start": "f88192f2509046d6",
@@ -2339,7 +2339,7 @@
    "spans": 3
   },
   {
-   "name": "GXClearGPMetric",
+   "name": "GX::ClearGPMetric",
    "build": "any",
    "size": 64,
    "start": "d66bd2258af31b7b",
@@ -2359,7 +2359,7 @@
    "spans": 3
   },
   {
-   "name": "GXClearVtxDesc",
+   "name": "GX::ClearVtxDesc",
    "build": "any",
    "size": 64,
    "start": "8bfbf03fe7593061",
@@ -2377,7 +2377,7 @@
    "registration": "GX__CopyDisp_8016fc38"
   },
   {
-   "name": "GXCopyDisp",
+   "name": "GX::CopyDisp",
    "build": "any",
    "size": 320,
    "start": "c902c41e4d82e29d",
@@ -2395,7 +2395,7 @@
    "registration": "GX__CopyTex_8016fd74"
   },
   {
-   "name": "GXCopyTex",
+   "name": "GX::CopyTex",
    "build": "any",
    "size": 352,
    "start": "cc49fa2a82549d93",
@@ -2422,7 +2422,7 @@
    "registration": "GX__DrawDone_8016eab0"
   },
   {
-   "name": "GXDrawDone",
+   "name": "GX::DrawDone",
    "build": "any",
    "size": 208,
    "start": "5d5671f2c0623a2e",
@@ -2440,7 +2440,7 @@
    "registration": "GX__DrawSphere_80172a30"
   },
   {
-   "name": "GXDrawSphere",
+   "name": "GX::DrawSphere",
    "build": "any",
    "size": 976,
    "start": "52e44366debd3ee8",
@@ -2468,7 +2468,7 @@
    "spans": 3
   },
   {
-   "name": "GXEnableTexOffsets",
+   "name": "GX::EnableTexOffsets",
    "build": "any",
    "size": 64,
    "start": "c1a1e2da23265a3c",
@@ -2506,7 +2506,7 @@
    "registration": "GX__EndDisplayList_80172eb4"
   },
   {
-   "name": "GXEndDisplayList",
+   "name": "GX::EndDisplayList",
    "build": "any",
    "size": 176,
    "start": "41333f0e7114fbb9",
@@ -2524,7 +2524,7 @@
    "registration": "GX__FinishInterruptHandler_8016ed94"
   },
   {
-   "name": "GXFinishInterruptHandler",
+   "name": "GX::FinishInterruptHandler",
    "build": "any",
    "size": 128,
    "start": "ae906f9b2b8fa25f",
@@ -2542,7 +2542,7 @@
    "registration": "GX__Flush_8016e654"
   },
   {
-   "name": "GXFlush",
+   "name": "GX::Flush",
    "build": "any",
    "size": 96,
    "start": "967ecbed7bbee911",
@@ -2578,7 +2578,7 @@
    "registration": "GX__GetProjectionv_801730cc"
   },
   {
-   "name": "GXGetProjectionv",
+   "name": "GX::GetProjectionv",
    "build": "any",
    "size": 64,
    "start": "4bee035baf148e35",
@@ -2596,7 +2596,7 @@
    "registration": "GX__GetTexObjAll_80170bf8"
   },
   {
-   "name": "GXGetTexObjAll",
+   "name": "GX::GetTexObjAll",
    "build": "any",
    "size": 96,
    "start": "fbfcf1bc55dfad4b",
@@ -2614,7 +2614,7 @@
    "registration": "GX__GetTexObjLODAll_80170cbc"
   },
   {
-   "name": "GXGetTexObjLODAll",
+   "name": "GX::GetTexObjLODAll",
    "build": "any",
    "size": 224,
    "start": "46e92b803a144cb3",
@@ -2633,7 +2633,7 @@
    "spans": 3
   },
   {
-   "name": "GXGetViewportv",
+   "name": "GX::GetViewportv",
    "build": "any",
    "size": 144,
    "start": "d941aea1b7f450c4",
@@ -2652,7 +2652,7 @@
    "registration": "GX__GetVtxAttrFmt_8016e04c"
   },
   {
-   "name": "GXGetVtxAttrFmt",
+   "name": "GX::GetVtxAttrFmt",
    "build": "any",
    "size": 608,
    "start": "e2a03497f42ead80",
@@ -2670,7 +2670,7 @@
    "registration": "GX__GetVtxAttrFmtv_8016e2b8"
   },
   {
-   "name": "GXGetVtxAttrFmtv",
+   "name": "GX::GetVtxAttrFmtv",
    "build": "any",
    "size": 128,
    "start": "47b73b5456d565bc",
@@ -2688,7 +2688,7 @@
    "registration": "GX__GetVtxDesc_8016d9f0"
   },
   {
-   "name": "GXGetVtxDesc",
+   "name": "GX::GetVtxDesc",
    "build": "any",
    "size": 448,
    "start": "12604ce54b56182e",
@@ -2706,7 +2706,7 @@
    "registration": "GX__GetVtxDescv_8016dba4"
   },
   {
-   "name": "GXGetVtxDescv",
+   "name": "GX::GetVtxDescv",
    "build": "any",
    "size": 144,
    "start": "bd8c44b5ba40c6b7",
@@ -2724,7 +2724,7 @@
    "registration": "GX__Init_8016b850"
   },
   {
-   "name": "GXInit",
+   "name": "GX::Init",
    "build": "any",
    "size": 1296,
    "start": "32b64a8e34931cb8",
@@ -2742,7 +2742,7 @@
    "registration": "gx_stub_801724f8"
   },
   {
-   "name": "GXInitFogAdjTable",
+   "name": "GX::InitFogAdjTable",
    "build": "any",
    "size": 352,
    "start": "88da227579f3bee6",
@@ -2760,7 +2760,7 @@
    "registration": "GX__InitTexObj_801707f8"
   },
   {
-   "name": "GXInitTexObj",
+   "name": "GX::InitTexObj",
    "build": "any",
    "size": 528,
    "start": "13b606340147c204",
@@ -2778,7 +2778,7 @@
    "registration": "GX__InitTexObjCI_80170a04"
   },
   {
-   "name": "GXInitTexObjCI",
+   "name": "GX::InitTexObjCI",
    "build": "any",
    "size": 80,
    "start": "a5e30cac62889476",
@@ -2797,7 +2797,7 @@
    "spans": 3
   },
   {
-   "name": "GXInitTexObjFilter",
+   "name": "GX::InitTexObjFilter",
    "build": "any",
    "size": 64,
    "start": "c1662cf43ffd0d03",
@@ -2816,7 +2816,7 @@
    "registration": "GX__InitTexObjLOD_80170a4c"
   },
   {
-   "name": "GXInitTexObjLOD",
+   "name": "GX::InitTexObjLOD",
    "build": "any",
    "size": 272,
    "start": "4329b0d7778a5ff1",
@@ -2835,7 +2835,7 @@
    "spans": 4
   },
   {
-   "name": "GXInitTexObjTlut",
+   "name": "GX::InitTexObjTlut",
    "build": "any",
    "size": 64,
    "start": "1752c65925b59a40",
@@ -2845,7 +2845,7 @@
    "spans": 3
   },
   {
-   "name": "GXInitTexObjUserData",
+   "name": "GX::InitTexObjUserData",
    "build": "any",
    "size": 128,
    "start": "0a9270e6bbd3ce61",
@@ -2865,7 +2865,7 @@
    "spans": 4
   },
   {
-   "name": "GXInitTexObjWrapMode",
+   "name": "GX::InitTexObjWrapMode",
    "build": "any",
    "size": 96,
    "start": "9b1c3deebea2df1d",
@@ -2885,7 +2885,7 @@
    "spans": 3
   },
   {
-   "name": "GXInitTlutObj",
+   "name": "GX::InitTlutObj",
    "build": "any",
    "size": 208,
    "start": "434da682953832e6",
@@ -2904,7 +2904,7 @@
    "registration": "GX__InvalidateTexAll_80171110"
   },
   {
-   "name": "GXInvalidateTexAll",
+   "name": "GX::InvalidateTexAll",
    "build": "any",
    "size": 80,
    "start": "e3400fb714869997",
@@ -2922,7 +2922,7 @@
    "registration": "GX__LoadLightObjImm_80170320"
   },
   {
-   "name": "GXLoadLightObjImm",
+   "name": "GX::LoadLightObjImm",
    "build": "any",
    "size": 128,
    "start": "56d037a9279efa41",
@@ -2940,7 +2940,7 @@
    "registration": "GX__LoadNrmMtxImm_80173188"
   },
   {
-   "name": "GXLoadNrmMtxImm",
+   "name": "GX::LoadNrmMtxImm",
    "build": "any",
    "size": 96,
    "start": "9f1160b570a77060",
@@ -2959,7 +2959,7 @@
    "spans": 3
   },
   {
-   "name": "GXLoadNrmMtxIndx3x3",
+   "name": "GX::LoadNrmMtxIndx3x3",
    "build": "any",
    "size": 64,
    "start": "26751efbf840f0c8",
@@ -2977,7 +2977,7 @@
    "registration": "GX__LoadPosMtxImm_8017310c"
   },
   {
-   "name": "GXLoadPosMtxImm",
+   "name": "GX::LoadPosMtxImm",
    "build": "any",
    "size": 80,
    "start": "56d653127f3e63a2",
@@ -2996,7 +2996,7 @@
    "spans": 3
   },
   {
-   "name": "GXLoadPosMtxIndx",
+   "name": "GX::LoadPosMtxIndx",
    "build": "any",
    "size": 144,
    "start": "cf9baa58f8340c76",
@@ -3015,7 +3015,7 @@
    "registration": "GX__LoadTexMtxImm_80173234"
   },
   {
-   "name": "GXLoadTexMtxImm",
+   "name": "GX::LoadTexMtxImm",
    "build": "any",
    "size": 192,
    "start": "b9475d77aaeb1c87",
@@ -3033,7 +3033,7 @@
    "registration": "GX__LoadTexObj_80170f2c"
   },
   {
-   "name": "GXLoadTexObj",
+   "name": "GX::LoadTexObj",
    "build": "any",
    "size": 96,
    "start": "00a703965aef0a9f",
@@ -3051,7 +3051,7 @@
    "registration": "GX__LoadTexObjPreLoaded_80170dc8"
   },
   {
-   "name": "GXLoadTexObjPreLoaded",
+   "name": "GX::LoadTexObjPreLoaded",
    "build": "any",
    "size": 368,
    "start": "76f2d5fe938360da",
@@ -3069,7 +3069,7 @@
    "registration": "GX__LoadTlut_80170fa8"
   },
   {
-   "name": "GXLoadTlut",
+   "name": "GX::LoadTlut",
    "build": "any",
    "size": 160,
    "start": "8668156c6236ffbf",
@@ -3088,7 +3088,7 @@
    "spans": 4
   },
   {
-   "name": "GXPixModeSync",
+   "name": "GX::PixModeSync",
    "build": "any",
    "size": 64,
    "start": "4a0a52995855bc8d",
@@ -3108,7 +3108,7 @@
    "spans": 5
   },
   {
-   "name": "GXPokeAlphaMode",
+   "name": "GX::PokeAlphaMode",
    "build": "any",
    "size": 80,
    "start": "efb7d575c18f4869",
@@ -3127,7 +3127,7 @@
    "registration": "gx_stub_8016ebd0"
   },
   {
-   "name": "GXPokeBlendMode",
+   "name": "GX::PokeBlendMode",
    "build": "any",
    "size": 96,
    "start": "c065e354c27b3863",
@@ -3146,7 +3146,7 @@
    "spans": 4
   },
   {
-   "name": "GXPokeColorUpdate",
+   "name": "GX::PokeColorUpdate",
    "build": "any",
    "size": 64,
    "start": "fd4c9d0216403ce9",
@@ -3166,7 +3166,7 @@
    "spans": 4
   },
   {
-   "name": "GXPokeDither",
+   "name": "GX::PokeDither",
    "build": "any",
    "size": 64,
    "start": "7121def2e03dd8f2",
@@ -3186,7 +3186,7 @@
    "spans": 4
   },
   {
-   "name": "GXPokeDstAlpha",
+   "name": "GX::PokeDstAlpha",
    "build": "any",
    "size": 64,
    "start": "ad3c2fb05f6990da",
@@ -3206,7 +3206,7 @@
    "spans": 3
   },
   {
-   "name": "GXPokeZMode",
+   "name": "GX::PokeZMode",
    "build": "any",
    "size": 112,
    "start": "5107ae81d20a22b1",
@@ -3226,7 +3226,7 @@
    "spans": 3
   },
   {
-   "name": "GXResetWriteGatherPipe",
+   "name": "GX::ResetWriteGatherPipe",
    "build": "any",
    "size": 64,
    "start": "a00cdab478142160",
@@ -3245,7 +3245,7 @@
    "spans": 3
   },
   {
-   "name": "GXSetAlphaCompare",
+   "name": "GX::SetAlphaCompare",
    "build": "any",
    "size": 64,
    "start": "83aa626af79c9b9b",
@@ -3264,7 +3264,7 @@
    "spans": 3
   },
   {
-   "name": "GXSetAlphaUpdate",
+   "name": "GX::SetAlphaUpdate",
    "build": "any",
    "size": 112,
    "start": "97d819831fb40ab1",
@@ -3301,7 +3301,7 @@
    "registration": "GX__SetBlendMode_8017277c"
   },
   {
-   "name": "GXSetBlendMode",
+   "name": "GX::SetBlendMode",
    "build": "any",
    "size": 80,
    "start": "028c349286159524",
@@ -3319,7 +3319,7 @@
    "registration": "GX__SetCPUFifo_8016c94c"
   },
   {
-   "name": "GXSetCPUFifo",
+   "name": "GX::SetCPUFifo",
    "build": "any",
    "size": 480,
    "start": "a7e560aba676ba2f",
@@ -3337,7 +3337,7 @@
    "registration": "GX__SetChanAmbColor_8017039c"
   },
   {
-   "name": "GXSetChanAmbColor",
+   "name": "GX::SetChanAmbColor",
    "build": "any",
    "size": 224,
    "start": "21d808fae1db447d",
@@ -3355,7 +3355,7 @@
    "registration": "GX__SetChanCtrl_80170570"
   },
   {
-   "name": "GXSetChanCtrl",
+   "name": "GX::SetChanCtrl",
    "build": "any",
    "size": 176,
    "start": "1cad6cc078f69540",
@@ -3373,7 +3373,7 @@
    "registration": "GX__SetChanMatColor_80170474"
   },
   {
-   "name": "GXSetChanMatColor",
+   "name": "GX::SetChanMatColor",
    "build": "any",
    "size": 224,
    "start": "21d808fae1db447d",
@@ -3392,7 +3392,7 @@
    "spans": 3
   },
   {
-   "name": "GXSetClipMode",
+   "name": "GX::SetClipMode",
    "build": "any",
    "size": 192,
    "start": "407083e4f3d7d179",
@@ -3412,7 +3412,7 @@
    "spans": 3
   },
   {
-   "name": "GXSetCoPlanar",
+   "name": "GX::SetCoPlanar",
    "build": "any",
    "size": 64,
    "start": "0d34912669b0d01b",
@@ -3431,7 +3431,7 @@
    "spans": 3
   },
   {
-   "name": "GXSetColorUpdate",
+   "name": "GX::SetColorUpdate",
    "build": "any",
    "size": 96,
    "start": "71253c373ffd143b",
@@ -3451,7 +3451,7 @@
    "spans": 3
   },
   {
-   "name": "GXSetCopyClamp",
+   "name": "GX::SetCopyClamp",
    "build": "any",
    "size": 192,
    "start": "0b0ffe8285516311",
@@ -3470,7 +3470,7 @@
    "registration": "GX__SetCopyFilter_8016fa40"
   },
   {
-   "name": "GXSetCopyFilter",
+   "name": "GX::SetCopyFilter",
    "build": "any",
    "size": 496,
    "start": "fdd3f3c8cd091a5c",
@@ -3489,7 +3489,7 @@
    "spans": 3
   },
   {
-   "name": "GXSetCullMode",
+   "name": "GX::SetCullMode",
    "build": "any",
    "size": 80,
    "start": "a9791fca05c2e02e",
@@ -3509,7 +3509,7 @@
    "spans": 3
   },
   {
-   "name": "GXSetCurrentMtx",
+   "name": "GX::SetCurrentMtx",
    "build": "any",
    "size": 224,
    "start": "0a10c0804639e769",
@@ -3529,7 +3529,7 @@
    "spans": 3
   },
   {
-   "name": "GXSetDispCopyDst",
+   "name": "GX::SetDispCopyDst",
    "build": "any",
    "size": 320,
    "start": "09f5b5309157f696",
@@ -3549,7 +3549,7 @@
    "spans": 3
   },
   {
-   "name": "GXSetDispCopyFrame2Field",
+   "name": "GX::SetDispCopyFrame2Field",
    "build": "any",
    "size": 80,
    "start": "a54e2b3178bde5a6",
@@ -3569,7 +3569,7 @@
    "spans": 3
   },
   {
-   "name": "GXSetDispCopyGamma",
+   "name": "GX::SetDispCopyGamma",
    "build": "any",
    "size": 352,
    "start": "85890f19720f8f9f",
@@ -3588,7 +3588,7 @@
    "registration": "GX__SetDispCopySrc_8016f438"
   },
   {
-   "name": "GXSetDispCopySrc",
+   "name": "GX::SetDispCopySrc",
    "build": "any",
    "size": 64,
    "start": "7e7556d05c878be7",
@@ -3607,7 +3607,7 @@
    "spans": 3
   },
   {
-   "name": "GXSetDither",
+   "name": "GX::SetDither",
    "build": "any",
    "size": 96,
    "start": "cfdb30856157476b",
@@ -3636,7 +3636,7 @@
    "spans": 3
   },
   {
-   "name": "GXSetDstAlpha",
+   "name": "GX::SetDstAlpha",
    "build": "any",
    "size": 112,
    "start": "62b8c313e0a9bede",
@@ -3655,7 +3655,7 @@
    "registration": "GX__SetFog_801722cc"
   },
   {
-   "name": "GXSetFog",
+   "name": "GX::SetFog",
    "build": "any",
    "size": 560,
    "start": "e89c04c1574db3ef",
@@ -3673,7 +3673,7 @@
    "registration": "GX__SetGPFifo_8016cb2c"
   },
   {
-   "name": "GXSetGPFifo",
+   "name": "GX::SetGPFifo",
    "build": "any",
    "size": 656,
    "start": "5991d4ea8676a634",
@@ -3691,7 +3691,7 @@
    "registration": "gx_stub_801735cc"
   },
   {
-   "name": "GXSetGPMetric",
+   "name": "GX::SetGPMetric",
    "build": "any",
    "size": 2080,
    "start": "8489619b512460ab",
@@ -3709,7 +3709,7 @@
    "registration": "GX__SetIndTexCoordScale_80171968"
   },
   {
-   "name": "GXSetIndTexCoordScale",
+   "name": "GX::SetIndTexCoordScale",
    "build": "any",
    "size": 256,
    "start": "e395f59769f8bf75",
@@ -3727,7 +3727,7 @@
    "registration": "GX__SetIndTexMtx_80171814"
   },
   {
-   "name": "GXSetIndTexMtx",
+   "name": "GX::SetIndTexMtx",
    "build": "any",
    "size": 320,
    "start": "452e4413446c099b",
@@ -3745,7 +3745,7 @@
    "registration": "GX__SetIndTexOrder_80171a6c"
   },
   {
-   "name": "GXSetIndTexOrder",
+   "name": "GX::SetIndTexOrder",
    "build": "any",
    "size": 208,
    "start": "45c2682c87c94928",
@@ -3764,7 +3764,7 @@
    "spans": 3
   },
   {
-   "name": "GXSetLineWidth",
+   "name": "GX::SetLineWidth",
    "build": "any",
    "size": 64,
    "start": "4c39280171c393d0",
@@ -3783,7 +3783,7 @@
    "spans": 3
   },
   {
-   "name": "GXSetNumChans",
+   "name": "GX::SetNumChans",
    "build": "any",
    "size": 224,
    "start": "6bf0513fff38234b",
@@ -3803,7 +3803,7 @@
    "spans": 3
   },
   {
-   "name": "GXSetNumIndStages",
+   "name": "GX::SetNumIndStages",
    "build": "any",
    "size": 112,
    "start": "4ae54200c281bb07",
@@ -3823,7 +3823,7 @@
    "spans": 3
   },
   {
-   "name": "GXSetNumTevStages",
+   "name": "GX::SetNumTevStages",
    "build": "any",
    "size": 608,
    "start": "80ec3a4b9eb9d62e",
@@ -3843,7 +3843,7 @@
    "spans": 3
   },
   {
-   "name": "GXSetNumTexGens",
+   "name": "GX::SetNumTexGens",
    "build": "any",
    "size": 176,
    "start": "1b57cabc7ad6616d",
@@ -3862,7 +3862,7 @@
    "registration": "GX__SetPixelFmt_80172888"
   },
   {
-   "name": "GXSetPixelFmt",
+   "name": "GX::SetPixelFmt",
    "build": "any",
    "size": 176,
    "start": "415aac4448e24bc9",
@@ -3881,7 +3881,7 @@
    "spans": 3
   },
   {
-   "name": "GXSetPointSize",
+   "name": "GX::SetPointSize",
    "build": "any",
    "size": 64,
    "start": "03de4baf88b2ab95",
@@ -3899,7 +3899,7 @@
    "registration": "GX__SetProjectionv_80173080"
   },
   {
-   "name": "GXSetProjectionv",
+   "name": "GX::SetProjectionv",
    "build": "any",
    "size": 80,
    "start": "35fdf1682f57984c",
@@ -3917,7 +3917,7 @@
    "registration": "GX__SetScissor_80173430"
   },
   {
-   "name": "GXSetScissor",
+   "name": "GX::SetScissor",
    "build": "any",
    "size": 112,
    "start": "0af35a59d3906f90",
@@ -3936,7 +3936,7 @@
    "spans": 3
   },
   {
-   "name": "GXSetScissorBoxOffset",
+   "name": "GX::SetScissorBoxOffset",
    "build": "any",
    "size": 64,
    "start": "7453666dfeb60f17",
@@ -3954,7 +3954,7 @@
    "registration": "GX__SetTevAlphaIn_80171d20"
   },
   {
-   "name": "GXSetTevAlphaIn",
+   "name": "GX::SetTevAlphaIn",
    "build": "any",
    "size": 64,
    "start": "1081ce8f4f678219",
@@ -3972,7 +3972,7 @@
    "registration": "GX__SetTevAlphaOp_80171db8"
   },
   {
-   "name": "GXSetTevAlphaOp",
+   "name": "GX::SetTevAlphaOp",
    "build": "any",
    "size": 96,
    "start": "c1499cda8569280c",
@@ -3990,7 +3990,7 @@
    "registration": "GX__SetTevColor_80171e10"
   },
   {
-   "name": "GXSetTevColor",
+   "name": "GX::SetTevColor",
    "build": "any",
    "size": 96,
    "start": "fa07f95159ed7895",
@@ -4008,7 +4008,7 @@
    "registration": "GX__SetTevColorIn_80171ce0"
   },
   {
-   "name": "GXSetTevColorIn",
+   "name": "GX::SetTevColorIn",
    "build": "any",
    "size": 64,
    "start": "3f1e9ae89cff6331",
@@ -4026,7 +4026,7 @@
    "registration": "GX__SetTevColorOp_80171d60"
   },
   {
-   "name": "GXSetTevColorOp",
+   "name": "GX::SetTevColorOp",
    "build": "any",
    "size": 96,
    "start": "e86bf2aea817f2ee",
@@ -4044,7 +4044,7 @@
    "registration": "GX__SetTevColorS10_80171e70"
   },
   {
-   "name": "GXSetTevColorS10",
+   "name": "GX::SetTevColorS10",
    "build": "any",
    "size": 112,
    "start": "637c488fa08f37c8",
@@ -4062,7 +4062,7 @@
    "registration": "GX__SetTevDirect_80171b58"
   },
   {
-   "name": "GXSetTevDirect",
+   "name": "GX::SetTevDirect",
    "build": "any",
    "size": 80,
    "start": "a257834ea68ba44f",
@@ -4071,7 +4071,7 @@
    "registration": "GX__SetTevDirect_80171b58"
   },
   {
-   "name": "GXSetTevIndWarp",
+   "name": "GX::SetTevIndWarp",
    "build": "any",
    "size": 96,
    "start": "6160cc088bc27092",
@@ -4089,7 +4089,7 @@
    "registration": "GX__SetTevIndirect_801717ac"
   },
   {
-   "name": "GXSetTevIndirect",
+   "name": "GX::SetTevIndirect",
    "build": "any",
    "size": 112,
    "start": "11e1b15459fdcf50",
@@ -4107,7 +4107,7 @@
    "registration": "GX__SetTevKAlphaSel_80171f80"
   },
   {
-   "name": "GXSetTevKAlphaSel",
+   "name": "GX::SetTevKAlphaSel",
    "build": "any",
    "size": 80,
    "start": "b211d4968f99d63e",
@@ -4125,7 +4125,7 @@
    "registration": "GX__SetTevKColor_80171ed4"
   },
   {
-   "name": "GXSetTevKColor",
+   "name": "GX::SetTevKColor",
    "build": "any",
    "size": 96,
    "start": "3815a0a2a03a7e43",
@@ -4143,7 +4143,7 @@
    "registration": "GX__SetTevKColorSel_80171f30"
   },
   {
-   "name": "GXSetTevKColorSel",
+   "name": "GX::SetTevKColorSel",
    "build": "any",
    "size": 80,
    "start": "68046117e8ada0e6",
@@ -4161,7 +4161,7 @@
    "registration": "GX__SetTevOp_80171c4c"
   },
   {
-   "name": "GXSetTevOp",
+   "name": "GX::SetTevOp",
    "build": "any",
    "size": 160,
    "start": "3412c75074760b60",
@@ -4179,7 +4179,7 @@
    "registration": "GX__SetTevOrder_8017214c"
   },
   {
-   "name": "GXSetTevOrder",
+   "name": "GX::SetTevOrder",
    "build": "any",
    "size": 352,
    "start": "ac471f8fb99afbed",
@@ -4198,7 +4198,7 @@
    "spans": 3
   },
   {
-   "name": "GXSetTevSwapMode",
+   "name": "GX::SetTevSwapMode",
    "build": "any",
    "size": 64,
    "start": "9cfdff8a5faded07",
@@ -4216,7 +4216,7 @@
    "registration": "GX__SetTevSwapModeTable_8017200c"
   },
   {
-   "name": "GXSetTevSwapModeTable",
+   "name": "GX::SetTevSwapModeTable",
    "build": "any",
    "size": 128,
    "start": "ad32d9849e38e912",
@@ -4225,7 +4225,7 @@
    "registration": "GX__SetTevSwapModeTable_8017200c"
   },
   {
-   "name": "GXSetTexCoordBias",
+   "name": "GX::SetTexCoordBias",
    "build": "any",
    "size": 112,
    "start": "760c66a79e347748",
@@ -4243,7 +4243,7 @@
    "registration": "GX__SetTexCoordGen2_8016e37c"
   },
   {
-   "name": "GXSetTexCoordGen2",
+   "name": "GX::SetTexCoordGen2",
    "build": "any",
    "size": 592,
    "start": "2761ced89a57c166",
@@ -4261,7 +4261,7 @@
    "registration": "GX__SetTexCoordScaleManually_80171180"
   },
   {
-   "name": "GXSetTexCoordScaleManually",
+   "name": "GX::SetTexCoordScaleManually",
    "build": "any",
    "size": 128,
    "start": "45a9e2a42652d741",
@@ -4279,7 +4279,7 @@
    "registration": "GX__SetTexCopyDst_8016f4dc"
   },
   {
-   "name": "GXSetTexCopyDst",
+   "name": "GX::SetTexCopyDst",
    "build": "any",
    "size": 272,
    "start": "bb108c5ab547e887",
@@ -4297,7 +4297,7 @@
    "registration": "GX__SetTexCopySrc_8016f478"
   },
   {
-   "name": "GXSetTexCopySrc",
+   "name": "GX::SetTexCopySrc",
    "build": "any",
    "size": 64,
    "start": "a7f5204c15601db3",
@@ -4316,7 +4316,7 @@
    "spans": 3
   },
   {
-   "name": "GXSetViewportJitter",
+   "name": "GX::SetViewportJitter",
    "build": "any",
    "size": 64,
    "start": "634192858844444f",
@@ -4334,7 +4334,7 @@
    "registration": "GX__SetVtxAttrFmt_8016dc68"
   },
   {
-   "name": "GXSetVtxAttrFmt",
+   "name": "GX::SetVtxAttrFmt",
    "build": "any",
    "size": 416,
    "start": "7a3f68e91d052fd9",
@@ -4352,7 +4352,7 @@
    "registration": "GX__SetVtxAttrFmtv_8016de08"
   },
   {
-   "name": "GXSetVtxAttrFmtv",
+   "name": "GX::SetVtxAttrFmtv",
    "build": "any",
    "size": 464,
    "start": "21b0f8f94e6a8d4e",
@@ -4370,7 +4370,7 @@
    "registration": "GX__SetVtxDesc_8016d3a4"
   },
   {
-   "name": "GXSetVtxDesc",
+   "name": "GX::SetVtxDesc",
    "build": "any",
    "size": 624,
    "start": "100597f33ab6c17b",
@@ -4388,7 +4388,7 @@
    "registration": "GX__SetVtxDescv_8016d608"
   },
   {
-   "name": "GXSetVtxDescv",
+   "name": "GX::SetVtxDescv",
    "build": "any",
    "size": 528,
    "start": "adc51576723d7d09",
@@ -4407,7 +4407,7 @@
    "spans": 3
   },
   {
-   "name": "GXSetZCompLoc",
+   "name": "GX::SetZCompLoc",
    "build": "any",
    "size": 224,
    "start": "53f5de81497d444c",
@@ -4427,7 +4427,7 @@
    "spans": 3
   },
   {
-   "name": "GXSetZMode",
+   "name": "GX::SetZMode",
    "build": "any",
    "size": 64,
    "start": "107ae5e460dae677",
@@ -4455,7 +4455,7 @@
    "registration": "GX__SetZTexture_801720c0"
   },
   {
-   "name": "GXSetZTexture",
+   "name": "GX::SetZTexture",
    "build": "any",
    "size": 144,
    "start": "6f8c240141f5f002",
@@ -4598,7 +4598,7 @@
    "registration": "NAND_IOS_Close_HLE"
   },
   {
-   "name": "IOS_Close",
+   "name": "IOS::Close",
    "build": "any",
    "size": 176,
    "start": "dc184dc934de7ddd",
@@ -4616,7 +4616,7 @@
    "registration": "IOS_CloseAsync_HLE"
   },
   {
-   "name": "IOS_CloseAsync",
+   "name": "IOS::CloseAsync",
    "build": "any",
    "size": 192,
    "start": "5596916b10797468",
@@ -4634,7 +4634,7 @@
    "registration": "NAND_IOS_Ioctl_Entry_HLE"
   },
   {
-   "name": "IOS_Ioctl",
+   "name": "IOS::Ioctl",
    "build": "any",
    "size": 304,
    "start": "b9ac1c80af4fb1d6",
@@ -4652,7 +4652,7 @@
    "registration": "IOS_IoctlAsync_80194158"
   },
   {
-   "name": "IOS_IoctlAsync",
+   "name": "IOS::IoctlAsync",
    "build": "any",
    "size": 320,
    "start": "f455366abb03e577",
@@ -4670,7 +4670,7 @@
    "registration": "IOS_IoctlvAsync_HLE"
   },
   {
-   "name": "IOS_IoctlvAsync",
+   "name": "IOS::IoctlvAsync",
    "build": "any",
    "size": 240,
    "start": "03f892537b7712af",
@@ -4688,7 +4688,7 @@
    "registration": "NAND_IOS_Open_HLE"
   },
   {
-   "name": "IOS_Open",
+   "name": "IOS::Open",
    "build": "any",
    "size": 304,
    "start": "bb6079a916ec1aee",
@@ -4706,7 +4706,7 @@
    "registration": "IOS_OpenAsync_HLE"
   },
   {
-   "name": "IOS_OpenAsync",
+   "name": "IOS::OpenAsync",
    "build": "any",
    "size": 288,
    "start": "7a9c2739eb6e136e",
@@ -4724,7 +4724,7 @@
    "registration": "NAND_IOS_Read_HLE"
   },
   {
-   "name": "IOS_Read",
+   "name": "IOS::Read",
    "build": "any",
    "size": 272,
    "start": "df13bdcf7148b224",
@@ -4742,7 +4742,7 @@
    "registration": "IOS_ReadAsync_HLE"
   },
   {
-   "name": "IOS_ReadAsync",
+   "name": "IOS::ReadAsync",
    "build": "any",
    "size": 256,
    "start": "e52d32e215c648fd",
@@ -4760,7 +4760,7 @@
    "registration": "NAND_IOS_Seek_HLE"
   },
   {
-   "name": "IOS_Seek",
+   "name": "IOS::Seek",
    "build": "any",
    "size": 240,
    "start": "5596916b10797468",
@@ -4778,7 +4778,7 @@
    "registration": "IOS_SeekAsync_HLE"
   },
   {
-   "name": "IOS_SeekAsync",
+   "name": "IOS::SeekAsync",
    "build": "any",
    "size": 224,
    "start": "781a47ade1ece623",
@@ -4796,7 +4796,7 @@
    "registration": "NAND_IOS_Write_HLE"
   },
   {
-   "name": "IOS_Write",
+   "name": "IOS::Write",
    "build": "any",
    "size": 272,
    "start": "5596916b10797468",
@@ -4814,7 +4814,7 @@
    "registration": "IOS_WriteAsync_HLE"
   },
   {
-   "name": "IOS_WriteAsync",
+   "name": "IOS::WriteAsync",
    "build": "any",
    "size": 256,
    "start": "781a47ade1ece623",
@@ -4937,7 +4937,7 @@
    "registration": "KPAD__Read_HLE"
   },
   {
-   "name": "KPADRead",
+   "name": "KPAD::Read",
    "build": "any",
    "size": 1872,
    "start": "a1e1fe8351b8f08c",
@@ -5287,7 +5287,7 @@
    "registration": "NANDCheck_HLE"
   },
   {
-   "name": "NANDCheck",
+   "name": "NAND::Check",
    "build": "any",
    "size": 272,
    "start": "86292256b4ba58a0",
@@ -5305,7 +5305,7 @@
    "registration": "NANDClose_HLE"
   },
   {
-   "name": "NANDClose",
+   "name": "NAND::Close",
    "build": "any",
    "size": 112,
    "start": "1353eba3b5585375",
@@ -5323,7 +5323,7 @@
    "registration": "NANDCloseAsync_HLE"
   },
   {
-   "name": "NANDCloseAsync",
+   "name": "NAND::CloseAsync",
    "build": "any",
    "size": 144,
    "start": "4f248738b9716671",
@@ -5332,7 +5332,7 @@
    "registration": "NANDCloseAsync_HLE"
   },
   {
-   "name": "NANDCreate",
+   "name": "nandCreate",
    "build": "any",
    "size": 272,
    "start": "76f834a4a4afbbb7",
@@ -5350,7 +5350,7 @@
    "registration": "NANDDelete_HLE"
   },
   {
-   "name": "NANDDelete",
+   "name": "NAND::Delete",
    "build": "any",
    "size": 176,
    "start": "21199712f4ce2fd3",
@@ -5368,7 +5368,7 @@
    "registration": "NANDGetCurrentDir_HLE"
   },
   {
-   "name": "NANDGetCurrentDir",
+   "name": "NAND::GetCurrentDir",
    "build": "any",
    "size": 128,
    "start": "5865422953357f58",
@@ -5386,7 +5386,7 @@
    "registration": "NANDGetLength_HLE"
   },
   {
-   "name": "NANDGetLength",
+   "name": "NAND::GetLength",
    "build": "any",
    "size": 144,
    "start": "4c79cbed27d623f0",
@@ -5413,7 +5413,7 @@
    "registration": "NANDInit_HLE"
   },
   {
-   "name": "NANDInit",
+   "name": "NAND::Init",
    "build": "any",
    "size": 304,
    "start": "bb189fc76b77ef9e",
@@ -5431,7 +5431,7 @@
    "registration": "NANDOpenAsync_HLE"
   },
   {
-   "name": "NANDOpenAsync",
+   "name": "NAND::OpenAsync",
    "build": "any",
    "size": 128,
    "start": "d05147e1ce0e485c",
@@ -5440,7 +5440,7 @@
    "registration": "NANDOpenAsync_HLE"
   },
   {
-   "name": "NANDPrivateCreateAsync",
+   "name": "NANDPrivateCreateAsync_HLE",
    "build": "any",
    "size": 256,
    "start": "ac0dfb886cdd72aa",
@@ -5449,7 +5449,7 @@
    "registration": "NANDPrivateCreateAsync_HLE"
   },
   {
-   "name": "NANDPrivateCreateDirAsync",
+   "name": "NANDPrivateCreateDirAsync_HLE",
    "build": "any",
    "size": 256,
    "start": "b547ef40d6d00116",
@@ -5467,7 +5467,7 @@
    "registration": "NANDPrivateDeleteAsync_HLE"
   },
   {
-   "name": "NANDPrivateDeleteAsync",
+   "name": "NAND::Private::DeleteAsync",
    "build": "any",
    "size": 192,
    "start": "e2e3f7bab690123e",
@@ -5485,7 +5485,7 @@
    "registration": "NANDPrivateGetStatusAsync_HLE"
   },
   {
-   "name": "NANDPrivateGetStatusAsync",
+   "name": "NAND::Private::GetStatusAsync",
    "build": "any",
    "size": 144,
    "start": "e7b27144ae66a9e1",
@@ -5503,7 +5503,7 @@
    "registration": "NANDPrivateGetTypeAsync_HLE"
   },
   {
-   "name": "NANDPrivateGetTypeAsync",
+   "name": "NAND::Private::GetTypeAsync",
    "build": "any",
    "size": 80,
    "start": "8347765477d78ec5",
@@ -5521,7 +5521,7 @@
    "registration": "NANDPrivateOpenAsync_HLE"
   },
   {
-   "name": "NANDPrivateOpenAsync",
+   "name": "NAND::Private::OpenAsync",
    "build": "any",
    "size": 128,
    "start": "d05147e1ce0e485c",
@@ -5558,7 +5558,7 @@
    "registration": "NANDSeek_HLE"
   },
   {
-   "name": "NANDSeek",
+   "name": "NAND::Seek",
    "build": "any",
    "size": 160,
    "start": "98e7fbe5fa0d27b8",
@@ -5576,7 +5576,7 @@
    "registration": "NANDSeekAsync_HLE"
   },
   {
-   "name": "NANDSeekAsync",
+   "name": "NAND::SeekAsync",
    "build": "any",
    "size": 176,
    "start": "d05147e1ce0e485c",
@@ -5907,7 +5907,7 @@
    "registration": "OSCancelThread_HLE_801aa1d4"
   },
   {
-   "name": "OSCancelThread",
+   "name": "OS::CancelThread",
    "build": "any",
    "size": 480,
    "start": "4e0a5e761fad519c",
@@ -5926,7 +5926,7 @@
    "spans": 3
   },
   {
-   "name": "OSClearContext",
+   "name": "OS::ClearContext",
    "build": "any",
    "size": 240,
    "start": "d6b378a36159424c",
@@ -5945,7 +5945,7 @@
    "registration": "OSCreateThread_HLE_801a9e84"
   },
   {
-   "name": "OSCreateThread",
+   "name": "OS::CreateThread",
    "build": "any",
    "size": 624,
    "start": "b2474b7befa3c364",
@@ -5963,7 +5963,7 @@
    "registration": "OSDetachThread_HLE_801aa4ec"
   },
   {
-   "name": "OSDetachThread",
+   "name": "OS::DetachThread",
    "build": "any",
    "size": 160,
    "start": "e6be59f27bbe007f",
@@ -5982,7 +5982,7 @@
    "spans": 4
   },
   {
-   "name": "OSDisableInterrupts",
+   "name": "OS::DisableInterrupts",
    "build": "any",
    "size": 64,
    "start": "1212c892cca8ad0a",
@@ -6002,7 +6002,7 @@
    "spans": 4
   },
   {
-   "name": "OSEnableInterrupts",
+   "name": "OS::EnableInterrupts",
    "build": "any",
    "size": 80,
    "start": "90c76d95a31560a0",
@@ -6021,7 +6021,7 @@
    "registration": "OS__ExceptionInit_801a00e0"
   },
   {
-   "name": "OSExceptionInit",
+   "name": "OS::ExceptionInit",
    "build": "any",
    "size": 640,
    "start": "5941f68908bdfb8e",
@@ -6057,7 +6057,7 @@
    "registration": "OS__GetConsoleType_8019f33c"
   },
   {
-   "name": "OSGetConsoleType",
+   "name": "OS::GetConsoleType",
    "build": "any",
    "size": 608,
    "start": "b9e98751fb7908ef",
@@ -6076,7 +6076,7 @@
    "spans": 3
   },
   {
-   "name": "OSGetResetCode",
+   "name": "OS::GetResetCode",
    "build": "any",
    "size": 80,
    "start": "1aba5663f47bac62",
@@ -6096,7 +6096,7 @@
    "spans": 4
   },
   {
-   "name": "OSGetTime",
+   "name": "OS::GetTime",
    "build": "any",
    "size": 160,
    "start": "6ed5973db95aacdf",
@@ -6115,7 +6115,7 @@
    "registration": "OSJoinThread_HLE_801aa3ac"
   },
   {
-   "name": "OSJoinThread",
+   "name": "OS::JoinThread",
    "build": "any",
    "size": 336,
    "start": "987f8d1813dbaa0f",
@@ -6133,7 +6133,7 @@
    "registration": "OS__LoadContext_801a1f58"
   },
   {
-   "name": "OSLoadContext",
+   "name": "OS::LoadContext",
    "build": "any",
    "size": 224,
    "start": "917a45aec1a36769",
@@ -6151,7 +6151,7 @@
    "registration": "OSLockMutex_HLE_801a7ee4"
   },
   {
-   "name": "OSLockMutex",
+   "name": "OS::LockMutex",
    "build": "any",
    "size": 224,
    "start": "3f930a77e06dd8ed",
@@ -6169,7 +6169,7 @@
    "registration": "OS__Panic_801A2660_Cpu"
   },
   {
-   "name": "OSPanic",
+   "name": "OS::Panic",
    "build": "any",
    "size": 304,
    "start": "38fb1af64ac0ae2c",
@@ -6178,7 +6178,7 @@
    "registration": "OS__Panic_801A2660_Cpu"
   },
   {
-   "name": "OSReport",
+   "name": "OS::Report",
    "build": "any",
    "size": 128,
    "start": "4e430c334c21b7c5",
@@ -6197,7 +6197,7 @@
    "spans": 3
   },
   {
-   "name": "OSResetSystem",
+   "name": "OS::ResetSystem",
    "build": "any",
    "size": 352,
    "start": "29e702410ed7510b",
@@ -6217,7 +6217,7 @@
    "spans": 4
   },
   {
-   "name": "OSRestoreInterrupts",
+   "name": "OS::RestoreInterrupts",
    "build": "any",
    "size": 80,
    "start": "7f947d7163c364a6",
@@ -6236,7 +6236,7 @@
    "registration": "OSResumeThread_HLE_801aa58c"
   },
   {
-   "name": "OSResumeThread",
+   "name": "OS::ResumeThread",
    "build": "any",
    "size": 672,
    "start": "bd0a25e2e1bb5cf5",
@@ -6254,7 +6254,7 @@
    "registration": "OSSetAlarm_HLE_801a0870"
   },
   {
-   "name": "OSSetAlarm",
+   "name": "OS::SetAlarm",
    "build": "any",
    "size": 112,
    "start": "1e3c395cf15b6f5c",
@@ -6272,7 +6272,7 @@
    "registration": "OS__SetCurrentContext_801a1e70"
   },
   {
-   "name": "OSSetCurrentContext",
+   "name": "OS::SetCurrentContext",
    "build": "any",
    "size": 96,
    "start": "2555b1f3548229a9",
@@ -6290,7 +6290,7 @@
    "registration": "OS__SetPeriodicAlarm_801a08e0"
   },
   {
-   "name": "OSSetPeriodicAlarm",
+   "name": "OS::SetPeriodicAlarm",
    "build": "any",
    "size": 144,
    "start": "3ccd0aea783cdea5",
@@ -6308,7 +6308,7 @@
    "registration": "OSSleepThread_HLE_801aa9b8"
   },
   {
-   "name": "OSSleepThread",
+   "name": "OS::SleepThread",
    "build": "any",
    "size": 240,
    "start": "e8fd393157788f68",
@@ -6344,7 +6344,7 @@
    "registration": "OSUnlockMutex_HLE_801a7fc0"
   },
   {
-   "name": "OSUnlockMutex",
+   "name": "OS::UnlockMutex",
    "build": "any",
    "size": 208,
    "start": "1c052c7a74bef658",
@@ -6362,7 +6362,7 @@
    "registration": "OSWakeupThread_HLE_801aaaa4"
   },
   {
-   "name": "OSWakeupThread",
+   "name": "OS::WakeupThread",
    "build": "any",
    "size": 256,
    "start": "88b9985ed4a2d679",
@@ -7616,7 +7616,7 @@
    "registration": "WPADControlMotor_HLE"
   },
   {
-   "name": "WPADControlMotor",
+   "name": "WPAD::ControlMotor",
    "build": "any",
    "size": 208,
    "start": "c10312a977af9d11",
@@ -7634,7 +7634,7 @@
    "registration": "WPADGetDataFormat_HLE"
   },
   {
-   "name": "WPADGetDataFormat",
+   "name": "WPAD::GetDataFormat",
    "build": "any",
    "size": 80,
    "start": "9759c431ca7eabc2",
@@ -7662,7 +7662,7 @@
    "registration": "WPADGetInfoAsync_HLE"
   },
   {
-   "name": "WPADGetInfoAsync",
+   "name": "WPAD::GetInfoAsync",
    "build": "any",
    "size": 544,
    "start": "94977028c4dac899",
@@ -7681,7 +7681,7 @@
    "spans": 3
   },
   {
-   "name": "WPADGetStatus",
+   "name": "WPAD::GetStatus",
    "build": "any",
    "size": 96,
    "start": "f152c2c56468ad19",
@@ -7700,7 +7700,7 @@
    "registration": "WPADInit_HLE"
   },
   {
-   "name": "WPADInit",
+   "name": "WPAD::Init",
    "build": "any",
    "size": 112,
    "start": "89e430a5d0c30bf9",
@@ -7718,7 +7718,7 @@
    "registration": "WPADProbe_HLE"
   },
   {
-   "name": "WPADProbe",
+   "name": "WPAD::Probe",
    "build": "any",
    "size": 144,
    "start": "b9832be5c62e6cd3",
@@ -7736,7 +7736,7 @@
    "registration": "WPADSetDataFormat_HLE"
   },
   {
-   "name": "WPADSetDataFormat",
+   "name": "WPAD::SetDataFormat",
    "build": "any",
    "size": 192,
    "start": "7d531cf09181df8c",
@@ -8104,7 +8104,7 @@
    "registration": "gx_stub_8016e6e4"
   },
   {
-   "name": "__GXAbort",
+   "name": "__GX::Abort",
    "build": "any",
    "size": 368,
    "start": "95ecfd5ec6f415e8",
@@ -8122,7 +8122,7 @@
    "registration": "gx_stub_8016d8c4"
   },
   {
-   "name": "__GXCalculateVLim",
+   "name": "__GX::CalculateVLim",
    "build": "any",
    "size": 304,
    "start": "6108fd26b5207354",
@@ -8140,7 +8140,7 @@
    "registration": "gx_stub_8016d1fc"
   },
   {
-   "name": "__GXCleanGPFifo",
+   "name": "__GX::CleanGPFifo",
    "build": "any",
    "size": 416,
    "start": "39b24f8ae1b0d733",
@@ -8158,7 +8158,7 @@
    "registration": "gx_stub_8016b49c"
   },
   {
-   "name": "__GXDefaultTexRegionCallback",
+   "name": "__GX::DefaultTexRegionCallback",
    "build": "any",
    "size": 240,
    "start": "26691566ea96ed38",
@@ -8177,7 +8177,7 @@
    "spans": 3
   },
   {
-   "name": "__GXDefaultTlutRegionCallback",
+   "name": "__GX::DefaultTlutRegionCallback",
    "build": "any",
    "size": 416,
    "start": "3474b2d798074d2c",
@@ -8197,7 +8197,7 @@
    "spans": 3
   },
   {
-   "name": "__GXFlushTextureState",
+   "name": "__GX::FlushTextureState",
    "build": "any",
    "size": 208,
    "start": "308f4fe8df123d41",
@@ -8216,7 +8216,7 @@
    "registration": "__GX__InitRevisionBits_8016b720"
   },
   {
-   "name": "__GXInitRevisionBits",
+   "name": "__GX::InitRevisionBits",
    "build": "any",
    "size": 304,
    "start": "cccae0c05a3016b3",
@@ -8234,7 +8234,7 @@
    "registration": "__GX__PEInit_8016ee14"
   },
   {
-   "name": "__GXPEInit",
+   "name": "__GX::PEInit",
    "build": "any",
    "size": 112,
    "start": "c9699a8ed79e34e5",
@@ -8252,7 +8252,7 @@
    "registration": "__GX__SaveFifo_8016cdbc"
   },
   {
-   "name": "__GXSaveFifo",
+   "name": "__GX::SaveFifo",
    "build": "any",
    "size": 256,
    "start": "517876177911caf3",
@@ -8270,7 +8270,7 @@
    "registration": "gx_stub_8016f23c"
   },
   {
-   "name": "__GXSendFlushPrim",
+   "name": "__GX::SendFlushPrim",
    "build": "any",
    "size": 224,
    "start": "cdeb587c4235b32d",
@@ -8288,7 +8288,7 @@
    "registration": "GX__SetDirtyState_8016ee78"
   },
   {
-   "name": "__GXSetDirtyState",
+   "name": "__GX::SetDirtyState",
    "build": "any",
    "size": 640,
    "start": "16922fabc5a91b15",
@@ -8297,7 +8297,7 @@
    "registration": "GX__SetDirtyState_8016ee78"
   },
   {
-   "name": "__GXSetGenMode",
+   "name": "__GX::SetGenMode",
    "build": "any",
    "size": 112,
    "start": "7c30ee5b2284b160",
@@ -8316,7 +8316,7 @@
    "registration": "gx_stub_80173544"
   },
   {
-   "name": "__GXSetMatrixIndex",
+   "name": "__GX::SetMatrixIndex",
    "build": "any",
    "size": 144,
    "start": "e71ab95f6fffd6c6",
@@ -8352,7 +8352,7 @@
    "registration": "__GX__SetSUTexRegs_801712f0"
   },
   {
-   "name": "__GXSetSUTexRegs",
+   "name": "__GX::SetSUTexRegs",
    "build": "any",
    "size": 368,
    "start": "2a31760c3c934a13",
@@ -8370,7 +8370,7 @@
    "registration": "__GX__SetTmemConfig_80171458"
   },
   {
-   "name": "__GXSetTmemConfig",
+   "name": "__GX::SetTmemConfig",
    "build": "any",
    "size": 848,
    "start": "62c9de1f2d213d9c",
@@ -8388,7 +8388,7 @@
    "registration": "gx_stub_8016dfcc"
   },
   {
-   "name": "__GXSetVAT",
+   "name": "__GX::SetVAT",
    "build": "any",
    "size": 128,
    "start": "231a675a531248ad",
@@ -8406,7 +8406,7 @@
    "registration": "gx_stub_8016d814"
   },
   {
-   "name": "__GXSetVCD",
+   "name": "__GX::SetVCD",
    "build": "any",
    "size": 176,
    "start": "0da5203a8955d226",
@@ -8442,7 +8442,7 @@
    "registration": "gx_stub_8016b5b4"
   },
   {
-   "name": "__GXShutdown",
+   "name": "__GX::Shutdown",
    "build": "any",
    "size": 368,
    "start": "6dd5df2578d1004a",
@@ -8460,7 +8460,7 @@
    "registration": "OS____GetSystemTime_801aad7c"
   },
   {
-   "name": "__OSGetSystemTime",
+   "name": "OS::__GetSystemTime",
    "build": "any",
    "size": 112,
    "start": "1ba520efbfb3cdbd",
@@ -8478,7 +8478,7 @@
    "registration": "OSInitAudioSystem_801A1358"
   },
   {
-   "name": "__OSInitAudioSystem",
+   "name": "OS::__InitAudioSystem",
    "build": "any",
    "size": 464,
    "start": "720dcc1704b873e2",
@@ -8496,7 +8496,7 @@
    "registration": "OS____InitMemoryProtection_801a7dfc"
   },
   {
-   "name": "__OSInitMemoryProtection",
+   "name": "OS::__InitMemoryProtection",
    "build": "any",
    "size": 208,
    "start": "bdd0f7e55167b450",
@@ -8514,7 +8514,7 @@
    "registration": "__OSInitSTM_HLE_801ab848"
   },
   {
-   "name": "__OSInitSTM",
+   "name": "OS::__InitSTM",
    "build": "any",
    "size": 288,
    "start": "9196b410cba22d7a",
@@ -8532,7 +8532,7 @@
    "registration": "OS____InterruptInit_801a661c"
   },
   {
-   "name": "__OSInterruptInit",
+   "name": "OS::__InterruptInit",
    "build": "any",
    "size": 208,
    "start": "2274be762c2b679f",
@@ -8550,7 +8550,7 @@
    "registration": "OS____MaskInterrupts_801a693c"
   },
   {
-   "name": "__OSMaskInterrupts",
+   "name": "OS::__MaskInterrupts",
    "build": "any",
    "size": 128,
    "start": "3abf60b832d89dfa",
@@ -8568,7 +8568,7 @@
    "registration": "OS____PSInit_801a04a0"
   },
   {
-   "name": "__OSPSInit",
+   "name": "OS::__PSInit",
    "build": "any",
    "size": 96,
    "start": "1b28d6c4d8e6e4ab",
@@ -8586,7 +8586,7 @@
    "registration": "OSStopAudioSystem_801A1520"
   },
   {
-   "name": "__OSStopAudioSystem",
+   "name": "OS::__StopAudioSystem",
    "build": "any",
    "size": 208,
    "start": "189a053bced66f5f",
@@ -8642,7 +8642,7 @@
    "spans": 3
   },
   {
-   "name": "__wpadInitSub",
+   "name": "WPADiInitSub",
    "build": "any",
    "size": 608,
    "start": "588a0734eec16e3a",
@@ -8813,7 +8813,7 @@
    "registration": "NANDOpen_HLE"
   },
   {
-   "name": "nandSafeClose",
+   "name": "NAND::SafeClose",
    "build": "any",
    "size": 480,
    "start": "6848c9b913c1f6f6",
@@ -8822,7 +8822,7 @@
    "registration": "NANDSafeClose_HLE"
   },
   {
-   "name": "nandSafeOpen",
+   "name": "NAND::SafeOpen",
    "build": "any",
    "size": 944,
    "start": "0053bda783d0eeae",
