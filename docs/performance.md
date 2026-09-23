@@ -117,6 +117,37 @@ were on, leaving roughly 6 ms parsing bytes that have to be parsed.
 Audio is now the largest single cost, and most of it is the guest's own
 callback - translated game code, not the runtime's mixer.
 
+## What would actually move it, in order
+
+The frame is ~66 ms. Everything below was measured on hardware, not guessed.
+
+**1. The 160,000 GX register writes a frame.** 1,600 display-list calls, around
+100 register writes each, replayed into Aurora's GX state: 9.2 ms. Aurora
+already skips a write whose value has not changed, so this is volume, not
+waste. It goes away only when a native applies a material's state once instead
+of the guest emitting a list that we decode. That is `Draw1Mat1ShpDirectly`
+(14.9% of the frame by itself) with `G3DState::LoadResShpPrimitive` (12.6%)
+behind it - the two together build the lists we then spend 12.6 ms decoding.
+
+**2. Smaller natives, ordered by what the profiler measured.** ogws is CC0 and
+has the source for all of these, so each is a reading job rather than a
+reverse-engineering one:
+
+| share | function | shape of the work |
+|---|---|---|
+| 2.5% | `nw4r::g3d::CalcWorld` | matrix math over a node-tree bytecode; needs ResMdl/ResNode layouts and one call back for animation |
+| 3.2% | `nw4r::g3d::ScnMdl::G3dProc` | scene walk |
+| 1.3% | `nw4r::ef::DrawBillboardStrategy::DrawNormalBillboard` | self-contained |
+| 1.4% + 0.9% | `nw4r::snd::detail::SoundThread` callbacks | audio, independent of the graphics work |
+| 0.7% | `nw4r::lyt::Material::SetupGX` | small, and menus lean on it |
+
+A native that only computes - `CalcWorld` is the clearest - is the safe place
+to start: if it is wrong the model moves visibly, rather than corrupting
+renderer state.
+
+**3. What is not worth doing.** The threaded decoder (measured: worse), and any
+cache keyed on a display list's bytes (measured: the bytes differ every frame).
+
 ## Notes
 
 - 2026-09-23: the graphics-command worker is not the thing to fix. It lives in
