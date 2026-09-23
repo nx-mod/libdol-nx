@@ -129,9 +129,11 @@ EOF
 
 cat > "$game_dir/.gitignore" <<'EOF'
 # Game code and data are never committed: build from your own disc.
-/disc/
+# No trailing slash on disc: it is often a link to where the disc already is.
+/disc
 /generated/
 /build/
+/functions.map
 EOF
 
 cat > "$game_dir/README.md" <<EOF
