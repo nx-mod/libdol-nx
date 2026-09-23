@@ -15,6 +15,7 @@
 #   --dawn DIR      dawn-nx checkout     (default: next to libwii-nx)
 #   --aurora DIR    aurora-nx checkout   (default: next to libwii-nx)
 #   --jobs N        parallel compiles    (default 2; translation is memory-hungry)
+#   --into DIR      put a new game's project here (its own repository, say)
 #   --skip-translate  build only, when the C++ is already there
 set -euo pipefail
 
@@ -28,11 +29,13 @@ dawn="$libwiinx/../dawn-nx"
 aurora="$libwiinx/../aurora-nx"
 jobs=2
 translate=1
+into=
 while [ $# -gt 0 ]; do
     case $1 in
         --dawn) dawn=$2; shift 2 ;;
         --aurora) aurora=$2; shift 2 ;;
         --jobs) jobs=$2; shift 2 ;;
+        --into) into=$2; shift 2 ;;
         --skip-translate) translate=0; shift ;;
         *) usage ;;
     esac
@@ -40,8 +43,15 @@ done
 
 if [ -f "$target" ]; then
     echo "== new game from $target"
-    "$here/wiinx-new-game" "$target"
-    game=$(ls -dt "$libwiinx"/../*-nx | head -1)
+    # Next to this checkout by default, or into --into, which is where a game
+    # with libwii-nx as its submodule wants it: the repository it already has.
+    if [ -n "$into" ]; then
+        "$here/wiinx-new-game" "$target" "$into"
+        game=$(cd "$into" && pwd)
+    else
+        "$here/wiinx-new-game" "$target"
+        game=$(ls -dt "$libwiinx"/../*-nx | head -1)
+    fi
 else
     game=$(cd "$target" 2>/dev/null && pwd) || { echo "no such game folder: $target" >&2; exit 1; }
 fi

@@ -38,7 +38,13 @@ title=$(sed -n 's/^Internal Name: *//p' <<<"$header" | tr -d '\r')
 region_letter=${game_id:3:1}
 name=$(tr 'A-Z' 'a-z' <<<"${game_id:0:4}")-nx
 game_dir=${2:-$libwiinx/../$name}
-[ -e "$game_dir" ] && { echo ">> $game_dir already exists" >&2; exit 1; }
+# An existing folder is fine as long as it is not already a game project: a
+# game usually gets its own repository, with libwii-nx as a submodule in it,
+# and that folder exists before the game does.
+for existing in game.toml recomp.yml; do
+    [ -e "$game_dir/$existing" ] && {
+        echo ">> $game_dir is already a game project ($existing)" >&2; exit 1; }
+done
 mkdir -p "$game_dir"
 game_dir=$(cd "$game_dir" && pwd)
 name=$(basename "$game_dir")
