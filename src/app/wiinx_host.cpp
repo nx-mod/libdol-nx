@@ -10,6 +10,7 @@
 #include "guest_flat_memory.h"
 #include "native_guest_return.h"
 #include "memory.h"
+#include "memory_access.h"
 
 #include <cstdio>
 
@@ -28,7 +29,11 @@ void WiinxInstallHost() {
     // the guest's address space are not in the flat mapping, and a native that
     // computed its own pointer faulted on the first pane that lived in one.
     host.pointer = [](wiinx::GuestAddr addr, wiinx::u32 size) -> wiinx::u8* {
-        return Memory::Contains(addr, size) ? Memory::GetPointer(addr, size) : nullptr;
+        // One lookup, inline: the page table answers "where is it" and "is it
+        // there" together. Asking Contains and then GetPointer resolved the
+        // same address twice, on a path a native takes for every field of
+        // every object it touches.
+        return MemoryInline::GetPointerFast(addr, size);
     };
     host.valid = [](wiinx::GuestAddr addr, wiinx::u32 size) { return Memory::Contains(addr, size); };
     host.gpr = [](wiinx::Cpu* cpu, int index) { return static_cast<wiinx::u32>(context(cpu)->gpr[index]); };

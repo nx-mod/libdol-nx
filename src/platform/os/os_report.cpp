@@ -150,11 +150,22 @@ static void HLE_LogOSReport(CpuContext* cpu, const char* fmt)
     }
 #endif
     std::cerr << "[OSReport] " << buffer;
-
-    // OSReport strings don't always end in \n, so flush explicitly
     if (buffer.empty() || buffer.back() != '\n') {
-        std::cerr << std::endl;
-    } else {
+        std::cerr << '\n';
+    }
+
+    // Not a flush per line. A game talks constantly - Mario Kart Wii's menus
+    // spent 4% of their time in OSReport - and each flush is a write to the SD
+    // card. Anything that matters (a warning, a panic) still goes out at once,
+    // and so does every 64th line, so a log left behind by a hang is at most
+    // that far from the end.
+    static int sinceFlush = 0;
+    const bool urgent = buffer.find("Warning") != std::string::npos ||
+                        buffer.find("Panic") != std::string::npos ||
+                        buffer.find("Error") != std::string::npos ||
+                        buffer.find("assert") != std::string::npos;
+    if (urgent || ++sinceFlush >= 64) {
+        sinceFlush = 0;
         std::cerr << std::flush;
     }
 

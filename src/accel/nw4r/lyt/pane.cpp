@@ -20,6 +20,10 @@
 #include <cmath>
 
 namespace wiinx::nw4r::lyt {
+
+// Set by the binding (see nw4r.hpp).
+GuestAddr g_calculateMtxAddress = 0;
+
 namespace {
 
 // Members both builds share (ogws lyt_pane.h / lyt_drawInfo.h).
@@ -166,7 +170,16 @@ void calculate_mtx(Cpu* cpu) {
         const GuestAddr method = load<u32>(load<u32>(child) + L::kVtableCalculateMtx);
         h.set_gpr(cpu, 3, child);
         h.set_gpr(cpu, 4, info.addr);
-        h.call(cpu, method);
+        if (method == g_calculateMtxAddress && g_calculateMtxAddress != 0) {
+            // An ordinary pane: its vtable entry is this native. Going out
+            // through the guest dispatcher to arrive back here costs a lookup
+            // and a call frame for every pane in the tree, and a menu is
+            // hundreds of panes deep - the code this replaced called its
+            // children directly.
+            calculate_mtx<L>(cpu);
+        } else {
+            h.call(cpu, method);
+        }
     }
 
     if (modifyInfo) {
@@ -178,6 +191,10 @@ void calculate_mtx(Cpu* cpu) {
 }
 
 }  // namespace
+
+void set_pane_calculate_mtx_address(GuestAddr address) noexcept {
+    g_calculateMtxAddress = address;
+}
 
 // The module table picks these up.
 extern const Native kPaneNatives[] = {

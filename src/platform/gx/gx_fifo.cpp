@@ -16,6 +16,12 @@ HleGxState g_hleGxState;
 // Time the guest spends having its FIFO words decoded into GX state, reported
 // per frame by [vi]. The sampling profiler charges this to whichever guest
 // function wrote the words, which hides it inside "game code".
+//
+// Off unless WIINX_GX_PROFILING is defined. These timers sit on the hottest
+// path in the program - one per BP, CP or XF register write, per display list
+// call, per draw - and each costs two reads of the system counter and two
+// atomic adds. A game writes thousands of those a frame, so measuring the
+// path changed what it measured.
 std::atomic<uint32_t> g_gxFifoCalls{0};
 std::atomic<uint64_t> g_gxFifoTicks{0};
 namespace {
@@ -33,7 +39,11 @@ struct FifoTimer {
     }
 };
 }  // namespace
+#if defined(WIINX_GX_PROFILING)
 #define GX_FIFO_TIMER FifoTimer fifoTimer
+#else
+#define GX_FIFO_TIMER ((void)0)
+#endif
 
 // The same time split by what the packet did. Sections never nest.
 enum FifoSection { kFifoBp, kFifoCp, kFifoXf, kFifoCallDl, kFifoDraw, kFifoVertex, kFifoSectionCount };
@@ -50,7 +60,11 @@ struct FifoSectionTimer {
     }
 };
 }  // namespace
+#if defined(WIINX_GX_PROFILING)
 #define GX_FIFO_SECTION(which) FifoSectionTimer fifoSection(which)
+#else
+#define GX_FIFO_SECTION(which) ((void)0)
+#endif
 #else
 #define GX_FIFO_TIMER ((void)0)
 #define GX_FIFO_SECTION(which) ((void)0)
