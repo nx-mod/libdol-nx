@@ -3,7 +3,8 @@
 #
 #   tools/wiinx-new-game <image> [folder]
 #
-# <image> is your own dump (.iso, .wbfs, .rvz, .gcz, .ciso).
+# <image> is your own dump (.iso, .wbfs, .rvz, .gcz, .ciso), or a disc you
+# already extracted, which is linked to rather than copied.
 # [folder] is where the project goes; next to this libwii-nx checkout, named
 # after the game ID, if left out. It writes:
 #
@@ -24,14 +25,27 @@ if [ $# -lt 1 ]; then
     exit 2
 fi
 image=$1
-command -v dolphin-tool >/dev/null || { echo "dolphin-tool not found: install Dolphin" >&2; exit 1; }
-[ -f "$image" ] || { echo "no such image: $image" >&2; exit 1; }
+# A disc that is already extracted (its own folder, or a project's disc/) is as
+# good a starting point as an image: everything below is read from the disc
+# itself either way, and nobody has to rip a disc twice.
+extracted=""
+for candidate in "$image" "$image/disc"; do
+    [ -f "$candidate/sys/boot.bin" ] && { extracted=$candidate; break; }
+done
 
-header=$(dolphin-tool header -i "$image")
-game_id=$(sed -n 's/^Game ID: *//p' <<<"$header" | tr -d '\r')
-revision=$(sed -n 's/^Revision: *//p' <<<"$header" | tr -d '\r')
-region=$(sed -n 's/^Region: *//p' <<<"$header" | tr -d '\r')
-title=$(sed -n 's/^Internal Name: *//p' <<<"$header" | tr -d '\r')
+if [ -n "$extracted" ]; then
+    extracted=$(cd "$extracted" && pwd)
+    read -r game_id revision region title <<<"$(python3 "$here/wiinx-read-boot" "$extracted/sys/boot.bin")"
+else
+    command -v dolphin-tool >/dev/null || { echo "dolphin-tool not found: install Dolphin" >&2; exit 1; }
+    [ -f "$image" ] || { echo "no such image or extracted disc: $image" >&2; exit 1; }
+
+    header=$(dolphin-tool header -i "$image")
+    game_id=$(sed -n 's/^Game ID: *//p' <<<"$header" | tr -d '\r')
+    revision=$(sed -n 's/^Revision: *//p' <<<"$header" | tr -d '\r')
+    region=$(sed -n 's/^Region: *//p' <<<"$header" | tr -d '\r')
+    title=$(sed -n 's/^Internal Name: *//p' <<<"$header" | tr -d '\r')
+fi
 [ -n "$game_id" ] || { echo "could not read a game ID from $image" >&2; exit 1; }
 
 # The disc ID's fourth character is the region: P Europe, E USA, J Japan, K Korea.
@@ -52,7 +66,16 @@ name=$(basename "$game_dir")
 engine=$(python3 -c "import os,sys; print(os.path.relpath(sys.argv[1], sys.argv[2]))" "$libwiinx" "$game_dir")
 
 echo ">> $title ($game_id, rev $revision, $region) -> $game_dir"
-"$here/wiinx-extract-disc" "$image" "$game_dir"
+if [ -n "$extracted" ]; then
+    if [ "$extracted" != "$game_dir/disc" ]; then
+        # Point at the disc where it already is: one copy on disk, and a disc
+        # is never committed anyway.
+        ln -sfn "$extracted" "$game_dir/disc"
+        echo ">> disc: $extracted"
+    fi
+else
+    "$here/wiinx-extract-disc" "$image" "$game_dir"
+fi
 dol="$game_dir/disc/sys/main.dol"
 sha=$(sha256sum "$dol" | cut -d' ' -f1)
 

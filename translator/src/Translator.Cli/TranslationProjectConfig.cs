@@ -102,12 +102,31 @@ internal sealed class TranslationProjectConfig
         var abiDirectories = (dto.Runtime?.NativeAbiDirectories ?? [])
             .Select(pathValue => ResolvePath(workspaceRoot, pathValue))
             .ToArray();
-        // Where this game keeps the functions the runtime replaces. Without it,
-        // the registrations' own addresses are used, which are right only for the
-        // game the runtime was written against.
-        var nativeBindings = string.IsNullOrWhiteSpace(dto.Runtime?.NativeBindings)
-            ? null
-            : ResolvePath(workspaceRoot, dto.Runtime!.NativeBindings!);
+        // Where this game keeps the functions the library replaces. A native is
+        // registered at the address it has in the game it was written from, so
+        // for any other game that address is a different function: binding by it
+        // would replace whatever happens to sit there. Every game therefore says
+        // which it is - its own table, or the word "registered" for the one game
+        // the registrations belong to - and saying nothing is an error rather
+        // than a silent mis-binding.
+        var nativeBindingsValue = dto.Runtime?.NativeBindings?.Trim();
+        string? nativeBindings;
+        if (string.IsNullOrEmpty(nativeBindingsValue))
+        {
+            throw new InvalidOperationException(
+                "runtime.native_bindings is missing. Write the game's own table with " +
+                "`wiinx-scan scan <dol> --out bindings.json` and name it here, or set it to " +
+                "`registered` if this is the game the library's natives were written from - " +
+                "their addresses are that game's.");
+        }
+        else if (string.Equals(nativeBindingsValue, "registered", StringComparison.OrdinalIgnoreCase))
+        {
+            nativeBindings = null;
+        }
+        else
+        {
+            nativeBindings = ResolvePath(workspaceRoot, nativeBindingsValue);
+        }
         // This game's own replacements, for what only it does; "native" beside
         // the project unless the project says otherwise.
         var gameNativeRoot = ResolvePath(workspaceRoot, dto.Runtime?.GameNativeRoot ?? "native");

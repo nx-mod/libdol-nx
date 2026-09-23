@@ -6,7 +6,7 @@ installed).
 
 | Tool | Does |
 |---|---|
-| `wiinx-scan` | lists a DOL's library builds; finds natives by signature; signs functions; records builds and generates `include/wiinx/builds.hpp`. See [docs/signatures.md](../docs/signatures.md) and [docs/builds.md](../docs/builds.md) |
+| `wiinx-scan` | lists a DOL's library builds; finds natives by signature; finds where a game's functions start, in its own code (`functions`); signs functions; records builds and generates `include/wiinx/builds.hpp`. See [docs/signatures.md](../docs/signatures.md) and [docs/builds.md](../docs/builds.md) |
 | `wiinx-extract` | pulls `main.dol`, or any file with `--file <path>`, out of a Wii `.iso` without extracting the disc: decrypts only the clusters it needs |
 | `wiinx-extract-disc` | the whole disc (ISO/WBFS/RVZ/GCZ/CISO), through Dolphin's `dolphin-tool`, with a free-space check |
 | `wiinx-inspect-dol` | a DOL's entry point, sections, BSS and small-data bases; `--yaml` for a project file |
@@ -15,7 +15,8 @@ installed).
 | `wiinx-fetch-nand` | a reference set of system titles into `nand/` (not tracked), from a menu or by flag |
 | `wiinx-sysconf` | reads and edits a Wii SYSCONF, the console's settings |
 | `wiicrypto.py`, `wiinand.py` | the Wii's AES, keys and title download, shared by the tools above |
-| `wiinx-new-game` | a whole game project from your own disc: `game.toml`, `recomp.yml` pointing back at this checkout, README, `.gitignore` |
+| `wiinx-new-game` | a whole game project from your own disc - an image, or one already extracted: `game.toml`, `recomp.yml` pointing back at this checkout, README, `.gitignore` |
+| `wiinx-read-boot` | what a disc says it is (ID, revision, region, title), read from its `sys/boot.bin` |
 | `wiinx-translate` | the translator's four steps over a game project, with a memory guard |
 | `wiinx-audit` | how universal the natives are: SDK, middleware, or one game's |
 | `wiinx-manual-adds` | what a game still needs by hand, and `--template` to start one |
@@ -44,3 +45,10 @@ tools/wiinx-extract "Wii Sports + Wii Sports Resort.iso" sports.dol --file US/sy
   from that recipe; the pieces are proven, the one command is not yet.
 - 2026-09-22: `wiinx-scan` and `wiinx-extract` added. A disc image that ends
   before a file does - a truncated copy - reads as `short read: 0 of N bytes`.
+- 2026-09-23: building New Super Mario Bros. Wii from nothing found four of
+  these tools wrong for any game but the first: `wiinx-extract-disc` assumed
+  the layout dolphin-tool gives some discs, `wiinx-translate` reused a stale
+  translator binary and ran the REL manifest step for a game with no REL, and
+  `wiinx-new-game` refused to work inside a repository that already existed.
+  `wiinx-scan functions` was added the same day, because without a symbol map
+  that game translated only 1,999 of its functions.

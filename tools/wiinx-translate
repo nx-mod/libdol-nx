@@ -52,10 +52,15 @@ region=$(sed -n 's/^[[:space:]]*region:[[:space:]]*\([^#[:space:]]*\).*/\1/p' "$
 export PATH="$PATH:$HOME/.dotnet" DOTNET_CLI_TELEMETRY_OPTOUT=1
 command -v dotnet >/dev/null || { echo "dotnet not found: install the .NET 8 SDK" >&2; exit 1; }
 cli="$libwiinx/translator/src/Translator.Cli/bin/Release/net8.0/Translator.Cli.dll"
-if [ ! -f "$cli" ]; then
+# Always build: dotnet's build is incremental, and a translator changed since
+# the last run must not be silently skipped (the old binary would translate the
+# game with the old rules and nothing would say so).
+if [ -z "${WIINX_SKIP_TRANSLATOR_BUILD:-}" ]; then
     echo "building the translator"
-    dotnet build -c Release "$libwiinx/translator/src/Translator.Cli" >/dev/null
+    dotnet build -c Release "$libwiinx/translator/src/Translator.Cli" >/dev/null || {
+        echo "the translator did not build" >&2; exit 1; }
 fi
+[ -f "$cli" ] || { echo "the translator is not built: $cli" >&2; exit 1; }
 
 # Translation is memory-hungry: stop cleanly instead of taking the machine
 # down with it (it has crashed small hosts). MIN_FREE_MB overrides.
@@ -85,9 +90,16 @@ step translate-recursive translate-recursive "$entry" --project "$project" \
     --outdir "$out/functions" --output-metadata "$out/base_translation_output.json" \
     --production-source-bundle "$out/base_translation_sources.bin" \
     --no-function-files --prune-stale --threads "$threads"
-step emit-base-manifest emit-base-manifest --project "$project" --out "$dir/build/base" \
-    --functions-dir "$out/functions" --translation-output-metadata "$out/base_translation_output.json" \
-    ${region:+--region "$region"}
+# The base manifest describes a game's one REL for mods that patch it. A game
+# that configures no REL (its code is all in the DOL, or in modules it loads
+# itself) has no base to describe, so the step is skipped rather than failed.
+if sed -n '/^inputs:/,/^[a-z]/p' "$project" | grep -q '^[[:space:]]*rel:'; then
+    step emit-base-manifest emit-base-manifest --project "$project" --out "$dir/build/base" \
+        --functions-dir "$out/functions" --translation-output-metadata "$out/base_translation_output.json" \
+        ${region:+--region "$region"}
+else
+    echo "== emit-base-manifest (skipped: this game configures no REL)"
+fi
 step generate-data-init generate-data-init --project "$project"
 step emit-build-shards emit-build-shards --project "$project" \
     --base-metadata "$out/base_translation_output.json" --base-functions-dir "$out/functions" \

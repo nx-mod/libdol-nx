@@ -107,7 +107,9 @@ wiinx-scan game.dol  →  bindings  →  translator  →  direct native calls
 
 `wiinx-scan` reads the library banners and matches each function's code
 signature, then writes the game's `bindings.json`: which native, of which build,
-answers each address. The translator bakes that in, so a bound call costs
+answers each address. A game only binds what its own table names; the game the
+natives were written from says `native_bindings: registered` instead, because
+those addresses are its own. The translator bakes that in, so a bound call costs
 nothing at runtime. A function nothing matches stays the game's own translated
 code: an unknown build is slower, never wrong.
 
@@ -144,7 +146,7 @@ builds the library and tools, never a game.
 | [`accel/sdk`](src/accel/sdk/README.md) | THP decoder ported                             |
 | [`accel/nw4r`](src/accel/nw4r/README.md) | lyt `Pane::CalculateMtx` ported, 2007 and 2008 builds |
 | `accel/nw4r` g3d CalcWorld/CalcView | located in Mario Kart Wii, not written           |
-| [`wiinx-scan`](tools/README.md)   | builds from banners (224 known) and binding by signature; call following next |
+| [`wiinx-scan`](tools/README.md)   | builds from banners (224 known), binding by signature, and finding a game's function starts in its own code |
 | [tools](tools/README.md)          | disc, DOL, NAND and game-project tools, all here |
 | [translator](translator/README.md) | ported: same output as the original, byte for byte |
 | `cpu`, `platform`, `app`          | ported: Mario Kart Wii builds from libwii-nx, layers checked by `wiinx-check-layers` |

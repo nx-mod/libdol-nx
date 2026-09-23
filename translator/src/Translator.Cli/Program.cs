@@ -487,6 +487,8 @@ int RunTranslateRecursive(string[] argsTail)
         // entry is really code, and one noisy line must not block a release.
         var speculativeSeeds = new Queue<uint>(functionMap?.Addresses ?? Array.Empty<uint>());
         var speculativeSkips = new List<(uint Address, string Reason)>();
+        // Discovered call targets that are not in this game's image at all.
+        var offImageTargets = new SortedDictionary<uint, uint>();
 
         var count = 0;
         var totals = new List<TranslationMetrics>();
@@ -743,6 +745,17 @@ int RunTranslateRecursive(string[] argsTail)
 
             foreach (var target in discoveryTargets)
             {
+                if (!image.Value.Contains(target, sizeof(uint)))
+                {
+                    // Not code this image holds: an absolute branch into the
+                    // console's own low memory, or a slot the game fills in at
+                    // run time. Nothing here can decode it, and it is not a
+                    // translator fault, so count it and carry on - the call
+                    // still goes through the runtime's dispatcher when it runs.
+                    offImageTargets.TryAdd(target, work.Address);
+                    continue;
+                }
+
                 knownBaseFunctionEntryPoints.Add(target);
                 if (visited.Add(target))
                 {
@@ -784,6 +797,18 @@ int RunTranslateRecursive(string[] argsTail)
             Console.WriteLine(
                 $"[translator] Function starts: {walkReachable:N0} reached by the call-graph walk, " +
                 $"{count - walkReachable:N0} added speculatively from the map.");
+            if (offImageTargets.Count != 0)
+            {
+                foreach (var (target, source) in offImageTargets.Take(20))
+                {
+                    Console.WriteLine(
+                        $"[translator]   call target 0x{target:X8} (from 0x{source:X8}) is outside the image");
+                }
+                Console.WriteLine(
+                    $"[translator] Left {offImageTargets.Count:N0} call target(s) untranslated: not in this " +
+                    "game's image.");
+            }
+
             if (speculativeSkips.Count != 0)
             {
                 foreach (var (address, reason) in speculativeSkips.OrderBy(static skip => skip.Address).Take(20))

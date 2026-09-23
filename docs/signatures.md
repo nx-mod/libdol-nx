@@ -43,11 +43,47 @@ the runtime registers a native under, against the address it has in this game:
 ```
 
 The game's `recomp.yml` names that file (`runtime.native_bindings`), and the
-translator binds every call to it. Without one, a native keeps the address it
-was registered at, which is the game it was written from.
+translator binds every call to it.
+
+A native is registered at the address it has in the game it was written from,
+so in any other game that address is some other function entirely - binding by
+it would replace whatever happens to sit there. Every game therefore has to say
+which it is:
+
+```yaml
+runtime:
+  native_bindings: bindings.json   # this game's own table
+  # or
+  native_bindings: registered      # this IS the game the natives came from
+```
+
+Saying nothing is an error, not a default: the dangerous case is the one that
+has to be written down.
 
 A native that does not match is left unbound - reported as `not found`, with
 the number of matches - and the game's translated code runs.
+
+## Finding a game's functions
+
+A game whose symbols nobody has mapped still has to be translated whole.
+Recursive descent from the entry point only reaches what direct calls reach,
+which in a C++ game is a fraction of it - everything behind a virtual call is
+invisible. `wiinx-scan functions` finds the rest in the game's own code:
+
+```sh
+tools/wiinx-scan functions disc/sys/main.dol --out functions.map
+```
+
+It takes the target of every `bl`, every word in the image that points at code
+following a return (vtables and pointer tables), and every place a function
+opens its own stack frame (`stwu r1,-N(r1)`, with or without `mflr r0` first).
+`recomp.yml` names the result as `translation.function_map.path`.
+
+Measured against Mario Kart Wii's symbol map, it finds 91.8% of that game's
+real function starts, and 2.8% of what it finds is not in the map. Map entries
+are seeded speculatively - one that is not code is dropped with a count, never
+an error - so the guesses cost translation time, not correctness. For New Super
+Mario Bros. Wii it took the translation from 1,999 functions to 17,812.
 
 ## Signing a function
 
