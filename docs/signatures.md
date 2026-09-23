@@ -99,11 +99,39 @@ name the runtime uses for that native. Functions shorter than 16
 instructions are not signed; they are too common to be unique. Every build a
 native supports needs its own signature, signed from a game that links it.
 
+## Code that is the same in every game
+
+Parts of the SDK are hand-written assembly - the cache range operations,
+masking interrupts, reading the clock - and the assembler emits the same
+instructions for every build of them. They are too short for the usual
+signature (the window is 16 instructions; `OSDisableInterrupts` is five) and
+have no relocated operands to mask, so they are signed whole, against no build:
+
+```sh
+tools/wiinx-scan sign-asm main.dol OSDisableInterrupts OS__DisableInterrupts_801a65ac 801a65ac 20
+```
+
+writes `"build": "any"`, which every game's scan considers. Signed from Mario
+Kart Wii, these ten match New Super Mario Bros. Wii - a game linking library
+builds two years newer - each at its own address:
+
+| | Mario Kart Wii | New Super Mario Bros. Wii |
+|---|---|---|
+| `DCFlushRange` | `0x801A162C` | `0x801AC470` |
+| `OSDisableInterrupts` | `0x801A65AC` | `0x801B1140` |
+| `OSGetTime` | `0x801AAD5C` | `0x801B5F80` |
+
+`sign-asm` is only right where the code really is build-independent: check a
+signature against a second game before adding it, which is what the uniqueness
+check inside it is for. Compiled C changes between builds and still needs a
+signature per build.
+
 ## The console's own natives
 
-`accel` natives are bound this way today. The `platform` natives - the console
-itself, around 700 of them - are still registered at the addresses they were
-written from, Mario Kart Wii's, by `PPC_NATIVE_OVERRIDE(<address>, ...)`. They
+`accel` natives are bound this way today, and so are the ten assembly
+primitives above. The rest of the `platform` natives - the console itself,
+around 550 of them - are still registered at the addresses they were written
+from, Mario Kart Wii's, by `PPC_NATIVE_OVERRIDE(<address>, ...)`. They
 are the same functions every Wii game links, at each game's own addresses, so
 another game binds none of them and runs its own translated SDK code instead:
 correct, and far slower where it matters (DVD, DSP, VI).

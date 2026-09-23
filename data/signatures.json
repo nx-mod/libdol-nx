@@ -2,6 +2,86 @@
  "about": "Code signatures for libwii-nx natives: hashes of masked instructions, never code. `registration` is the name the runtime registers the native under, which a game's bindings.json maps to its own address. Add entries with tools/wiinx-scan sign.",
  "natives": [
   {
+   "name": "DCFlushRange",
+   "build": "any",
+   "size": 48,
+   "exact": "93cccdef2db2d4ed",
+   "signed_from": "main.dol",
+   "registration": "DCFlushRange_801a162c"
+  },
+  {
+   "name": "DCFlushRangeNoSync",
+   "build": "any",
+   "size": 44,
+   "exact": "609869ef211e15fd",
+   "signed_from": "main.dol",
+   "registration": "DCFlushRangeNoSync_801a168c"
+  },
+  {
+   "name": "DCInvalidateRange",
+   "build": "any",
+   "size": 44,
+   "exact": "4f84050b94b4b2c1",
+   "signed_from": "main.dol",
+   "registration": "DCInvalidateRange_801a1600"
+  },
+  {
+   "name": "DCStoreRange",
+   "build": "any",
+   "size": 48,
+   "exact": "18ef22fd876c32a6",
+   "signed_from": "main.dol",
+   "registration": "DCStoreRange_801a165c"
+  },
+  {
+   "name": "DCStoreRangeNoSync",
+   "build": "any",
+   "size": 44,
+   "exact": "a7929eb21f752bcf",
+   "signed_from": "main.dol",
+   "registration": "DCStoreRangeNoSync_801a16b8"
+  },
+  {
+   "name": "ICInvalidateRange",
+   "build": "any",
+   "size": 52,
+   "exact": "5c0cb4f4df95f7fb",
+   "signed_from": "main.dol",
+   "registration": "ICInvalidateRange_HLE"
+  },
+  {
+   "name": "OSDisableInterrupts",
+   "build": "any",
+   "size": 20,
+   "exact": "91253610f8caa498",
+   "signed_from": "main.dol",
+   "registration": "OS__DisableInterrupts_801a65ac"
+  },
+  {
+   "name": "OSEnableInterrupts",
+   "build": "any",
+   "size": 20,
+   "exact": "fc3bb9e8a3a33462",
+   "signed_from": "main.dol",
+   "registration": "OS__EnableInterrupts_801a65c0"
+  },
+  {
+   "name": "OSGetTime",
+   "build": "any",
+   "size": 24,
+   "exact": "47c7b4180d560222",
+   "signed_from": "main.dol",
+   "registration": "OS__GetTime_HLE"
+  },
+  {
+   "name": "OSRestoreInterrupts",
+   "build": "any",
+   "size": 36,
+   "exact": "54db610a580003e2",
+   "signed_from": "main.dol",
+   "registration": "OS__RestoreInterrupts_801a65d4"
+  },
+  {
    "name": "nw4r::lyt::Pane::CalculateMtx",
    "build": "nw4r.lyt@2008-03-08",
    "size": 768,

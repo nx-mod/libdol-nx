@@ -6,6 +6,7 @@
     tools/wiinx-scan functions <game.dol> [--out functions.map]
     tools/wiinx-scan os-globals <game.dol>
     tools/wiinx-scan sign   <game.dol> <name> <build> <address> <size>
+    tools/wiinx-scan sign-asm <game.dol> <name> <registration> <address> <size>
     tools/wiinx-scan record <game id> <game.dol>...
     tools/wiinx-scan header
 
@@ -29,6 +30,12 @@ os-globals
 sign    records a function's signature from a game you have, for adding a
         native. Run it on your own disc's DOL; it prints the entry for
         data/signatures.json.
+sign-asm
+        the same, for a part of the SDK that is hand-written assembly: the
+        instructions are identical in every build, so it is signed against no
+        build ("any") and matched whole rather than by a masked window. Use it
+        only where the code really is build-independent - check it against a
+        second game before adding it.
 record  adds the builds a game's executables name to data/builds.json, with
         the game ID as where each was seen.
 header  writes include/wiinx/builds.hpp from data/builds.json: every known
@@ -50,6 +57,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SIGNATURES = os.path.join(HERE, "..", "data", "signatures.json")
+ANY_BUILD = "any"
 WINDOW = 16  # instructions in the start window
 
 
@@ -408,17 +416,52 @@ def load_signatures():
         return json.load(handle)["natives"]
 
 
+def exact_hash(code):
+    """A hash of instructions exactly as they are, masking nothing."""
+    return hashlib.sha256(code).hexdigest()[:16]
+
+
+def find_exact(dol, signatures):
+    """Match the signatures that are the same code in every game.
+
+    Parts of the SDK are hand-written assembly - the cache range operations,
+    masking interrupts, reading the clock - and the assembler emits the same
+    instructions for every build of it. They are too short to sign the usual
+    way (the window is 16 instructions and these are five), and they have no
+    relocated operands to mask, so they are matched whole: hash every aligned
+    run of the right length and keep the one that matches.
+    """
+    hits = {signature["exact"]: [] for signature in signatures}
+    for size in {signature["size"] for signature in signatures}:
+        wanted = {s["exact"] for s in signatures if s["size"] == size}
+        for start, blob in dol.text():
+            for offset in range(0, len(blob) - size + 1, 4):
+                key = exact_hash(blob[offset:offset + size])
+                if key in wanted:
+                    hits[key].append(start + offset)
+    return hits
+
+
 def scan(dol):
     linked = {build_id for build_id, _ in builds(dol).values()}
-    candidates = [s for s in load_signatures() if s["build"] in linked]
+    signatures = load_signatures()
+    # A signature for a build this game does not link cannot be its code, but
+    # one written for no build in particular (hand-written assembly, the same
+    # everywhere) applies to every game.
+    candidates = [s for s in signatures
+                  if s["build"] == ANY_BUILD or s["build"] in linked]
+    exact = [s for s in candidates if "exact" in s]
+    masked = [s for s in candidates if "exact" not in s]
+
     # Index the game's start windows once: every aligned address in its text.
     by_window = {}
     for start, blob in dol.text():
         for offset in range(0, len(blob) - WINDOW * 4 + 1, 4):
             key = masked_hash(blob[offset:offset + WINDOW * 4])
             by_window.setdefault(key, []).append(start + offset)
+
     bindings, missing = [], []
-    for sig in candidates:
+    for sig in masked:
         hits = [a for a in by_window.get(sig["start"], [])
                 if (code := dol.read(a, sig["size"])) is not None and masked_hash(code) == sig["body"]]
         if len(hits) == 1:
@@ -426,6 +469,17 @@ def scan(dol):
                              "registration": sig.get("registration")})
         else:
             missing.append((sig["name"], sig["build"], len(hits)))
+
+    if exact:
+        found = find_exact(dol, exact)
+        for sig in exact:
+            hits = found[sig["exact"]]
+            if len(hits) == 1:
+                bindings.append({"name": sig["name"], "build": sig["build"],
+                                 "address": f"0x{hits[0]:08X}",
+                                 "registration": sig.get("registration")})
+            else:
+                missing.append((sig["name"], sig["build"], len(hits)))
     return bindings, missing
 
 
@@ -457,6 +511,30 @@ def main(argv):
             value = found[field]
             print(f"layout.{field} = 0x{value:08X}u;" if value
                   else f"// layout.{field} = ?;  not confirmed")
+        return 0
+    if command == "sign-asm" and len(argv) >= 6:
+        # Hand-written SDK assembly: the same instructions in every game, so it
+        # is signed against no build and matched whole.
+        name, registration = argv[2], argv[3]
+        address, size = int(argv[4], 16), int(argv[5], 16) if argv[5].startswith("0x") else int(argv[5])
+        code = dol.read(address, size)
+        if code is None:
+            print(f"0x{address:08X}+{size} is not in this game's code")
+            return 1
+        entry = {
+            "name": name,
+            "build": ANY_BUILD,
+            "size": size,
+            "exact": exact_hash(code),
+            "signed_from": os.path.basename(argv[1]),
+            "registration": registration,
+        }
+        hits = find_exact(dol, [entry])[entry["exact"]]
+        if len(hits) != 1:
+            print(f"# not unique in this game ({len(hits)} matches): "
+                  + ", ".join(f"0x{hit:08X}" for hit in hits))
+            return 1
+        print(json.dumps(entry, indent=1))
         return 0
     if command == "functions":
         starts = function_starts(dol)

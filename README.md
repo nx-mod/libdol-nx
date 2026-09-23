@@ -146,7 +146,7 @@ builds the library and tools, never a game.
 | [`accel/sdk`](src/accel/sdk/README.md) | THP decoder ported                             |
 | [`accel/nw4r`](src/accel/nw4r/README.md) | lyt `Pane::CalculateMtx` ported, 2007 and 2008 builds |
 | `accel/nw4r` g3d CalcWorld/CalcView | located in Mario Kart Wii, not written           |
-| [`wiinx-scan`](tools/README.md)   | builds from banners (224 known), binding by signature, and finding a game's function starts in its own code |
+| [`wiinx-scan`](tools/README.md)   | builds from banners (224 known), binding by signature, a game's function starts and its OS globals, both read out of its own code |
 | [tools](tools/README.md)          | disc, DOL, NAND and game-project tools, all here |
 | [translator](translator/README.md) | ported: same output as the original, byte for byte |
 | `cpu`, `platform`, `app`          | ported: Mario Kart Wii builds from libwii-nx, layers checked by `wiinx-check-layers` |
