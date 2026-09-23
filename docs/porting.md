@@ -97,3 +97,9 @@ show up.
   `src/app/mkwii_game.cpp` (renamed from `dynamic_aspect.cpp`). What is left of
   one game in the library is the ~700 `PPC_NATIVE_OVERRIDE` addresses the
   platform natives are registered at, which the signature milestone replaces.
+- 2026-09-23: the cut-over happened for Mario Kart Wii. Its project, its symbol
+  map and its natives (including `mkwii_game.cpp` and its records, which came
+  out of `src/app`) are in `nx-mod/mkwii-nx`, which has libwii-nx as a
+  submodule. Translating it there reproduces all 29,637 functions byte for
+  byte, so the move changed nothing about the game. New Super Mario Bros. Wii
+  was built the same way from its own disc, in `nx-mod/nsmbwii-nx`.

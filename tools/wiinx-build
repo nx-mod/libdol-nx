@@ -58,8 +58,20 @@ fi
 [ -f "$game/recomp.yml" ] || { echo "no game project at $game" >&2; exit 1; }
 
 if [ "$translate" = 1 ]; then
-    echo "== scanning $(basename "$game") for natives"
-    "$here/wiinx-scan" scan "$game/disc/sys/main.dol" --out "$game/bindings.json" || true
+    dol="$game/disc/sys/main.dol"
+    # A game the library's natives were written from keeps its own table; every
+    # other game's is found by matching code.
+    if ! grep -q '^[[:space:]]*native_bindings:[[:space:]]*registered' "$game/recomp.yml"; then
+        echo "== scanning $(basename "$game") for natives"
+        "$here/wiinx-scan" scan "$dol" --out "$game/bindings.json" || true
+    fi
+    # Where its functions start, unless the project names a map of its own
+    # (a game whose symbols someone has already mapped).
+    map=$(sed -n '/function_map:/{n;s/^[[:space:]]*path:[[:space:]]*//p;}' "$game/recomp.yml" | head -1)
+    if [ -z "$map" ] || [ ! -f "$game/$map" ]; then
+        echo "== finding $(basename "$game")'s functions"
+        "$here/wiinx-scan" functions "$dol" --out "$game/functions.map"
+    fi
     "$here/wiinx-translate" "$game" --threads "$jobs"
 fi
 
