@@ -11,6 +11,8 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
+#include <utility>
 
 namespace RuntimeGuestOs {
 
@@ -48,5 +50,35 @@ inline Layout g_layout{};
 inline const Layout& layout() noexcept { return g_layout; }
 inline void install(const Layout& layout) noexcept { g_layout = layout; }
 inline bool installed() noexcept { return g_layout.run_queue != 0; }
+
+// The fields a game left at zero, as a comma-separated list, or "" when it
+// filled in every one. A game may legitimately install a partial layout -
+// wiinx-scan finds the scheduler's own variables and not the rest - so this is
+// for saying which, not for refusing to run.
+inline std::string missing() noexcept {
+    const std::pair<const char*, uint32_t> fields[]{
+        {"run_queue", g_layout.run_queue},
+        {"run_queue_bits", g_layout.run_queue_bits},
+        {"reschedule", g_layout.reschedule},
+        {"scheduler_disable_count", g_layout.scheduler_disable_count},
+        {"default_thread", g_layout.default_thread},
+        {"idle_thread", g_layout.idle_thread},
+        {"switch_thread_callback_ptr", g_layout.switch_thread_callback_ptr},
+        {"interrupt_handler_table_ptr", g_layout.interrupt_handler_table_ptr},
+        {"alarm_queue_r13_offset", g_layout.alarm_queue_r13_offset},
+        {"load_context", g_layout.load_context},
+    };
+    std::string names;
+    for (const auto& [name, value] : fields) {
+        if (value != 0) {
+            continue;
+        }
+        if (!names.empty()) {
+            names += ", ";
+        }
+        names += name;
+    }
+    return names;
+}
 
 }  // namespace RuntimeGuestOs

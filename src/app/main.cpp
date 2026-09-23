@@ -2311,6 +2311,11 @@ int RuntimeMain(int argc, char** argv) {
             // just does not know where this one put them (guest_os_layout.h).
             RT_LOG(RT_TAG_OS) << "no guest OS layout installed: the scheduler's globals are unknown, "
                                  "threading will not work" << std::endl;
+        } else if (const std::string missing = RuntimeGuestOs::missing(); !missing.empty()) {
+            // Partial is normal: wiinx-scan finds the scheduler's own variables
+            // and not the rest. Anything needing a missing one says so when it
+            // is reached, rather than reading address zero quietly.
+            RT_LOG(RT_TAG_OS) << "guest OS layout is partial; not installed: " << missing << std::endl;
         }
         RuntimeGameHooks::surface_resized(auroraInfo.windowSize.native_fb_width,
                                           auroraInfo.windowSize.native_fb_height);
