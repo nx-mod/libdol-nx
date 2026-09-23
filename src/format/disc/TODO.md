@@ -1,19 +1,15 @@
 # TODO - format/disc
 
-Nothing is written yet. In the order it has to be built:
-
-- [ ] Raw images: the GameCube and Wii headers, and what each says about the
-      rest of the disc
-- [ ] The FST both consoles share: files, folders, and reading one out
-- [ ] Wii partitions: the table at `0x40000`, each partition's ticket, and the
-      cluster layout - `0x400` of hashes and `0x7C00` of data
-- [ ] Cluster decryption, with the key the caller supplies
-- [ ] WBFS and CISO, which are ways of storing the same image with the empty
-      parts left out
-- [ ] A cache, so a game reading a file does not decrypt the same cluster twice
+- [x] Raw images, both consoles, and the file table they share
+- [x] Wii partitions, their clusters, and decryption through the caller's cipher
+- [x] A cluster cache, since a game reading a file reads one many times over
+- [x] Synthetic images under test
+- [ ] WBFS and CISO: the same image with the empty parts left out
+- [ ] RVZ, which needs zstd or LZMA and the regeneration of the padding Dolphin
+      throws away
 - [ ] The apploader, for a GameCube disc's boot path
-- [ ] A check against a real dump on the machine that has one, and a synthetic
-      image built here for the rest
+- [ ] Verify a partition against its hashes, for a dump that may be damaged
+- [ ] A check against a real dump, on a machine that has one
 
 Then `platform/fs` reads through this instead of an extracted folder, and a dump
 on the card is all a player needs.

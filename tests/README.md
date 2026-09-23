@@ -18,6 +18,7 @@ cmake -S . -B build -G Ninja && cmake --build build && ctest --test-dir build
 | `nand_sysconf_check` | SYSCONF, against a file the runtime itself wrote |
 | `nand_mii_check` | the Mii database, against a file the runtime itself wrote |
 | `nand_title_check` | tickets, TMDs and WADs of both kinds, built here and read back |
+| `disc_check` | disc images: headers, the Wii's partitions and clusters, the file table, and a cipher supplied by the caller |
 | `archive_yaz0_check` | Yaz0 expands correctly, and refuses the streams that would read or write past a buffer |
 
 `data/` holds the two reference files. They contain nothing Nintendo made: they

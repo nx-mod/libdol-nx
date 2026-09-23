@@ -12,6 +12,7 @@ set(WIINX_CHECKS
     nand_mii_check      # the Mii database, against a file the runtime wrote
     nand_title_check    # tickets, TMDs and WADs, built here and read back
     archive_yaz0_check  # Yaz0, including the streams a game must refuse
+    disc_check          # disc images: header, partitions, clusters, file table
 )
 
 foreach(check IN LISTS WIINX_CHECKS)
@@ -28,3 +29,4 @@ add_test(NAME nand_sysconf COMMAND nand_sysconf_check ${CMAKE_CURRENT_SOURCE_DIR
 add_test(NAME nand_mii COMMAND nand_mii_check ${CMAKE_CURRENT_SOURCE_DIR}/data/RFL_DB.dat)
 add_test(NAME nand_title COMMAND nand_title_check)
 add_test(NAME archive_yaz0 COMMAND archive_yaz0_check)
+add_test(NAME disc COMMAND disc_check)
