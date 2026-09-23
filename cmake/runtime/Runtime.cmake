@@ -296,6 +296,32 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
     "${WIINX_ROOT}/src/accel/*_bind.cpp")
 list(FILTER SOURCES EXCLUDE REGEX "/src/app/(switch|product)/")
 
+# The console's own modules. What is here is what both machines have; the
+# peripherals and system software only one of them has live in that console's
+# library, and are compiled in beside these rather than linked, because they
+# answer a game's SDK calls the same way.
+set(WIINX_WII_DIR "${WIINX_ROOT}/../libwii-nx" CACHE PATH "libwii-nx source tree")
+set(WIINX_GC_DIR "${WIINX_ROOT}/../libgc-nx" CACHE PATH "libgc-nx source tree")
+
+if(EXISTS "${WIINX_WII_DIR}/cmake/Sources.cmake")
+    include("${WIINX_WII_DIR}/cmake/Sources.cmake")
+    list(APPEND SOURCES ${WIINX_WII_SOURCES})
+    list(APPEND WIINX_RUNTIME_INCLUDE_DIRS ${WIINX_WII_INCLUDE_DIRS})
+    message(STATUS "libwii-nx: ${WIINX_WII_DIR}")
+else()
+    message(WARNING
+        "libwii-nx is not beside this checkout, so a Wii game will be missing "
+        "IOS, the NAND, the Wii Remote and the console's settings. Clone it or "
+        "set -DWIINX_WII_DIR=<path>.")
+endif()
+
+if(EXISTS "${WIINX_GC_DIR}/cmake/Sources.cmake")
+    include("${WIINX_GC_DIR}/cmake/Sources.cmake")
+    list(APPEND SOURCES ${WIINX_GC_SOURCES})
+    list(APPEND WIINX_RUNTIME_INCLUDE_DIRS ${WIINX_GC_INCLUDE_DIRS})
+    message(STATUS "libgc-nx: ${WIINX_GC_DIR}")
+endif()
+
 # A game's own replacements, for what only that game does. Everything here in
 # src/ is the Wii's SDK and its middleware, which every game shares and which is
 # bound to each game's addresses by a table; a genuine quirk of one game belongs

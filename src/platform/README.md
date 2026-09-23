@@ -27,3 +27,16 @@ Each module came here whole and keeps its behavior.
 - 2026-09-23: `system` seeds low memory from the disc's own header rather than
   from one game's ID, and `fs`/`net` ask the product whether it overlays the
   disc instead of asking whether it is Retro Rewind.
+
+## What is not here
+
+The peripherals and system software only one console has live in that console's
+own library, and are compiled in beside these by a runtime build:
+
+- [libwii-nx](https://github.com/nx-mod/libwii-nx) - IOS and ES, the NAND as a
+  game sees it, the Wii Remote, the console's settings
+- [libgc-nx](https://github.com/nx-mod/libgc-nx) - ARAM, memory cards, disc
+  streaming, the GameCube's boot path
+
+A build says so when one of them is missing, rather than producing a runtime
+that is quietly short of a console.
