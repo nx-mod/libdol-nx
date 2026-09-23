@@ -77,14 +77,53 @@ def sections(data):
     return kind, ticket, tmd, end
 
 
+# Keys other than the console's own are not in this repository. A title that
+# wants one reads it from a file you provide: one "<index> <32 hex digits>" per
+# line.
+KEY_FILE = os.path.expanduser("~/.wii-nx/common-keys")
+
+
+def common_key(index):
+    """The common key a ticket names, or None when it is not to hand."""
+    if index == 0:
+        return COMMON_KEY
+    if not os.path.exists(KEY_FILE):
+        return None
+    with open(KEY_FILE) as handle:
+        for line in handle:
+            parts = line.split()
+            if len(parts) == 2 and parts[0].isdigit() and int(parts[0]) == index:
+                return bytes.fromhex(parts[1])
+    return None
+
+
+def key_index(ticket):
+    """Which common key the ticket names.
+
+    Plenty of WADs in circulation were repacked by tools that left rubbish in
+    the reserved bytes around this one, so anything that is not a key the Wii
+    actually has means the ordinary one.
+    """
+    index = ticket[SIGNATURE + 0xB1]
+    return index if index <= 2 else 0
+
+
 def title_key(ticket):
     """The ticket's key, unwrapped with the common key it names."""
     wrapped = ticket[SIGNATURE + 0x7F:SIGNATURE + 0x8F]
     title_id = ticket[SIGNATURE + 0x9C:SIGNATURE + 0xA4]
-    index = ticket[SIGNATURE + 0xB1]
-    if index != 0:
-        raise SystemExit(f"this title wants common key {index}, which this tool does not carry")
-    return aes_cbc_decrypt(COMMON_KEY, title_id + b"\0" * 8, wrapped)
+    index = key_index(ticket)
+    key = common_key(index)
+    if key is None:
+        raise SystemExit(
+            f"this title wants common key {index}: put it in {KEY_FILE} as "
+            f"\"{index} <32 hex digits>\"")
+    return aes_cbc_decrypt(key, title_id + b"\0" * 8, wrapped)
+
+
+def boot_index(tmd):
+    """Which content the title starts at, as the TMD says."""
+    return struct.unpack(">H", tmd[SIGNATURE + 0xA0:SIGNATURE + 0xA2])[0]
 
 
 def contents(tmd):
@@ -114,10 +153,12 @@ def describe(data):
     print(f"  wants      IOS{ios & 0xFFFFFFFF}")
     print(f"  ticket     {issuer(ticket)}")
     print(f"  tmd        {issuer(tmd)}")
+    boot = boot_index(tmd)
     print("  contents")
     for index, cid, ctype, size, _sha in contents(tmd):
-        shared = " (shared)" if ctype & 0x8000 or ctype == 0x4001 else ""
-        print(f"    {index:>3}  {cid:08x}  {size:>10,} bytes{shared}")
+        marks = " (shared)" if ctype & 0x8000 or ctype == 0x4001 else ""
+        marks += "  <- boots here" if index == boot else ""
+        print(f"    {index:>3}  {cid:08x}  {size:>10,} bytes{marks}")
     return kind, ticket, tmd
 
 
@@ -126,8 +167,11 @@ def unpack(data, folder):
     key = title_key(ticket)
     os.makedirs(folder, exist_ok=True)
 
+    boot = boot_index(tmd)
     executable = None
     best = -1
+    recognised = 0
+    booted = None
     for index, cid, _ctype, size, _sha in contents(tmd):
         stored = (size + 15) & ~15
         blob = data[at:at + stored]
@@ -143,19 +187,39 @@ def unpack(data, folder):
             out.write(plain)
         print(f"  {os.path.basename(path)}  {size:,} bytes")
 
+        # A decrypted content is recognisable: an executable, an archive, or
+        # Nintendo's own compression. If none of them are, the key was wrong.
+        if plain[:4] == b"\x55\xaa\x38\x2d" or plain[:4] in (b"ASH0", b"Yaz0", b"LZ77"):
+            recognised += 1
+        if index == boot and looks_like_dol(plain):
+            booted = plain
         if looks_like_dol(plain):
+            recognised += 1
             score = dol_score(plain)
             if score > best:
                 best, executable = score, plain
 
-    if executable is not None:
-        path = os.path.join(folder, "main.dol")
-        with open(path, "wb") as out:
-            out.write(executable)
-        print(f"  main.dol  {len(executable):,} bytes")
+    # Two executables, and the difference matters. The TMD names the content
+    # IOS starts, which for WiiWare and Virtual Console is usually a small
+    # loader - often one shared with other titles. The game itself is in
+    # another content, which that loader reads and jumps into.
+    def write(name, blob, note):
+        with open(os.path.join(folder, name), "wb") as out:
+            out.write(blob)
+        print(f"  {name}  {len(blob):,} bytes  ({note})")
+
+    if booted is not None:
+        write("main.dol", booted, "the content the title boots")
+        if executable is not None and executable is not booted:
+            write("payload.dol", executable, "the largest executable here")
+    elif executable is not None:
+        write("main.dol", executable, "the only executable here")
+    elif recognised:
+        print("  no content is an executable on its own: the title's code is inside")
+        print("  one of the archives (try tools/wiinx-unpack-u8 on the largest)")
     else:
-        print("  no content looks like an executable: it may be inside a U8 archive")
-        print("  (try tools/wiinx-unpack-u8 on the largest one)")
+        print("  nothing decrypted into anything recognisable - the title key is")
+        print("  wrong, which usually means the ticket names a key not to hand")
 
 
 def main(argv):

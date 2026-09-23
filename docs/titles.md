@@ -19,6 +19,27 @@ Virtual Console titles are channels: the emulator and the ROM travel together as
 one title's contents, so from the outside a Virtual Console game and a WiiWare
 game are indistinguishable.
 
+## What a WAD actually contains
+
+Reading twelve of them - ten WiiWare, two Virtual Console - says more than the
+format documentation does:
+
+- **The content a title boots is usually not the game.** The TMD names a boot
+  index, and for WiiWare and Virtual Console that content is a small loader,
+  about 300 KB, which reads the real code out of another content and jumps into
+  it. Several titles boot the *same* loader, because it is a shared content.
+- **Shared contents are common.** Both Virtual Console titles carried the same
+  three: the emulator they run on. They live in `/shared1` on a console, listed
+  in `content.map`, and a title that installs without them will not start.
+- **The key index byte is often rubbish.** Tickets in circulation have been
+  through repacking tools that scribbled in the reserved bytes, so a value
+  greater than 2 means the ordinary common key rather than a key that does not
+  exist.
+
+For static recompilation that boot content is only the first step: the loader is
+what gets translated, and whatever it loads has to be translated as its own
+module, the way a game's RELs are.
+
 ## What running one takes
 
 Nothing in a title is special to the console's hardware - it is PowerPC code in
@@ -46,8 +67,11 @@ Both kinds of WAD are read today, and `tools/wiinx-wad` is how you look at one:
 
 ```sh
 tools/wiinx-wad Channel.wad                 # which title it is, and what it carries
-tools/wiinx-wad Channel.wad unpacked/       # decrypted, with the executable as main.dol
+tools/wiinx-wad Channel.wad unpacked/       # decrypted, as main.dol and payload.dol
 ```
+
+`main.dol` is the content the title boots; `payload.dol` is the largest
+executable among the rest, which for WiiWare and Virtual Console is the game.
 
 What is not written yet is the writing - installing a title into a NAND: see
 [src/format/nand/TODO.md](../src/format/nand/TODO.md).
