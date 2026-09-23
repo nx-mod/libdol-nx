@@ -2,6 +2,118 @@
  "about": "Every library build seen in a game's startup banners. Add games with tools/wiinx-scan record; regenerate the header with tools/wiinx-scan header.",
  "builds": [
   {
+   "id": "dol.ai@2003-04-17",
+   "banner": "Dolphin SDK - AI Apr 17 2003 (0x2301)",
+   "seen_in": [
+    "GM4E01"
+   ]
+  },
+  {
+   "id": "dol.ar@2003-04-17",
+   "banner": "Dolphin SDK - AR Apr 17 2003 (0x2301)",
+   "seen_in": [
+    "GM4E01"
+   ]
+  },
+  {
+   "id": "dol.arq@2003-04-17",
+   "banner": "Dolphin SDK - ARQ Apr 17 2003 (0x2301)",
+   "seen_in": [
+    "GM4E01"
+   ]
+  },
+  {
+   "id": "dol.card@2003-04-17",
+   "banner": "Dolphin SDK - CARD Apr 17 2003 (0x2301)",
+   "seen_in": [
+    "GM4E01"
+   ]
+  },
+  {
+   "id": "dol.dsp@2003-04-17",
+   "banner": "Dolphin SDK - DSP Apr 17 2003 (0x2301)",
+   "seen_in": [
+    "GM4E01"
+   ]
+  },
+  {
+   "id": "dol.dvd@2003-07-23",
+   "banner": "Dolphin SDK - DVD Jul 23 2003 (0x2301)",
+   "seen_in": [
+    "GM4E01"
+   ]
+  },
+  {
+   "id": "dol.eth@2003-08-05",
+   "banner": "Dolphin SDK - ETH Aug  5 2003 (0x2301)",
+   "seen_in": [
+    "GM4E01"
+   ]
+  },
+  {
+   "id": "dol.exi@2003-04-17",
+   "banner": "Dolphin SDK - EXI Apr 17 2003 (0x2301)",
+   "seen_in": [
+    "GM4E01"
+   ]
+  },
+  {
+   "id": "dol.gx@2003-07-23",
+   "banner": "Dolphin SDK - GX Jul 23 2003 (0x2301)",
+   "seen_in": [
+    "GM4E01"
+   ]
+  },
+  {
+   "id": "dol.hio@2003-04-17",
+   "banner": "Dolphin SDK - HIO Apr 17 2003 (0x2301)",
+   "seen_in": [
+    "GM4E01"
+   ]
+  },
+  {
+   "id": "dol.ip@2003-09-29",
+   "banner": "Dolphin SDK - IP Sep 29 2003 (0x2301)",
+   "seen_in": [
+    "GM4E01"
+   ]
+  },
+  {
+   "id": "dol.os@2003-07-23",
+   "banner": "Dolphin SDK - OS Jul 23 2003 (0x2301)",
+   "seen_in": [
+    "GM4E01"
+   ]
+  },
+  {
+   "id": "dol.pad@2003-08-06",
+   "banner": "Dolphin SDK - PAD Aug  6 2003 (0x2301)",
+   "seen_in": [
+    "GM4E01"
+   ]
+  },
+  {
+   "id": "dol.si@2003-04-17",
+   "banner": "Dolphin SDK - SI Apr 17 2003 (0x2301)",
+   "seen_in": [
+    "GM4E01"
+   ]
+  },
+  {
+   "id": "dol.thp@2002-08-27",
+   "banner": "Dolphin SDK - THP Aug 27 2002",
+   "seen_in": [
+    "GM4E01"
+   ]
+  },
+  {
+   "id": "dol.vi@2003-04-17",
+   "banner": "Dolphin SDK - VI Apr 17 2003 (0x2301)",
+   "seen_in": [
+    "GM4E01"
+   ]
+  },
+  {
    "id": "nw4r.ef@2007-06-08",
    "banner": "NW4R - EF Jun  8 2007 (0x4199_60831)",
    "seen_in": [
@@ -20,7 +132,8 @@
    "id": "nw4r.ef@2009-06-09",
    "banner": "NW4R - EF Jun  9 2009 (0x4302_145)",
    "seen_in": [
-    "SMNE01"
+    "SMNE01",
+    "SMNP01"
    ]
   },
   {
@@ -49,7 +162,8 @@
    "id": "nw4r.g3d@2009-04-02",
    "banner": "NW4R - G3D Apr  2 2009 (0x4302_145)",
    "seen_in": [
-    "SMNE01"
+    "SMNE01",
+    "SMNP01"
    ]
   },
   {
@@ -92,7 +206,8 @@
    "id": "nw4r.lyt@2009-04-02",
    "banner": "NW4R - LYT Apr  2 2009 (0x4302_145)",
    "seen_in": [
-    "SMNE01"
+    "SMNE01",
+    "SMNP01"
    ]
   },
   {
@@ -128,7 +243,8 @@
    "id": "nw4r.snd@2009-06-09",
    "banner": "NW4R - SND Jun  9 2009 (0x4302_145)",
    "seen_in": [
-    "SMNE01"
+    "SMNE01",
+    "SMNP01"
    ]
   },
   {
@@ -191,7 +307,8 @@
    "id": "rvl.ai@2009-02-27",
    "banner": "RVL_SDK - AI Feb 27 2009 (0x4302_145)",
    "seen_in": [
-    "SMNE01"
+    "SMNE01",
+    "SMNP01"
    ]
   },
   {
@@ -261,7 +378,8 @@
    "id": "rvl.ax@2009-02-27",
    "banner": "RVL_SDK - AX Feb 27 2009 (0x4302_145)",
    "seen_in": [
-    "SMNE01"
+    "SMNE01",
+    "SMNP01"
    ]
   },
   {
@@ -391,7 +509,8 @@
    "id": "rvl.dsp@2009-02-27",
    "banner": "RVL_SDK - DSP Feb 27 2009 (0x4302_145)",
    "seen_in": [
-    "SMNE01"
+    "SMNE01",
+    "SMNP01"
    ]
   },
   {
@@ -481,7 +600,8 @@
    "id": "rvl.dvd@2009-09-09",
    "banner": "RVL_SDK - DVD Sep  9 2009 (0x4302_145)",
    "seen_in": [
-    "SMNE01"
+    "SMNE01",
+    "SMNP01"
    ]
   },
   {
@@ -602,7 +722,8 @@
    "banner": "RVL_SDK - EXI Feb 27 2009 (0x4302_145)",
    "seen_in": [
     "HADE",
-    "SMNE01"
+    "SMNE01",
+    "SMNP01"
    ]
   },
   {
@@ -699,7 +820,8 @@
    "id": "rvl.gx@2009-02-27",
    "banner": "RVL_SDK - GX Feb 27 2009 (0x4302_145)",
    "seen_in": [
-    "SMNE01"
+    "SMNE01",
+    "SMNP01"
    ]
   },
   {
@@ -773,7 +895,8 @@
    "id": "rvl.hbm@2009-03-03",
    "banner": "RVL_SDK - HBM Mar  3 2009 (0x4201_142)",
    "seen_in": [
-    "SMNE01"
+    "SMNE01",
+    "SMNP01"
    ]
   },
   {
@@ -864,7 +987,8 @@
    "id": "rvl.kpad@2009-06-22",
    "banner": "RVL_SDK - KPAD Jun 22 2009 (0x4302_145)",
    "seen_in": [
-    "SMNE01"
+    "SMNE01",
+    "SMNP01"
    ]
   },
   {
@@ -970,7 +1094,8 @@
    "banner": "RVL_SDK - NAND Feb 27 2009 (0x4302_145)",
    "seen_in": [
     "HADE",
-    "SMNE01"
+    "SMNE01",
+    "SMNP01"
    ]
   },
   {
@@ -1179,7 +1304,8 @@
    "banner": "RVL_SDK - OS Feb 27 2009 (0x4302_145)",
    "seen_in": [
     "HADE",
-    "SMNE01"
+    "SMNE01",
+    "SMNP01"
    ]
   },
   {
@@ -1334,7 +1460,8 @@
    "banner": "RVL_SDK - SC Feb 27 2009 (0x4302_145)",
    "seen_in": [
     "HADE",
-    "SMNE01"
+    "SMNE01",
+    "SMNP01"
    ]
   },
   {
@@ -1412,7 +1539,8 @@
    "banner": "RVL_SDK - SI Feb 27 2009 (0x4302_145)",
    "seen_in": [
     "HADE",
-    "SMNE01"
+    "SMNE01",
+    "SMNP01"
    ]
   },
   {
@@ -1578,7 +1706,8 @@
    "banner": "RVL_SDK - VI Feb 27 2009 (0x4302_145)",
    "seen_in": [
     "HADE",
-    "SMNE01"
+    "SMNE01",
+    "SMNP01"
    ]
   },
   {
@@ -1661,7 +1790,8 @@
    "id": "rvl.wpad@2009-06-22",
    "banner": "RVL_SDK - WPAD Jun 22 2009 (0x4302_145)",
    "seen_in": [
-    "SMNE01"
+    "SMNE01",
+    "SMNP01"
    ]
   },
   {

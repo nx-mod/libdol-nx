@@ -44,6 +44,16 @@ read here - with two things left to the caller, as encryption is:
 A Wii disc in these formats needs no cipher at all: the partitions are stored
 decrypted, and `Image` is told so.
 
+Three things a reader has to get right, and each cost a bug before it worked
+against a real file:
+
+- a raw-data region's chunks sit on a grid of whole disc sectors, so a region
+  that begins inside one starts at the sector below it;
+- a partition's chunks carry the hashes they replaced as exception lists in
+  front of their data, inside the compressed stream when there is one;
+- `rvz_packed_size` is the length of the *packed* representation, not of what it
+  expands to.
+
 A Wii image is a GameCube image plus the middle layer, so one reader serves
 both.
 

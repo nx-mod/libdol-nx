@@ -370,8 +370,15 @@ def masked_hash(code):
 
 
 MONTHS = {m: i + 1 for i, m in enumerate("Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split())}
-BANNER = re.compile(rb"<< (NW4R|RVL_SDK|EGG) +- +([A-Z0-9_]+) \t?[a-z]+ +build: "
-                    rb"([A-Z][a-z]{2}) +(\d{1,2}) (\d{4}) [\d:]+ \((0x[0-9a-f_]+)\)( UNOFFICIAL)? >>")
+# Every SDK names itself the same way, Wii and GameCube alike. The GameCube's
+# own libraries say "Dolphin SDK", and a few of them carry no version code at
+# all - THP is one - so that part is optional.
+BANNER = re.compile(rb"<< (NW4R|RVL_SDK|EGG|Dolphin SDK) +- +([A-Z0-9_]+)[ \t]+[a-z]+ +build: "
+                    rb"([A-Z][a-z]{2}) +(\d{1,2}) (\d{4}) [\d:]+"
+                    rb"(?: \((0x[0-9a-f_]+)\))?( UNOFFICIAL)? >>")
+
+# What each family is called in a build id.
+FAMILY = {"RVL_SDK": "rvl", "Dolphin SDK": "dol", "NW4R": "nw4r", "EGG": "egg"}
 
 
 def builds(dol):
@@ -381,9 +388,10 @@ def builds(dol):
         family, lib, month, day, year, code, unofficial = (g.decode() if g else "" for g in m.groups())
         if unofficial:
             continue
-        name = f"{'rvl' if family == 'RVL_SDK' else family.lower()}.{lib.lower()}"
+        name = f"{FAMILY.get(family, family.lower())}.{lib.lower()}"
         date = datetime.date(int(year), MONTHS[month], int(day)).isoformat()
-        found[name] = (f"{name}@{date}", f"{family} - {lib} {month} {int(day):>2} {year} ({code})")
+        where = f" ({code})" if code else ""
+        found[name] = (f"{name}@{date}", f"{family} - {lib} {month} {int(day):>2} {year}{where}")
     return found
 
 

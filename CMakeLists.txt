@@ -123,6 +123,28 @@ if(WIINX_RUNTIME)
 endif()
 
 # ---------------------------------------------------------------------------
+# Tools that are programs rather than scripts. They run on the machine doing the
+# building, so they are built in a host build and left out of a Switch one.
+# ---------------------------------------------------------------------------
+option(WIINX_TOOLS "Build the host tools" ${PROJECT_IS_TOP_LEVEL})
+if(WIINX_TOOLS AND NOT CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
+    add_executable(wiinx-inspect-image tools/src/wiinx_inspect_image.cpp)
+    target_link_libraries(wiinx-inspect-image PRIVATE wiinx::format)
+
+    # Zstandard, for the chunks RVZ and WIA are compressed with. Without it the
+    # tool still reads everything that is stored plainly.
+    find_package(PkgConfig QUIET)
+    if(PkgConfig_FOUND)
+        pkg_check_modules(ZSTD QUIET libzstd)
+    endif()
+    if(ZSTD_FOUND)
+        target_compile_definitions(wiinx-inspect-image PRIVATE WIINX_HAVE_ZSTD)
+        target_include_directories(wiinx-inspect-image PRIVATE ${ZSTD_INCLUDE_DIRS})
+        target_link_libraries(wiinx-inspect-image PRIVATE ${ZSTD_LIBRARIES})
+    endif()
+endif()
+
+# ---------------------------------------------------------------------------
 # Checks. They run on the machine doing the building, against the sections that
 # build anywhere: ctest in a host build, nothing in a Switch one.
 # ---------------------------------------------------------------------------

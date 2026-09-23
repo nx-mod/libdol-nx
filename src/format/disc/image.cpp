@@ -241,11 +241,15 @@ bool Image::ReadFileTable() {
         return false;
     }
 
+    // A Wii disc counts in four-byte units - the table's place and its length
+    // both - because the format predates discs it could address directly.
     const bool wii = mHeader.console == Console::Wii;
     const std::uint64_t fst = wii ? static_cast<std::uint64_t>(mHeader.fst_offset) << 2
                                   : mHeader.fst_offset;
+    const std::size_t fst_size = wii ? static_cast<std::size_t>(mHeader.fst_size) << 2
+                                     : mHeader.fst_size;
 
-    std::vector<std::uint8_t> table(mHeader.fst_size);
+    std::vector<std::uint8_t> table(fst_size);
     if (!ReadData(fst, table.data(), table.size())) {
         return false;
     }

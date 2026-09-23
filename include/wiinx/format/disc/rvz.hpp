@@ -91,15 +91,17 @@ class Rvz {
         std::uint32_t packed_size = 0; // before the padding was regenerated
     };
     struct Region {
-        std::uint64_t offset = 0;      // on the disc
+        std::uint64_t offset = 0;      // where this is presented
         std::uint64_t size = 0;
         std::uint32_t first_group = 0;
         std::uint32_t groups = 0;
-        bool partition = false;        // stored decrypted, 0x7C00 to a cluster
+        std::uint32_t chunk = 0;       // bytes of this region in one group
+        std::uint32_t lists = 0;       // hash-exception lists in front of a chunk
     };
 
     bool ReadTables(const std::vector<std::uint8_t>& disc);
-    bool ReadGroup(std::uint32_t index, std::vector<std::uint8_t>& out) const;
+    bool ReadGroup(std::uint32_t index, const Region& region,
+                   std::vector<std::uint8_t>& out) const;
     bool Read(std::uint64_t offset, std::uint8_t* out, std::size_t size) const;
 
     Source mFile;

@@ -33,6 +33,12 @@ constexpr std::size_t kDiscSize = 0xDC;
 constexpr std::size_t kPartitionEntrySize = 48;
 constexpr std::size_t kRawDataEntrySize = 24;
 constexpr std::size_t kClusterStored = kClusterDataSize;  // 0x7C00 per 0x8000
+// A group of clusters: what one hash-exception list covers.
+constexpr std::size_t kGroupData = 64 * kClusterStored;  // 0x1F0000
+// The most one list can take, so a chunk that carries lists is decompressed
+// into a buffer with room for them.
+constexpr std::size_t kListSlack = 0x12000;
+constexpr std::size_t kExceptionEntry = 2 + 20;  // where a hash goes, and the hash
 
 std::uint32_t Read32(const std::uint8_t* p) {
     return (static_cast<std::uint32_t>(p[0]) << 24) | (static_cast<std::uint32_t>(p[1]) << 16) |
@@ -45,7 +51,29 @@ std::uint64_t Read64(const std::uint8_t* p) {
 
 }  // namespace
 
-bool Rvz::ReadGroup(std::uint32_t index, std::vector<std::uint8_t>& out) const {
+// The lists of hashes a chunk of a partition carries in front of its data:
+// each is a count and that many (where, hash) pairs. Nothing here checks a
+// hash, so they are measured and stepped over. When they were stored without
+// compression the last one is padded so the data behind it starts aligned.
+std::size_t SkipExceptionLists(const std::uint8_t* data, std::size_t size, std::uint32_t lists,
+                               bool aligned) {
+    std::size_t at = 0;
+    for (std::uint32_t list = 0; list < lists; list++) {
+        if (at + 2 > size) {
+            return at;
+        }
+        const std::size_t count = (static_cast<std::size_t>(data[at]) << 8) | data[at + 1];
+        std::size_t length = 2 + count * kExceptionEntry;
+        if (aligned && list + 1 == lists) {
+            length = ((at + length + 3) & ~std::size_t{3}) - at;
+        }
+        at += length;
+    }
+    return at;
+}
+
+bool Rvz::ReadGroup(std::uint32_t index, const Region& region,
+                    std::vector<std::uint8_t>& out) const {
     if (index >= mGroups.size()) {
         return false;
     }
@@ -54,7 +82,7 @@ bool Rvz::ReadGroup(std::uint32_t index, std::vector<std::uint8_t>& out) const {
     // A group with no bytes is a run of zeros: a part of the disc that was
     // never written, or was scrubbed away.
     if (group.size == 0) {
-        out.assign(mChunkSize, 0);
+        out.assign(region.chunk, 0);
         return true;
     }
 
@@ -63,13 +91,22 @@ bool Rvz::ReadGroup(std::uint32_t index, std::vector<std::uint8_t>& out) const {
         return false;
     }
 
+    // Hash exceptions travel with the data they belong to: inside the
+    // compressed stream when there is one, and in front of it when there is
+    // not.
+    const bool lists_compressed = group.compressed && mCompression != Compression::Purge;
+    if (region.lists != 0 && !lists_compressed) {
+        const std::size_t skip = SkipExceptionLists(raw.data(), raw.size(), region.lists, true);
+        raw.erase(raw.begin(), raw.begin() + static_cast<std::ptrdiff_t>(std::min(skip, raw.size())));
+    }
+
     if (!group.compressed) {
         out = std::move(raw);
     } else {
         if (mDecompressor.inflate == nullptr) {
             return false;
         }
-        out.assign(mChunkSize, 0);
+        out.assign(region.chunk + region.lists * kListSlack, 0);
         const std::size_t written = mDecompressor.inflate(mDecompressor.context, mCompression,
                                                           raw.data(), raw.size(), out.data(),
                                                           out.size());
@@ -79,33 +116,37 @@ bool Rvz::ReadGroup(std::uint32_t index, std::vector<std::uint8_t>& out) const {
         out.resize(written);
     }
 
-    // An RVZ group may be "packed": runs of real bytes, and runs of the filler
-    // a disc carries between its files, recorded as a seed rather than as
-    // bytes. The filler sits where no file does, so it is written as zeros -
-    // a dump's real contents come back either way (see the header).
+    if (region.lists != 0 && lists_compressed) {
+        const std::size_t skip = SkipExceptionLists(out.data(), out.size(), region.lists, false);
+        out.erase(out.begin(), out.begin() + static_cast<std::ptrdiff_t>(std::min(skip, out.size())));
+    }
+
+    // An RVZ group may be "packed": the bytes that come out of the
+    // decompressor are runs of real data and runs of the filler a disc carries
+    // between its files, the latter recorded as a seed rather than as bytes.
+    // `packed_size` says how much of the stream is that representation; what it
+    // expands to is the chunk. The filler lies where no file does, so it is
+    // written as zeros (see the header).
     if (group.packed_size != 0) {
+        const std::size_t limit = std::min<std::size_t>(out.size(), group.packed_size);
         std::vector<std::uint8_t> unpacked;
-        unpacked.reserve(group.packed_size);
+        unpacked.reserve(region.chunk);
+
         std::size_t at = 0;
-        while (at + 4 <= out.size() && unpacked.size() < group.packed_size) {
+        while (at + 4 <= limit) {
             const std::uint32_t field = Read32(out.data() + at);
             at += 4;
             const std::size_t length = field & 0x7FFFFFFFu;
             if ((field & 0x80000000u) != 0) {
-                // Filler: a 68-byte seed, then that many bytes to regrow.
-                at += 68;
-                unpacked.resize(std::min<std::size_t>(unpacked.size() + length, group.packed_size),
-                                0);
+                at += 68;  // the seed the filler would be regrown from
+                unpacked.insert(unpacked.end(), length, 0);
             } else {
-                if (at + length > out.size()) {
-                    return false;
-                }
+                const std::size_t take = std::min(length, limit - at);
                 unpacked.insert(unpacked.end(), out.begin() + static_cast<std::ptrdiff_t>(at),
-                                out.begin() + static_cast<std::ptrdiff_t>(at + length));
+                                out.begin() + static_cast<std::ptrdiff_t>(at + take));
                 at += length;
             }
         }
-        unpacked.resize(group.packed_size, 0);
         out = std::move(unpacked);
     }
     return true;
@@ -194,6 +235,14 @@ bool Rvz::ReadTables(const std::vector<std::uint8_t>& disc) {
         region.size = Read64(at + 8);
         region.first_group = Read32(at + 16);
         region.groups = Read32(at + 20);
+        region.chunk = mChunkSize;
+
+        // A region's chunks are laid on a grid of whole disc sectors, so a
+        // region that starts inside one begins at the sector boundary below it
+        // and is that much longer.
+        const std::uint64_t skipped = region.offset % kClusterSize;
+        region.offset -= skipped;
+        region.size += skipped;
         mRegions.push_back(region);
     }
 
@@ -204,19 +253,29 @@ bool Rvz::ReadTables(const std::vector<std::uint8_t>& disc) {
         if (!mFile.Read(partition_offset, partition_table.data(), partition_table.size())) {
             return false;
         }
+        // A partition's data is stored decrypted, so its chunks hold 0x7C00
+        // for every 0x8000 of disc, and each carries the hashes it replaced as
+        // exception lists in front of it.
+        const std::uint32_t partition_chunk =
+            static_cast<std::uint32_t>(mChunkSize / kClusterSize * kClusterStored);
+        const std::uint32_t lists =
+            std::max<std::uint32_t>(1, static_cast<std::uint32_t>(partition_chunk / kGroupData));
+
         for (std::uint32_t index = 0; index < partitions; index++) {
             const std::uint8_t* at = partition_table.data() + index * partition_entry;
+            // Everything in a partition is measured from its first sector.
+            const std::uint64_t first = Read32(at + 16);
+            const std::uint64_t start = first * kClusterSize;
+
             for (int segment = 0; segment < 2; segment++) {
                 const std::uint8_t* data = at + 16 + segment * 16;
                 Region region;
-                region.partition = true;
-                // The segment begins where it does on the disc, and what is
-                // stored for it is the decrypted 0x7C00 of each cluster - so
-                // that is how long it is here.
-                region.offset = static_cast<std::uint64_t>(Read32(data)) * kClusterSize;
+                region.offset = start + (Read32(data) - first) * kClusterStored;
                 region.size = static_cast<std::uint64_t>(Read32(data + 4)) * kClusterStored;
                 region.first_group = Read32(data + 8);
                 region.groups = Read32(data + 12);
+                region.chunk = partition_chunk;
+                region.lists = lists;
                 if (region.size != 0) {
                     mRegions.push_back(region);
                 }
@@ -278,14 +337,8 @@ bool Rvz::Read(std::uint64_t offset, std::uint8_t* out, std::size_t size) const 
             return true;
         }
 
-        // A chunk of a partition holds the decrypted part of each cluster it
-        // covers, and nothing else, so it is shorter than a raw-data chunk.
         const std::uint64_t within = offset - found->offset;
-        const std::uint32_t chunk =
-            found->partition
-                ? static_cast<std::uint32_t>(mChunkSize / kClusterSize * kClusterStored)
-                : mChunkSize;
-
+        const std::uint32_t chunk = found->chunk;
         const std::uint32_t group =
             found->first_group + static_cast<std::uint32_t>(within / chunk);
         const std::size_t at = static_cast<std::size_t>(within % chunk);
@@ -294,15 +347,34 @@ bool Rvz::Read(std::uint64_t offset, std::uint8_t* out, std::size_t size) const 
         }
 
         if (mGroupIndex != group) {
-            if (!ReadGroup(group, mGroupBytes)) {
+            if (!ReadGroup(group, *found, mGroupBytes)) {
                 return false;
             }
             mGroupIndex = group;
         }
-        if (at >= mGroupBytes.size()) {
+
+        // A read stops at the end of the chunk it is in, and at the end of the
+        // region: the next of either is a different group, or different bytes
+        // entirely.
+        const std::uint64_t left_in_region = found->offset + found->size - offset;
+        const std::size_t left_in_chunk = chunk - at;
+        std::size_t take = static_cast<std::size_t>(
+            std::min<std::uint64_t>({size, left_in_region, left_in_chunk}));
+        if (take == 0) {
             return false;
         }
-        const std::size_t take = std::min(size, mGroupBytes.size() - at);
+
+        // A chunk may hold less than it covers - the last one of a region, or
+        // one whose tail was scrubbed away. What it does not hold reads as
+        // zeros, which is what that part of a disc is.
+        if (at >= mGroupBytes.size()) {
+            std::memset(out, 0, take);
+            out += take;
+            offset += take;
+            size -= take;
+            continue;
+        }
+        take = std::min(take, mGroupBytes.size() - at);
         std::memcpy(out, mGroupBytes.data() + at, take);
         out += take;
         offset += take;

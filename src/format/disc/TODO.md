@@ -14,8 +14,8 @@
 - [ ] Regenerate a disc's padding from its seed, for verifying a dump against
       its hashes. Dolphin is GPL-2-or-later, so its generator can be followed
       and credited
-- [ ] Check RVZ against a real dump: the structure is read from the format's
-      own documentation and has not met a file made by Dolphin yet
+- [x] Checked against real dumps made by Dolphin: a GameCube disc and a Wii one,
+      both read through to their files and their executables
 - [ ] GCZ, common in older GameCube collections: zlib blocks, no scrubbing
 - [ ] Split files - `.wbf1`, `.part1.iso` - joined before the container sees
       them, since FAT32 stops at 4 GB
