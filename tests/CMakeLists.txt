@@ -7,6 +7,7 @@ set(WIINX_CHECKS
     core_check          # typed guest memory and the native registry
     nw4r_lyt_check      # layout matrices against the original's arithmetic
     sdk_mtx_check       # the matrix library, including its paired-single order
+    sdk_msl_check       # the C library's natives, against the standard
     sdk_thp_check       # the video decoder against a known frame
     nand_sysconf_check  # SYSCONF, against a file the runtime wrote
     nand_mii_check      # the Mii database, against a file the runtime wrote
@@ -28,6 +29,7 @@ endforeach()
 add_test(NAME core COMMAND core_check)
 add_test(NAME nw4r_lyt COMMAND nw4r_lyt_check)
 add_test(NAME sdk_mtx COMMAND sdk_mtx_check)
+add_test(NAME sdk_msl COMMAND sdk_msl_check)
 add_test(NAME sdk_thp COMMAND sdk_thp_check)
 add_test(NAME nand_sysconf COMMAND nand_sysconf_check ${CMAKE_CURRENT_SOURCE_DIR}/data/SYSCONF)
 add_test(NAME nand_mii COMMAND nand_mii_check ${CMAKE_CURRENT_SOURCE_DIR}/data/RFL_DB.dat)
