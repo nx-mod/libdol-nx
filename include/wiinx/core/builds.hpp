@@ -58,6 +58,7 @@ inline constexpr LibVersion kNw4rLyt_2010_03_15{"nw4r.lyt@2010-03-15", "nw4r.lyt
 
 inline constexpr LibVersion kNw4rSnd_2007_06_08{"nw4r.snd@2007-06-08", "nw4r.snd", "Jun  8 2007 (0x4199_60831)"};  // RSPE01
 inline constexpr LibVersion kNw4rSnd_2008_03_08{"nw4r.snd@2008-03-08", "nw4r.snd", "Mar  8 2008 (0x4201_127)"};  // RMCP01
+inline constexpr LibVersion kNw4rSnd_2008_05_15{"nw4r.snd@2008-05-15", "nw4r.snd", "May 15 2008 (0x4199_60831)"};  // WR9E
 inline constexpr LibVersion kNw4rSnd_2008_11_20{"nw4r.snd@2008-11-20", "nw4r.snd", "Nov 20 2008 (0x4199_60831)"};  // HAYA
 inline constexpr LibVersion kNw4rSnd_2009_06_09{"nw4r.snd@2009-06-09", "nw4r.snd", "Jun  9 2009 (0x4302_145)"};  // SMNE01, SMNP01
 inline constexpr LibVersion kNw4rSnd_2009_12_22{"nw4r.snd@2009-12-22", "nw4r.snd", "Dec 22 2009 (0x4302_158)"};  // SP2E01
@@ -66,7 +67,7 @@ inline constexpr LibVersion kNw4rSnd_2012_03_30{"nw4r.snd@2012-03-30", "nw4r.snd
 inline constexpr LibVersion kRvlAi_2006_10_26{"rvl.ai@2006-10-26", "rvl.ai", "Oct 26 2006 (0x4199_60831)"};  // HAAA
 inline constexpr LibVersion kRvlAi_2006_11_30{"rvl.ai@2006-11-30", "rvl.ai", "Nov 30 2006 (0x4199_60831)"};  // R8PE01, RM3E01
 inline constexpr LibVersion kRvlAi_2007_05_08{"rvl.ai@2007-05-08", "rvl.ai", "May  8 2007 (0x4199_60831)"};  // HAFE, HAFP, HAGE, HAGP
-inline constexpr LibVersion kRvlAi_2007_08_08{"rvl.ai@2007-08-08", "rvl.ai", "Aug  8 2007 (0x4199_60831)"};  // HACA, R92E01, RMCP01
+inline constexpr LibVersion kRvlAi_2007_08_08{"rvl.ai@2007-08-08", "rvl.ai", "Aug  8 2007 (0x4199_60831)"};  // HACA, R92E01, RMCP01, WR9E
 inline constexpr LibVersion kRvlAi_2008_07_30{"rvl.ai@2008-07-30", "rvl.ai", "Jul 30 2008 (0x4199_60831)"};  // HAYA, R7PE01
 inline constexpr LibVersion kRvlAi_2009_02_27{"rvl.ai@2009-02-27", "rvl.ai", "Feb 27 2009 (0x4302_145)"};  // SMNE01, SMNP01
 inline constexpr LibVersion kRvlAi_2009_12_11{"rvl.ai@2009-12-11", "rvl.ai", "Dec 11 2009 (0x4302_145)"};  // SP2E01
@@ -76,7 +77,7 @@ inline constexpr LibVersion kRvlAi_2010_08_23{"rvl.ai@2010-08-23", "rvl.ai", "Au
 inline constexpr LibVersion kRvlAx_2006_10_26{"rvl.ax@2006-10-26", "rvl.ax", "Oct 26 2006 (0x4199_60831)"};  // HAAA
 inline constexpr LibVersion kRvlAx_2006_12_18{"rvl.ax@2006-12-18", "rvl.ax", "Dec 18 2006 (0x4199_60831)"};  // R8PE01, RM3E01
 inline constexpr LibVersion kRvlAx_2007_05_08{"rvl.ax@2007-05-08", "rvl.ax", "May  8 2007 (0x4199_60831)"};  // HAFE, HAFP, HAGE, HAGP
-inline constexpr LibVersion kRvlAx_2007_08_08{"rvl.ax@2007-08-08", "rvl.ax", "Aug  8 2007 (0x4199_60831)"};  // HACA, R92E01, RMCP01
+inline constexpr LibVersion kRvlAx_2007_08_08{"rvl.ax@2007-08-08", "rvl.ax", "Aug  8 2007 (0x4199_60831)"};  // HACA, R92E01, RMCP01, WR9E
 inline constexpr LibVersion kRvlAx_2008_07_30{"rvl.ax@2008-07-30", "rvl.ax", "Jul 30 2008 (0x4199_60831)"};  // HAYA, R7PE01
 inline constexpr LibVersion kRvlAx_2009_02_27{"rvl.ax@2009-02-27", "rvl.ax", "Feb 27 2009 (0x4302_145)"};  // SMNE01, SMNP01
 inline constexpr LibVersion kRvlAx_2009_12_11{"rvl.ax@2009-12-11", "rvl.ax", "Dec 11 2009 (0x4302_145)"};  // SP2E01
@@ -87,6 +88,7 @@ inline constexpr LibVersion kRvlCard_2010_04_20{"rvl.card@2010-04-20", "rvl.card
 
 inline constexpr LibVersion kRvlCnt_2007_05_10{"rvl.cnt@2007-05-10", "rvl.cnt", "May 10 2007 (0x4199_60831)"};  // HAFE, HAFP, HAGE, HAGP
 inline constexpr LibVersion kRvlCnt_2007_08_08{"rvl.cnt@2007-08-08", "rvl.cnt", "Aug  8 2007 (0x4199_60831)"};  // HACA, RMCP01
+inline constexpr LibVersion kRvlCnt_2008_03_05{"rvl.cnt@2008-03-05", "rvl.cnt", "Mar  5 2008 (0x4199_60831)"};  // WR9E
 inline constexpr LibVersion kRvlCnt_2008_07_30{"rvl.cnt@2008-07-30", "rvl.cnt", "Jul 30 2008 (0x4199_60831)"};  // HAYA
 inline constexpr LibVersion kRvlCnt_2010_04_20{"rvl.cnt@2010-04-20", "rvl.cnt", "Apr 20 2010 (0x4199_60831)"};  // SystemMenu
 inline constexpr LibVersion kRvlCnt_2010_08_23{"rvl.cnt@2010-08-23", "rvl.cnt", "Aug 23 2010 (0x4302_145)"};  // HABA
@@ -97,7 +99,7 @@ inline constexpr LibVersion kRvlCntcache_2012_03_08{"rvl.cntcache@2012-03-08", "
 inline constexpr LibVersion kRvlDsp_2006_10_26{"rvl.dsp@2006-10-26", "rvl.dsp", "Oct 26 2006 (0x4199_60831)"};  // HAAA
 inline constexpr LibVersion kRvlDsp_2006_11_30{"rvl.dsp@2006-11-30", "rvl.dsp", "Nov 30 2006 (0x4199_60831)"};  // R8PE01, RM3E01
 inline constexpr LibVersion kRvlDsp_2007_05_08{"rvl.dsp@2007-05-08", "rvl.dsp", "May  8 2007 (0x4199_60831)"};  // HAFE, HAFP, HAGE, HAGP
-inline constexpr LibVersion kRvlDsp_2007_08_08{"rvl.dsp@2007-08-08", "rvl.dsp", "Aug  8 2007 (0x4199_60831)"};  // HACA, R92E01, RMCP01
+inline constexpr LibVersion kRvlDsp_2007_08_08{"rvl.dsp@2007-08-08", "rvl.dsp", "Aug  8 2007 (0x4199_60831)"};  // HACA, R92E01, RMCP01, WR9E
 inline constexpr LibVersion kRvlDsp_2008_07_30{"rvl.dsp@2008-07-30", "rvl.dsp", "Jul 30 2008 (0x4199_60831)"};  // HAYA, R7PE01
 inline constexpr LibVersion kRvlDsp_2009_02_27{"rvl.dsp@2009-02-27", "rvl.dsp", "Feb 27 2009 (0x4302_145)"};  // SMNE01, SMNP01
 inline constexpr LibVersion kRvlDsp_2009_12_11{"rvl.dsp@2009-12-11", "rvl.dsp", "Dec 11 2009 (0x4302_145)"};  // SP2E01
@@ -108,7 +110,7 @@ inline constexpr LibVersion kRvlDvd_2006_10_26{"rvl.dvd@2006-10-26", "rvl.dvd", 
 inline constexpr LibVersion kRvlDvd_2007_04_24{"rvl.dvd@2007-04-24", "rvl.dvd", "Apr 24 2007 (0x4199_60831)"};  // R8PE01, RM3E01
 inline constexpr LibVersion kRvlDvd_2007_06_21{"rvl.dvd@2007-06-21", "rvl.dvd", "Jun 21 2007 (0x4199_60831)"};  // HAFE, HAFP, HAGE, HAGP
 inline constexpr LibVersion kRvlDvd_2007_07_31{"rvl.dvd@2007-07-31", "rvl.dvd", "Jul 31 2007 (0x4199_60831)"};  // IOS21
-inline constexpr LibVersion kRvlDvd_2007_08_08{"rvl.dvd@2007-08-08", "rvl.dvd", "Aug  8 2007 (0x4199_60831)"};  // R92E01, RMCP01
+inline constexpr LibVersion kRvlDvd_2007_08_08{"rvl.dvd@2007-08-08", "rvl.dvd", "Aug  8 2007 (0x4199_60831)"};  // R92E01, RMCP01, WR9E
 inline constexpr LibVersion kRvlDvd_2008_02_22{"rvl.dvd@2008-02-22", "rvl.dvd", "Feb 22 2008 (0x4199_60831)"};  // HACA
 inline constexpr LibVersion kRvlDvd_2008_07_30{"rvl.dvd@2008-07-30", "rvl.dvd", "Jul 30 2008 (0x4199_60831)"};  // HAYA, R7PE01
 inline constexpr LibVersion kRvlDvd_2009_02_27{"rvl.dvd@2009-02-27", "rvl.dvd", "Feb 27 2009 (0x4302_145)"};  // HADE
@@ -118,10 +120,13 @@ inline constexpr LibVersion kRvlDvd_2010_04_20{"rvl.dvd@2010-04-20", "rvl.dvd", 
 inline constexpr LibVersion kRvlDvd_2010_08_23{"rvl.dvd@2010-08-23", "rvl.dvd", "Aug 23 2010 (0x4302_145)"};  // HABA
 
 inline constexpr LibVersion kRvlDwc_2008_03_01{"rvl.dwc@2008-03-01", "rvl.dwc", "Mar  1 2008 (0x4199_60831)"};  // RMCP01
+inline constexpr LibVersion kRvlDwc_2008_05_09{"rvl.dwc@2008-05-09", "rvl.dwc", "May  9 2008 (0x4199_60831)"};  // WR9E
+
+inline constexpr LibVersion kRvlEcdk_2008_05_08{"rvl.ecdk@2008-05-08", "rvl.ecdk", "May  8 2008 (0x4199_60831)"};  // WR9E
 
 inline constexpr LibVersion kRvlEcx_2012_07_27{"rvl.ecx@2012-07-27", "rvl.ecx", "Jul 27 2012 (0x4302_213)"};  // HABA
 
-inline constexpr LibVersion kRvlEnc_2007_08_08{"rvl.enc@2007-08-08", "rvl.enc", "Aug  8 2007 (0x4199_60831)"};  // R92E01, RMCP01
+inline constexpr LibVersion kRvlEnc_2007_08_08{"rvl.enc@2007-08-08", "rvl.enc", "Aug  8 2007 (0x4199_60831)"};  // R92E01, RMCP01, WR9E
 inline constexpr LibVersion kRvlEnc_2008_07_30{"rvl.enc@2008-07-30", "rvl.enc", "Jul 30 2008 (0x4199_60831)"};  // HAYA
 inline constexpr LibVersion kRvlEnc_2010_04_20{"rvl.enc@2010-04-20", "rvl.enc", "Apr 20 2010 (0x4199_60831)"};  // SystemMenu
 inline constexpr LibVersion kRvlEnc_2010_08_23{"rvl.enc@2010-08-23", "rvl.enc", "Aug 23 2010 (0x4302_145)"};  // HABA
@@ -130,7 +135,7 @@ inline constexpr LibVersion kRvlExi_2006_10_26{"rvl.exi@2006-10-26", "rvl.exi", 
 inline constexpr LibVersion kRvlExi_2006_11_30{"rvl.exi@2006-11-30", "rvl.exi", "Nov 30 2006 (0x4199_60831)"};  // R8PE01, RM3E01
 inline constexpr LibVersion kRvlExi_2007_06_06{"rvl.exi@2007-06-06", "rvl.exi", "Jun  6 2007 (0x4199_60831)"};  // HAFE, HAFP, HAGE, HAGP
 inline constexpr LibVersion kRvlExi_2007_07_31{"rvl.exi@2007-07-31", "rvl.exi", "Jul 31 2007 (0x4199_60831)"};  // IOS21
-inline constexpr LibVersion kRvlExi_2007_08_08{"rvl.exi@2007-08-08", "rvl.exi", "Aug  8 2007 (0x4199_60831)"};  // HACA, R92E01, RMCP01
+inline constexpr LibVersion kRvlExi_2007_08_08{"rvl.exi@2007-08-08", "rvl.exi", "Aug  8 2007 (0x4199_60831)"};  // HACA, R92E01, RMCP01, WR9E
 inline constexpr LibVersion kRvlExi_2008_07_30{"rvl.exi@2008-07-30", "rvl.exi", "Jul 30 2008 (0x4199_60831)"};  // HAYA, R7PE01
 inline constexpr LibVersion kRvlExi_2009_02_27{"rvl.exi@2009-02-27", "rvl.exi", "Feb 27 2009 (0x4302_145)"};  // HADE, SMNE01, SMNP01
 inline constexpr LibVersion kRvlExi_2009_12_11{"rvl.exi@2009-12-11", "rvl.exi", "Dec 11 2009 (0x4302_145)"};  // SP2E01
@@ -145,7 +150,7 @@ inline constexpr LibVersion kRvlGx_2006_10_26{"rvl.gx@2006-10-26", "rvl.gx", "Oc
 inline constexpr LibVersion kRvlGx_2006_11_29{"rvl.gx@2006-11-29", "rvl.gx", "Nov 29 2006 (0x4200_60308)"};  // RM3E01
 inline constexpr LibVersion kRvlGx_2006_11_30{"rvl.gx@2006-11-30", "rvl.gx", "Nov 30 2006 (0x4199_60831)"};  // R8PE01
 inline constexpr LibVersion kRvlGx_2007_05_08{"rvl.gx@2007-05-08", "rvl.gx", "May  8 2007 (0x4199_60831)"};  // HAFE, HAFP, HAGE, HAGP
-inline constexpr LibVersion kRvlGx_2007_12_11{"rvl.gx@2007-12-11", "rvl.gx", "Dec 11 2007 (0x4199_60831)"};  // HACA, R92E01, RMCP01
+inline constexpr LibVersion kRvlGx_2007_12_11{"rvl.gx@2007-12-11", "rvl.gx", "Dec 11 2007 (0x4199_60831)"};  // HACA, R92E01, RMCP01, WR9E
 inline constexpr LibVersion kRvlGx_2008_09_11{"rvl.gx@2008-09-11", "rvl.gx", "Sep 11 2008 (0x4199_60831)"};  // HAYA, R7PE01
 inline constexpr LibVersion kRvlGx_2009_02_27{"rvl.gx@2009-02-27", "rvl.gx", "Feb 27 2009 (0x4302_145)"};  // SMNE01, SMNP01
 inline constexpr LibVersion kRvlGx_2009_12_11{"rvl.gx@2009-12-11", "rvl.gx", "Dec 11 2009 (0x4302_145)"};  // SP2E01
@@ -156,6 +161,7 @@ inline constexpr LibVersion kRvlHbm_2007_05_16{"rvl.hbm@2007-05-16", "rvl.hbm", 
 inline constexpr LibVersion kRvlHbm_2007_05_18{"rvl.hbm@2007-05-18", "rvl.hbm", "May 18 2007 (0x4199_60831)"};  // R8PE01
 inline constexpr LibVersion kRvlHbm_2007_11_22{"rvl.hbm@2007-11-22", "rvl.hbm", "Nov 22 2007 (0x4199_60726)"};  // RMCP01
 inline constexpr LibVersion kRvlHbm_2008_02_07{"rvl.hbm@2008-02-07", "rvl.hbm", "Feb  7 2008 (0x4199_60726)"};  // HACA, R92E01
+inline constexpr LibVersion kRvlHbm_2008_04_24{"rvl.hbm@2008-04-24", "rvl.hbm", "Apr 24 2008 (0x4199_60726)"};  // WR9E
 inline constexpr LibVersion kRvlHbm_2008_06_16{"rvl.hbm@2008-06-16", "rvl.hbm", "Jun 16 2008 (0x4199_60831)"};  // R7PE01
 inline constexpr LibVersion kRvlHbm_2008_09_24{"rvl.hbm@2008-09-24", "rvl.hbm", "Sep 24 2008 (0x4199_60831)"};  // HAYA
 inline constexpr LibVersion kRvlHbm_2009_03_03{"rvl.hbm@2009-03-03", "rvl.hbm", "Mar  3 2009 (0x4201_142)"};  // SMNE01, SMNP01
@@ -171,7 +177,7 @@ inline constexpr LibVersion kRvlKbd_2010_08_23{"rvl.kbd@2010-08-23", "rvl.kbd", 
 inline constexpr LibVersion kRvlKpad_2006_10_31{"rvl.kpad@2006-10-31", "rvl.kpad", "Oct 31 2006 (0x4199_60831)"};  // HAAA
 inline constexpr LibVersion kRvlKpad_2007_05_17{"rvl.kpad@2007-05-17", "rvl.kpad", "May 17 2007 (0x4199_60831)"};  // R8PE01, RM3E01
 inline constexpr LibVersion kRvlKpad_2007_06_28{"rvl.kpad@2007-06-28", "rvl.kpad", "Jun 28 2007 (0x4199_60831)"};  // HAFE, HAFP, HAGE, HAGP
-inline constexpr LibVersion kRvlKpad_2007_08_08{"rvl.kpad@2007-08-08", "rvl.kpad", "Aug  8 2007 (0x4199_60831)"};  // HACA, R92E01, RMCP01
+inline constexpr LibVersion kRvlKpad_2007_08_08{"rvl.kpad@2007-08-08", "rvl.kpad", "Aug  8 2007 (0x4199_60831)"};  // HACA, R92E01, RMCP01, WR9E
 inline constexpr LibVersion kRvlKpad_2008_09_11{"rvl.kpad@2008-09-11", "rvl.kpad", "Sep 11 2008 (0x4199_60831)"};  // HAYA, R7PE01
 inline constexpr LibVersion kRvlKpad_2009_06_22{"rvl.kpad@2009-06-22", "rvl.kpad", "Jun 22 2009 (0x4302_145)"};  // SMNE01, SMNP01
 inline constexpr LibVersion kRvlKpad_2009_12_11{"rvl.kpad@2009-12-11", "rvl.kpad", "Dec 11 2009 (0x4302_145)"};  // SP2E01
@@ -189,6 +195,7 @@ inline constexpr LibVersion kRvlNand_2006_11_30{"rvl.nand@2006-11-30", "rvl.nand
 inline constexpr LibVersion kRvlNand_2007_05_08{"rvl.nand@2007-05-08", "rvl.nand", "May  8 2007 (0x4199_60831)"};  // HAFE, HAFP, HAGE, HAGP
 inline constexpr LibVersion kRvlNand_2007_07_31{"rvl.nand@2007-07-31", "rvl.nand", "Jul 31 2007 (0x4199_60831)"};  // IOS21
 inline constexpr LibVersion kRvlNand_2007_12_11{"rvl.nand@2007-12-11", "rvl.nand", "Dec 11 2007 (0x4199_60831)"};  // HACA, R92E01, RMCP01
+inline constexpr LibVersion kRvlNand_2008_02_29{"rvl.nand@2008-02-29", "rvl.nand", "Feb 29 2008 (0x4199_60831)"};  // WR9E
 inline constexpr LibVersion kRvlNand_2008_09_11{"rvl.nand@2008-09-11", "rvl.nand", "Sep 11 2008 (0x4199_60831)"};  // HAYA, R7PE01
 inline constexpr LibVersion kRvlNand_2009_02_27{"rvl.nand@2009-02-27", "rvl.nand", "Feb 27 2009 (0x4302_145)"};  // HADE, SMNE01, SMNP01
 inline constexpr LibVersion kRvlNand_2009_12_11{"rvl.nand@2009-12-11", "rvl.nand", "Dec 11 2009 (0x4302_145)"};  // SP2E01
@@ -197,20 +204,20 @@ inline constexpr LibVersion kRvlNand_2010_08_23{"rvl.nand@2010-08-23", "rvl.nand
 
 inline constexpr LibVersion kRvlNcd_2006_11_11{"rvl.ncd@2006-11-11", "rvl.ncd", "Nov 11 2006 (0x4199_60831)"};  // HAAA
 inline constexpr LibVersion kRvlNcd_2007_06_28{"rvl.ncd@2007-06-28", "rvl.ncd", "Jun 28 2007 (0x4199_60831)"};  // HAFE, HAFP, HAGE, HAGP
-inline constexpr LibVersion kRvlNcd_2007_12_10{"rvl.ncd@2007-12-10", "rvl.ncd", "Dec 10 2007 (0x4199_60831)"};  // HACA, RMCP01
+inline constexpr LibVersion kRvlNcd_2007_12_10{"rvl.ncd@2007-12-10", "rvl.ncd", "Dec 10 2007 (0x4199_60831)"};  // HACA, RMCP01, WR9E
 inline constexpr LibVersion kRvlNcd_2008_12_12{"rvl.ncd@2008-12-12", "rvl.ncd", "Dec 12 2008 (0x4199_60831)"};  // SystemMenu
 inline constexpr LibVersion kRvlNcd_2009_01_19{"rvl.ncd@2009-01-19", "rvl.ncd", "Jan 19 2009 (0x4199_60831)"};  // HAYA
 inline constexpr LibVersion kRvlNcd_2009_06_09{"rvl.ncd@2009-06-09", "rvl.ncd", "Jun  9 2009 (0x4199_60831)"};  // HABA
 
 inline constexpr LibVersion kRvlNhttp_2007_06_27{"rvl.nhttp@2007-06-27", "rvl.nhttp", "Jun 27 2007 (0x4199_60726)"};  // SystemMenu
-inline constexpr LibVersion kRvlNhttp_2007_10_11{"rvl.nhttp@2007-10-11", "rvl.nhttp", "Oct 11 2007 (0x4199_60726)"};  // RMCP01
+inline constexpr LibVersion kRvlNhttp_2007_10_11{"rvl.nhttp@2007-10-11", "rvl.nhttp", "Oct 11 2007 (0x4199_60726)"};  // RMCP01, WR9E
 inline constexpr LibVersion kRvlNhttp_2009_05_12{"rvl.nhttp@2009-05-12", "rvl.nhttp", "May 12 2009 (0x4199_60831)"};  // HABA
 
 inline constexpr LibVersion kRvlNhttpcreate_2009_05_12{"rvl.nhttpcreate@2009-05-12", "rvl.nhttpcreate", "May 12 2009 (0x4199_60831)"};  // HABA
 
 inline constexpr LibVersion kRvlNwc24_2007_05_10{"rvl.nwc24@2007-05-10", "rvl.nwc24", "May 10 2007 (0x4199_60831)"};  // RM3E01
 inline constexpr LibVersion kRvlNwc24_2007_06_28{"rvl.nwc24@2007-06-28", "rvl.nwc24", "Jun 28 2007 (0x4199_60831)"};  // HAFE, HAFP, HAGE, HAGP
-inline constexpr LibVersion kRvlNwc24_2007_12_10{"rvl.nwc24@2007-12-10", "rvl.nwc24", "Dec 10 2007 (0x4199_60831)"};  // HACA, RMCP01
+inline constexpr LibVersion kRvlNwc24_2007_12_10{"rvl.nwc24@2007-12-10", "rvl.nwc24", "Dec 10 2007 (0x4199_60831)"};  // HACA, RMCP01, WR9E
 inline constexpr LibVersion kRvlNwc24_2008_12_12{"rvl.nwc24@2008-12-12", "rvl.nwc24", "Dec 12 2008 (0x4199_60831)"};  // SystemMenu
 inline constexpr LibVersion kRvlNwc24_2009_06_09{"rvl.nwc24@2009-06-09", "rvl.nwc24", "Jun  9 2009 (0x4199_60831)"};  // HABA
 
@@ -221,7 +228,7 @@ inline constexpr LibVersion kRvlOs_2007_06_28{"rvl.os@2007-06-28", "rvl.os", "Ju
 inline constexpr LibVersion kRvlOs_2007_07_31{"rvl.os@2007-07-31", "rvl.os", "Jul 31 2007 (0x4199_60831)"};  // IOS21
 inline constexpr LibVersion kRvlOs_2007_12_11{"rvl.os@2007-12-11", "rvl.os", "Dec 11 2007 (0x4199_60831)"};  // HACA
 inline constexpr LibVersion kRvlOs_2008_01_28{"rvl.os@2008-01-28", "rvl.os", "Jan 28 2008 (0x4199_60831)"};  // RMCP01
-inline constexpr LibVersion kRvlOs_2008_01_30{"rvl.os@2008-01-30", "rvl.os", "Jan 30 2008 (0x4199_60831)"};  // R92E01
+inline constexpr LibVersion kRvlOs_2008_01_30{"rvl.os@2008-01-30", "rvl.os", "Jan 30 2008 (0x4199_60831)"};  // R92E01, WR9E
 inline constexpr LibVersion kRvlOs_2008_10_02{"rvl.os@2008-10-02", "rvl.os", "Oct  2 2008 (0x4199_60831)"};  // HAYA, R7PE01
 inline constexpr LibVersion kRvlOs_2009_02_27{"rvl.os@2009-02-27", "rvl.os", "Feb 27 2009 (0x4302_145)"};  // HADE, SMNE01, SMNP01
 inline constexpr LibVersion kRvlOs_2009_12_11{"rvl.os@2009-12-11", "rvl.os", "Dec 11 2009 (0x4302_145)"};  // SP2E01
@@ -246,6 +253,7 @@ inline constexpr LibVersion kRvlSc_2007_05_08{"rvl.sc@2007-05-08", "rvl.sc", "Ma
 inline constexpr LibVersion kRvlSc_2007_07_31{"rvl.sc@2007-07-31", "rvl.sc", "Jul 31 2007 (0x4199_60831)"};  // IOS21
 inline constexpr LibVersion kRvlSc_2007_08_08{"rvl.sc@2007-08-08", "rvl.sc", "Aug  8 2007 (0x4199_60831)"};  // R92E01, RMCP01
 inline constexpr LibVersion kRvlSc_2008_02_22{"rvl.sc@2008-02-22", "rvl.sc", "Feb 22 2008 (0x4199_60831)"};  // HACA
+inline constexpr LibVersion kRvlSc_2008_02_29{"rvl.sc@2008-02-29", "rvl.sc", "Feb 29 2008 (0x4199_60831)"};  // WR9E
 inline constexpr LibVersion kRvlSc_2008_07_30{"rvl.sc@2008-07-30", "rvl.sc", "Jul 30 2008 (0x4199_60831)"};  // HAYA, R7PE01
 inline constexpr LibVersion kRvlSc_2009_02_27{"rvl.sc@2009-02-27", "rvl.sc", "Feb 27 2009 (0x4302_145)"};  // HADE, SMNE01, SMNP01
 inline constexpr LibVersion kRvlSc_2009_12_11{"rvl.sc@2009-12-11", "rvl.sc", "Dec 11 2009 (0x4302_145)"};  // SP2E01
@@ -256,7 +264,7 @@ inline constexpr LibVersion kRvlSi_2006_10_26{"rvl.si@2006-10-26", "rvl.si", "Oc
 inline constexpr LibVersion kRvlSi_2006_11_30{"rvl.si@2006-11-30", "rvl.si", "Nov 30 2006 (0x4199_60831)"};  // R8PE01, RM3E01
 inline constexpr LibVersion kRvlSi_2007_05_08{"rvl.si@2007-05-08", "rvl.si", "May  8 2007 (0x4199_60831)"};  // HAFE, HAFP, HAGE, HAGP
 inline constexpr LibVersion kRvlSi_2007_07_31{"rvl.si@2007-07-31", "rvl.si", "Jul 31 2007 (0x4199_60831)"};  // IOS21
-inline constexpr LibVersion kRvlSi_2007_08_08{"rvl.si@2007-08-08", "rvl.si", "Aug  8 2007 (0x4199_60831)"};  // HACA, R92E01, RMCP01
+inline constexpr LibVersion kRvlSi_2007_08_08{"rvl.si@2007-08-08", "rvl.si", "Aug  8 2007 (0x4199_60831)"};  // HACA, R92E01, RMCP01, WR9E
 inline constexpr LibVersion kRvlSi_2008_07_30{"rvl.si@2008-07-30", "rvl.si", "Jul 30 2008 (0x4199_60831)"};  // HAYA, R7PE01
 inline constexpr LibVersion kRvlSi_2009_02_27{"rvl.si@2009-02-27", "rvl.si", "Feb 27 2009 (0x4302_145)"};  // HADE, SMNE01, SMNP01
 inline constexpr LibVersion kRvlSi_2009_12_11{"rvl.si@2009-12-11", "rvl.si", "Dec 11 2009 (0x4302_145)"};  // SP2E01
@@ -264,15 +272,15 @@ inline constexpr LibVersion kRvlSi_2010_04_20{"rvl.si@2010-04-20", "rvl.si", "Ap
 inline constexpr LibVersion kRvlSi_2010_08_23{"rvl.si@2010-08-23", "rvl.si", "Aug 23 2010 (0x4302_145)"};  // HABA
 
 inline constexpr LibVersion kRvlSo_2007_06_28{"rvl.so@2007-06-28", "rvl.so", "Jun 28 2007 (0x4199_60831)"};  // HAFE, HAFP, HAGE, HAGP
-inline constexpr LibVersion kRvlSo_2007_12_10{"rvl.so@2007-12-10", "rvl.so", "Dec 10 2007 (0x4199_60831)"};  // RMCP01
+inline constexpr LibVersion kRvlSo_2007_12_10{"rvl.so@2007-12-10", "rvl.so", "Dec 10 2007 (0x4199_60831)"};  // RMCP01, WR9E
 inline constexpr LibVersion kRvlSo_2008_12_12{"rvl.so@2008-12-12", "rvl.so", "Dec 12 2008 (0x4199_60831)"};  // SystemMenu
 inline constexpr LibVersion kRvlSo_2009_06_09{"rvl.so@2009-06-09", "rvl.so", "Jun  9 2009 (0x4199_60831)"};  // HABA
 
-inline constexpr LibVersion kRvlSocket_2007_12_10{"rvl.socket@2007-12-10", "rvl.socket", "Dec 10 2007 (0x4199_60831)"};  // RMCP01
+inline constexpr LibVersion kRvlSocket_2007_12_10{"rvl.socket@2007-12-10", "rvl.socket", "Dec 10 2007 (0x4199_60831)"};  // RMCP01, WR9E
 inline constexpr LibVersion kRvlSocket_2008_12_12{"rvl.socket@2008-12-12", "rvl.socket", "Dec 12 2008 (0x4199_60831)"};  // SystemMenu
 
 inline constexpr LibVersion kRvlSsl_2007_06_21{"rvl.ssl@2007-06-21", "rvl.ssl", "Jun 21 2007 (0x4199_60726)"};  // SystemMenu
-inline constexpr LibVersion kRvlSsl_2007_11_06{"rvl.ssl@2007-11-06", "rvl.ssl", "Nov  6 2007 (0x4199_60726)"};  // RMCP01
+inline constexpr LibVersion kRvlSsl_2007_11_06{"rvl.ssl@2007-11-06", "rvl.ssl", "Nov  6 2007 (0x4199_60726)"};  // RMCP01, WR9E
 inline constexpr LibVersion kRvlSsl_2009_05_12{"rvl.ssl@2009-05-12", "rvl.ssl", "May 12 2009 (0x4199_60831)"};  // HABA
 
 inline constexpr LibVersion kRvlThp_2006_11_30{"rvl.thp@2006-11-30", "rvl.thp", "Nov 30 2006 (0x4199_60831)"};  // RM3E01
@@ -283,7 +291,7 @@ inline constexpr LibVersion kRvlVi_2006_10_27{"rvl.vi@2006-10-27", "rvl.vi", "Oc
 inline constexpr LibVersion kRvlVi_2006_11_30{"rvl.vi@2006-11-30", "rvl.vi", "Nov 30 2006 (0x4199_60831)"};  // R8PE01, RM3E01
 inline constexpr LibVersion kRvlVi_2007_06_06{"rvl.vi@2007-06-06", "rvl.vi", "Jun  6 2007 (0x4199_60831)"};  // HAFE, HAFP, HAGE, HAGP
 inline constexpr LibVersion kRvlVi_2007_07_31{"rvl.vi@2007-07-31", "rvl.vi", "Jul 31 2007 (0x4199_60831)"};  // IOS21
-inline constexpr LibVersion kRvlVi_2007_08_08{"rvl.vi@2007-08-08", "rvl.vi", "Aug  8 2007 (0x4199_60831)"};  // HACA, R92E01, RMCP01
+inline constexpr LibVersion kRvlVi_2007_08_08{"rvl.vi@2007-08-08", "rvl.vi", "Aug  8 2007 (0x4199_60831)"};  // HACA, R92E01, RMCP01, WR9E
 inline constexpr LibVersion kRvlVi_2008_09_11{"rvl.vi@2008-09-11", "rvl.vi", "Sep 11 2008 (0x4199_60831)"};  // HAYA, R7PE01
 inline constexpr LibVersion kRvlVi_2009_02_27{"rvl.vi@2009-02-27", "rvl.vi", "Feb 27 2009 (0x4302_145)"};  // HADE, SMNE01, SMNP01
 inline constexpr LibVersion kRvlVi_2009_12_11{"rvl.vi@2009-12-11", "rvl.vi", "Dec 11 2009 (0x4302_145)"};  // SP2E01
@@ -295,7 +303,7 @@ inline constexpr LibVersion kRvlWbc_2008_07_30{"rvl.wbc@2008-07-30", "rvl.wbc", 
 inline constexpr LibVersion kRvlWpad_2006_10_26{"rvl.wpad@2006-10-26", "rvl.wpad", "Oct 26 2006 (0x4199_60831)"};  // HAAA
 inline constexpr LibVersion kRvlWpad_2007_05_17{"rvl.wpad@2007-05-17", "rvl.wpad", "May 17 2007 (0x4199_60831)"};  // R8PE01, RM3E01
 inline constexpr LibVersion kRvlWpad_2007_06_28{"rvl.wpad@2007-06-28", "rvl.wpad", "Jun 28 2007 (0x4199_60831)"};  // HAFE, HAFP, HAGE, HAGP
-inline constexpr LibVersion kRvlWpad_2007_12_11{"rvl.wpad@2007-12-11", "rvl.wpad", "Dec 11 2007 (0x4199_60831)"};  // HACA, R92E01
+inline constexpr LibVersion kRvlWpad_2007_12_11{"rvl.wpad@2007-12-11", "rvl.wpad", "Dec 11 2007 (0x4199_60831)"};  // HACA, R92E01, WR9E
 inline constexpr LibVersion kRvlWpad_2008_01_29{"rvl.wpad@2008-01-29", "rvl.wpad", "Jan 29 2008 (0x4199_60726)"};  // RMCP01
 inline constexpr LibVersion kRvlWpad_2008_09_11{"rvl.wpad@2008-09-11", "rvl.wpad", "Sep 11 2008 (0x4199_60831)"};  // HAYA, R7PE01
 inline constexpr LibVersion kRvlWpad_2009_06_22{"rvl.wpad@2009-06-22", "rvl.wpad", "Jun 22 2009 (0x4302_145)"};  // SMNE01, SMNP01

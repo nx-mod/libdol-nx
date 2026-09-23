@@ -45,6 +45,57 @@ def align(value):
     return (value + ALIGN - 1) & ~(ALIGN - 1)
 
 
+def expand(data):
+    """Nintendo's own compression, undone: LZ77 (0x10) and LZ11 (0x11).
+
+    A WiiWare title keeps its code compressed and expands it while loading, so
+    a content that looks like nothing is often a compressed executable.
+    """
+    if len(data) < 8 or data[0] not in (0x10, 0x11):
+        return None
+    lz11 = data[0] == 0x11
+    size = int.from_bytes(data[1:4], "little")
+    at = 4
+    if size == 0:
+        size = int.from_bytes(data[4:8], "little")
+        at = 8
+
+    out = bytearray()
+    flags = 0
+    left = 0
+    while len(out) < size and at < len(data):
+        if left == 0:
+            flags, at, left = data[at], at + 1, 8
+        reference, flags, left = flags & 0x80, (flags << 1) & 0xFF, left - 1
+
+        if not reference:
+            out.append(data[at])
+            at += 1
+            continue
+
+        first = data[at]
+        if not lz11:
+            length, distance = (first >> 4) + 3, ((first & 0xF) << 8 | data[at + 1]) + 1
+            at += 2
+        elif first >> 4 == 0:
+            length = (first << 4 | data[at + 1] >> 4) + 0x11
+            distance = ((data[at + 1] & 0xF) << 8 | data[at + 2]) + 1
+            at += 3
+        elif first >> 4 == 1:
+            length = ((first & 0xF) << 12 | data[at + 1] << 4 | data[at + 2] >> 4) + 0x111
+            distance = ((data[at + 2] & 0xF) << 8 | data[at + 3]) + 1
+            at += 4
+        else:
+            length, distance = (first >> 4) + 1, ((first & 0xF) << 8 | data[at + 1]) + 1
+            at += 2
+
+        if distance > len(out):
+            return None
+        for _ in range(length):
+            out.append(out[-distance])
+    return bytes(out[:size])
+
+
 def read_header(data):
     if len(data) < 0x20 or struct.unpack(">I", data[:4])[0] != 0x20:
         raise SystemExit("not a WAD: the header does not start with its own size")
@@ -186,6 +237,15 @@ def unpack(data, folder):
         with open(path, "wb") as out:
             out.write(plain)
         print(f"  {os.path.basename(path)}  {size:,} bytes")
+
+        # A content that is compressed is written out expanded as well: a
+        # WiiWare title's own executable usually arrives that way.
+        expanded = expand(plain)
+        if expanded:
+            with open(path + ".out", "wb") as out:
+                out.write(expanded)
+            print(f"    expanded to {len(expanded):,} bytes")
+            plain = expanded
 
         # A decrypted content is recognisable: an executable, an archive, or
         # Nintendo's own compression. If none of them are, the key was wrong.

@@ -233,6 +233,13 @@
    ]
   },
   {
+   "id": "nw4r.snd@2008-05-15",
+   "banner": "NW4R - SND May 15 2008 (0x4199_60831)",
+   "seen_in": [
+    "WR9E"
+   ]
+  },
+  {
    "id": "nw4r.snd@2008-11-20",
    "banner": "NW4R - SND Nov 20 2008 (0x4199_60831)",
    "seen_in": [
@@ -292,7 +299,8 @@
    "seen_in": [
     "HACA",
     "R92E01",
-    "RMCP01"
+    "RMCP01",
+    "WR9E"
    ]
   },
   {
@@ -363,7 +371,8 @@
    "seen_in": [
     "HACA",
     "R92E01",
-    "RMCP01"
+    "RMCP01",
+    "WR9E"
    ]
   },
   {
@@ -426,6 +435,13 @@
    "seen_in": [
     "HACA",
     "RMCP01"
+   ]
+  },
+  {
+   "id": "rvl.cnt@2008-03-05",
+   "banner": "RVL_SDK - CNT Mar  5 2008 (0x4199_60831)",
+   "seen_in": [
+    "WR9E"
    ]
   },
   {
@@ -494,7 +510,8 @@
    "seen_in": [
     "HACA",
     "R92E01",
-    "RMCP01"
+    "RMCP01",
+    "WR9E"
    ]
   },
   {
@@ -571,7 +588,8 @@
    "banner": "RVL_SDK - DVD Aug  8 2007 (0x4199_60831)",
    "seen_in": [
     "R92E01",
-    "RMCP01"
+    "RMCP01",
+    "WR9E"
    ]
   },
   {
@@ -633,6 +651,20 @@
    ]
   },
   {
+   "id": "rvl.dwc@2008-05-09",
+   "banner": "RVL_SDK - DWC May  9 2008 (0x4199_60831)",
+   "seen_in": [
+    "WR9E"
+   ]
+  },
+  {
+   "id": "rvl.ecdk@2008-05-08",
+   "banner": "RVL_SDK - ECDK May  8 2008 (0x4199_60831)",
+   "seen_in": [
+    "WR9E"
+   ]
+  },
+  {
    "id": "rvl.ecx@2012-07-27",
    "banner": "RVL_SDK - ECX Jul 27 2012 (0x4302_213)",
    "seen_in": [
@@ -644,7 +676,8 @@
    "banner": "RVL_SDK - ENC Aug  8 2007 (0x4199_60831)",
    "seen_in": [
     "R92E01",
-    "RMCP01"
+    "RMCP01",
+    "WR9E"
    ]
   },
   {
@@ -706,7 +739,8 @@
    "seen_in": [
     "HACA",
     "R92E01",
-    "RMCP01"
+    "RMCP01",
+    "WR9E"
    ]
   },
   {
@@ -805,7 +839,8 @@
    "seen_in": [
     "HACA",
     "R92E01",
-    "RMCP01"
+    "RMCP01",
+    "WR9E"
    ]
   },
   {
@@ -875,6 +910,13 @@
    "seen_in": [
     "HACA",
     "R92E01"
+   ]
+  },
+  {
+   "id": "rvl.hbm@2008-04-24",
+   "banner": "RVL_SDK - HBM Apr 24 2008 (0x4199_60726)",
+   "seen_in": [
+    "WR9E"
    ]
   },
   {
@@ -972,7 +1014,8 @@
    "seen_in": [
     "HACA",
     "R92E01",
-    "RMCP01"
+    "RMCP01",
+    "WR9E"
    ]
   },
   {
@@ -1082,6 +1125,13 @@
    ]
   },
   {
+   "id": "rvl.nand@2008-02-29",
+   "banner": "RVL_SDK - NAND Feb 29 2008 (0x4199_60831)",
+   "seen_in": [
+    "WR9E"
+   ]
+  },
+  {
    "id": "rvl.nand@2008-09-11",
    "banner": "RVL_SDK - NAND Sep 11 2008 (0x4199_60831)",
    "seen_in": [
@@ -1141,7 +1191,8 @@
    "banner": "RVL_SDK - NCD Dec 10 2007 (0x4199_60831)",
    "seen_in": [
     "HACA",
-    "RMCP01"
+    "RMCP01",
+    "WR9E"
    ]
   },
   {
@@ -1176,7 +1227,8 @@
    "id": "rvl.nhttp@2007-10-11",
    "banner": "RVL_SDK - NHTTP Oct 11 2007 (0x4199_60726)",
    "seen_in": [
-    "RMCP01"
+    "RMCP01",
+    "WR9E"
    ]
   },
   {
@@ -1215,7 +1267,8 @@
    "banner": "RVL_SDK - NWC24 Dec 10 2007 (0x4199_60831)",
    "seen_in": [
     "HACA",
-    "RMCP01"
+    "RMCP01",
+    "WR9E"
    ]
   },
   {
@@ -1288,7 +1341,8 @@
    "id": "rvl.os@2008-01-30",
    "banner": "RVL_SDK - OS Jan 30 2008 (0x4199_60831)",
    "seen_in": [
-    "R92E01"
+    "R92E01",
+    "WR9E"
    ]
   },
   {
@@ -1448,6 +1502,13 @@
    ]
   },
   {
+   "id": "rvl.sc@2008-02-29",
+   "banner": "RVL_SDK - SC Feb 29 2008 (0x4199_60831)",
+   "seen_in": [
+    "WR9E"
+   ]
+  },
+  {
    "id": "rvl.sc@2008-07-30",
    "banner": "RVL_SDK - SC Jul 30 2008 (0x4199_60831)",
    "seen_in": [
@@ -1523,7 +1584,8 @@
    "seen_in": [
     "HACA",
     "R92E01",
-    "RMCP01"
+    "RMCP01",
+    "WR9E"
    ]
   },
   {
@@ -1578,7 +1640,8 @@
    "id": "rvl.so@2007-12-10",
    "banner": "RVL_SDK - SO Dec 10 2007 (0x4199_60831)",
    "seen_in": [
-    "RMCP01"
+    "RMCP01",
+    "WR9E"
    ]
   },
   {
@@ -1599,7 +1662,8 @@
    "id": "rvl.socket@2007-12-10",
    "banner": "RVL_SDK - SOCKET Dec 10 2007 (0x4199_60831)",
    "seen_in": [
-    "RMCP01"
+    "RMCP01",
+    "WR9E"
    ]
   },
   {
@@ -1620,7 +1684,8 @@
    "id": "rvl.ssl@2007-11-06",
    "banner": "RVL_SDK - SSL Nov  6 2007 (0x4199_60726)",
    "seen_in": [
-    "RMCP01"
+    "RMCP01",
+    "WR9E"
    ]
   },
   {
@@ -1690,7 +1755,8 @@
    "seen_in": [
     "HACA",
     "R92E01",
-    "RMCP01"
+    "RMCP01",
+    "WR9E"
    ]
   },
   {
@@ -1768,7 +1834,8 @@
    "banner": "RVL_SDK - WPAD Dec 11 2007 (0x4199_60831)",
    "seen_in": [
     "HACA",
-    "R92E01"
+    "R92E01",
+    "WR9E"
    ]
   },
   {
