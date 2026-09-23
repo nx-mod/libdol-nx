@@ -1,7 +1,7 @@
 // nw4r - Nintendo's Wii middleware (layout, 3D, sound, effects).
 #pragma once
 
-#include "wiinx/builds.hpp"
+#include "wiinx/core/builds.hpp"
 #include "wiinx/core/native.hpp"
 
 namespace wiinx::nw4r {

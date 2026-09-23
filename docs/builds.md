@@ -16,7 +16,7 @@ was built against; the date is what separates builds of one library.
 
 - `data/builds.json` - every build seen, with the games it was seen in. Add a
   game with `tools/wiinx-scan record <game id> <dol>...`.
-- `include/wiinx/builds.hpp` - generated from it by `tools/wiinx-scan header`:
+- `include/wiinx/core/builds.hpp` - generated from it by `tools/wiinx-scan header`:
   each build as a `LibVersion`, e.g. `wiinx::builds::kNw4rLyt_2008_03_08`.
   Never edit it by hand.
 

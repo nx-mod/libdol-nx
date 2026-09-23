@@ -285,16 +285,15 @@ endif()
 # buys correctness: without it, a newly added src/*.cpp that is not referenced by
 # a registration file is silently never compiled and never errors. The stale-glob
 # failure mode is worth far more than the milliseconds.
-# The runtime is cpu + platform + app, plus the natives' runtime bindings and
-# the accel modules still written in the runtime's native form. libwii-nx's
-# own core/sdk/nw4r libraries are linked, not re-globbed (see the root
-# CMakeLists), so they keep their own flags.
+# The runtime is cpu + platform + app, plus each accel module's *_bind.cpp -
+# the file that registers that module's natives at this game's addresses. The
+# modules themselves are libraries, linked rather than re-globbed (see the root
+# CMakeLists), so they keep their own flags and build anywhere.
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
     "${WIINX_ROOT}/src/cpu/*.cpp"
     "${WIINX_ROOT}/src/platform/*.cpp"
     "${WIINX_ROOT}/src/app/*.cpp"
-    "${WIINX_ROOT}/src/accel/*_bind.cpp"
-    "${WIINX_ROOT}/src/accel/egg/*.cpp")
+    "${WIINX_ROOT}/src/accel/*_bind.cpp")
 list(FILTER SOURCES EXCLUDE REGEX "/src/app/(switch|product)/")
 
 # A game's own replacements, for what only that game does. Everything here in

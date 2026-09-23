@@ -38,7 +38,7 @@ sign-asm
         second game before adding it.
 record  adds the builds a game's executables name to data/builds.json, with
         the game ID as where each was seen.
-header  writes include/wiinx/builds.hpp from data/builds.json: every known
+header  writes include/wiinx/core/builds.hpp from data/builds.json: every known
         build as a LibVersion constant.
 
 A signature holds hashes, never code: the first 16 instructions and the whole
@@ -388,7 +388,7 @@ def builds(dol):
 
 
 BUILDS = os.path.join(HERE, "..", "data", "builds.json")
-HEADER = os.path.join(HERE, "..", "include", "wiinx", "builds.hpp")
+HEADER = os.path.join(HERE, "..", "include", "wiinx", "core", "builds.hpp")
 
 
 def load_builds():

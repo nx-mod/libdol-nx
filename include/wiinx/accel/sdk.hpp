@@ -1,7 +1,7 @@
 // sdk - Nintendo's RVL SDK and the C library games link with it.
 #pragma once
 
-#include "wiinx/builds.hpp"
+#include "wiinx/core/builds.hpp"
 #include "wiinx/core/native.hpp"
 
 namespace wiinx::sdk {

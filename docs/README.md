@@ -10,6 +10,7 @@ need.
 | [Writing a native](natives.md) | adding a native, or a new build of one |
 | [Game hooks](game-hooks.md) | a game needs something of its own from the runtime |
 | [Performance](performance.md) | what a frame costs on hardware, and the settings that have been measured |
+| [Homebrew](homebrew.md) | running GameCube and Wii homebrew, from source or from its executable |
 | [Coverage](coverage.md) | which SDK libraries the library has taken over, and what the gaps cost |
 | [Tools](../tools/README.md) | what each tool in `tools/` does |
 
