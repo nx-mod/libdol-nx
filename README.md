@@ -1,61 +1,92 @@
-# libwii-nx
+# libdol-nx
 
-The Wii as a library, for statically recompiled Wii games running natively on
-Nintendo Switch.
+The machine the GameCube and the Wii both are, as a library, for statically
+recompiled games running natively on Nintendo Switch.
 
 It is the whole toolkit: the translator that turns a game's PowerPC code into
 C++, the CPU runtime that code runs on, the console it expects, native versions
-of the libraries it links, and the tools for discs, NANDs and builds. A game
-project needs libwii-nx and nothing else. With it, a game is built from the
-player's own disc:
+of the libraries it links, the Wii's and the GameCube's file formats, and the
+tools for discs, NANDs and builds. A game project needs this and the library for
+its console, and nothing else. With it, a game is built from the player's own
+disc:
 
 ```
-your disc  →  libwii-nx translator  →  game code + libwii-nx runtime  →  NRO
+your disc  →  translator  →  game code + runtime  →  NRO
 ```
 
 The translated code calls in at the same function boundaries the game called
 Nintendo's SDK at, so a fix here reaches every game that uses what was fixed.
-Parts still being ported in are tracked in [docs/porting.md](docs/porting.md).
+
+Two consoles, one library, because they are one machine: the CPU core is the
+same, the graphics pipeline is the same, the sound hardware is the same, and of
+the libraries Nintendo shipped in the two SDKs, sixteen appear in both under the
+same names. What differs is peripherals and system software, and that lives in
+[libwii-nx](https://github.com/nx-mod/libwii-nx) and
+[libgc-nx](https://github.com/nx-mod/libgc-nx).
 
 ## Design
 
+Six sections. Each is a folder of public headers under `include/wiinx/`, a
+folder of code under `src/`, a static library, and a README beside it.
+
 ```
 include/wiinx/     public headers - all a caller sees
-  core/  cpu/  platform/  accel/
-translator/        PowerPC → C++, run once per game
+  core/  format/  cpu/  platform/  accel/  app/
 src/
-  core/            types, typed guest access, the host interface, the registry
-  cpu/             the guest CPU runtime: registers, memory, calls, threads
-  platform/        the console itself - required by every game
-    os  fs  gx  audio  input  system
-  accel/           native versions of libraries games link - optional, for speed
-    sdk  nw4r  egg  jsystem  rfl
-  app/             the program: main loop, settings, the in-game overlay
-data/              builds seen in games, and native signatures (hashes, never code)
-docs/              how things work: builds, signatures, writing a native
-tools/             discs, NANDs, DOLs, builds and signatures (see tools/README.md)
+  core/       types, typed guest access, the host interface, the registry
+  format/     the consoles' file formats, as bytes: disc  nand  archive  media
+  cpu/        the guest CPU runtime: registers, memory, calls, threads
+  platform/   the console itself - os  fs  gx  audio  input  system  net
+  accel/      native versions of the libraries games link - sdk  nw4r  egg  jsystem  rfl  ogc
+  app/        the program: main loop, settings, the in-game overlay
+translator/   PowerPC → C++, run once per game
+data/         builds seen in games, and native signatures (hashes, never code)
+docs/         how things work: builds, signatures, writing a native, homebrew
+tools/        discs, NANDs, DOLs, builds and signatures (see tools/README.md)
+tests/        checks that run wherever the building happens (ctest)
 ```
 
-Every part is its own static library with its own README. Dependencies point one
-way: `app` → `accel` → `platform` → `cpu` → `core`. Underneath, libwii-nx builds on
-[aurora-nx](https://github.com/nx-mod/aurora-nx) (GX to WebGPU),
-[dawn-nx](https://github.com/nx-mod/dawn-nx) (WebGPU to Vulkan),
+Dependencies point one way: `app` → `accel` → `platform` → `cpu` → `core`, with
+`format` beside them depending on nothing.
+
+`core`, `format` and `accel` need only the standard library, so they build on
+any machine and their checks run there. `cpu`, `platform` and `app` are the
+running console and need Aurora and a game's translated code.
+
+Underneath, this builds on [aurora-nx](https://github.com/nx-mod/aurora-nx)
+(GX to WebGPU), [dawn-nx](https://github.com/nx-mod/dawn-nx) (WebGPU to Vulkan),
 [nxvk](https://github.com/nx-mod/nxvk) (the Vulkan driver),
 [sqlite-nx](https://github.com/nx-mod/sqlite-nx) and libnx. Those stay separate
-libraries; a game project only sees libwii-nx.
+libraries; a game project sees this one and its console's.
+
+### format - the consoles' own files
+
+Bytes in a buffer: no host, no runtime, no guest memory. The runtime uses it to
+serve a game, the tools use it on a PC, and a launcher uses it to list what is
+installed, all from one copy.
+
+| Module    | Is                                                             |
+|-----------|----------------------------------------------------------------|
+| `disc`    | disc images and their containers, GameCube and Wii              |
+| `nand`    | SYSCONF, the Mii database, NAND paths, tickets, TMDs, WADs      |
+| `archive` | what games pack their files in: U8, Yaz0                        |
+| `media`   | THP video, and the sound formats that go with it                |
 
 ### platform - the console
 
-What a game's SDK talks to when it touches hardware.
+What a game's SDK talks to when it touches hardware. What is here is what both
+consoles have; the peripherals only one of them has are in that console's own
+library.
 
 | Module   | Is                                                              |
 |----------|-----------------------------------------------------------------|
 | `os`     | threads, alarms, interrupts, time, caches, mutexes              |
-| `fs`     | disc (DVD), NAND saves, IOS/ES file access                      |
-| `gx`     | graphics: the GX FIFO into Aurora, decoded on its own core      |
+| `fs`     | the disc (DVD), and saves through whichever store the console has |
+| `gx`     | graphics: the GX FIFO into Aurora                               |
 | `audio`  | AI/DSP/AX into Switch audio                                     |
-| `input`  | GameCube pad, Wii Remote (KPAD/WPAD) from Joy-Con               |
-| `system` | video timing (VI), settings (SC), IPC, power                    |
+| `input`  | the controller ports, and each console's own controllers        |
+| `system` | video timing (VI), settings, power                              |
+| `net`    | sockets and SSL, where a game has them                          |
 
 ### accel - fast versions of linked libraries
 
@@ -69,6 +100,7 @@ results: gameplay depends on it (ghosts, online).
 | `egg`     | Nintendo EAD's framework                                    |
 | `jsystem` | the GameCube-era framework                                  |
 | `rfl`     | Miis, Home Button menu                                      |
+| `ogc`     | libogc, for homebrew put through the translator             |
 
 ## Natives and versions
 
@@ -116,7 +148,7 @@ code: an unknown build is slower, never wrong.
 ## What a game brings of its own
 
 A game is its disc, its `bindings.json`, and - only if it needs one - its own
-native code. libwii-nx names no game: where one needs something the console
+native code. libdol-nx names no game: where one needs something the console
 does not do (scaling its canvas to the display, a renderer argument a setting
 has to reach), it fills in a [hook](docs/game-hooks.md) at startup, and it says
 there where its own copy of the Wii's OS keeps the scheduler's globals.
@@ -129,7 +161,7 @@ One command:
 tools/wiinx-build mygame.iso        # or a game folder made earlier
 ```
 
-extracts the disc, writes the project, scans the game for the natives libwii-nx
+extracts the disc, writes the project, scans the game for the natives libdol-nx
 can bind, translates its code, builds it and leaves `<game>/build/<game>.nro`
 for `sdmc:/wii-nx/games/<game>/`. It needs dawn-nx and aurora-nx checkouts
 (`--dawn`, `--aurora`) and devkitPro's Switch toolchain.
@@ -139,19 +171,20 @@ builds the library and tools, never a game.
 
 ## Status
 
-| Part                              | State                                              |
-|-----------------------------------|----------------------------------------------------|
-| [`core`](src/core/README.md)      | done: types, typed access, host, builds, registry  |
-| [`platform`](src/platform/README.md) | ported: os, fs, gx, audio, input, net, system; its natives still bound at one game's addresses |
-| [`accel/sdk`](src/accel/sdk/README.md) | THP decoder ported                             |
-| [`accel/nw4r`](src/accel/nw4r/README.md) | lyt `Pane::CalculateMtx` ported, 2007 and 2008 builds |
-| `accel/nw4r` g3d CalcWorld/CalcView | located in Mario Kart Wii, not written           |
-| [`wiinx-scan`](tools/README.md)   | builds from banners (224 known), binding by signature, a game's function starts and its OS globals, both read out of its own code |
-| [tools](tools/README.md)          | disc, DOL, NAND and game-project tools, all here |
-| [translator](translator/README.md) | ported: same output as the original, byte for byte |
-| `cpu`, `platform`, `app`          | ported: Mario Kart Wii builds from libwii-nx, layers checked by `wiinx-check-layers` |
-| [game hooks](docs/game-hooks.md)  | done: hooks and the guest OS layout come from the game, in one file per game |
-| `tools/wiinx-build`               | written (disc → NRO through `cmake/game`); not yet run end to end |
+| Section | State |
+|---|---|
+| [`core`](src/core/README.md) | types, typed guest access, the host interface, the build table, the native registry |
+| [`format`](src/format/README.md) | NAND: SYSCONF, Miis, paths and title ids, tickets, TMDs, WADs. Disc, archive and media to come |
+| [`cpu`](src/cpu/README.md) | registers, memory, calls, threads, the guest OS layout a game installs |
+| [`platform`](src/platform/README.md) | os, fs, gx, audio, input, net, system |
+| [`accel/sdk`](src/accel/sdk/README.md) | the C library, the matrix library, the THP decoder |
+| [`accel/nw4r`](src/accel/nw4r/README.md) | lyt `Pane::CalculateMtx`, two builds. g3d and snd are the largest gaps |
+| [`accel/egg`](src/accel/egg/README.md) | Yaz0 |
+| [translator](translator/README.md) | PowerPC → C++, one pass per game |
+| [tools](tools/README.md) | discs, DOLs, NANDs, builds, signatures and game projects |
+
+What each library covers and what the gaps cost is measured in
+[docs/coverage.md](docs/coverage.md).
 
 ## Working on it
 
@@ -160,9 +193,18 @@ the rules every part follows.
 
 ## Building
 
+The sections that need only the standard library build anywhere, and their
+checks run there:
+
 ```sh
-cmake -S . -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/cmake/Switch.cmake
-cmake --build build
+cmake -S . -B build -G Ninja && cmake --build build && ctest --test-dir build
+```
+
+The whole library, for a Switch:
+
+```sh
+cmake -S . -B build-switch -G Ninja -DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/cmake/Switch.cmake
+cmake --build build-switch
 ```
 
 ## License
