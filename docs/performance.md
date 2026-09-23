@@ -31,6 +31,35 @@ second and arms its sampling profiler after 30 seconds).
 - **Retraces get dropped**: `[retrace] SKIPPED, guard held` counted 16,400 in
   one session.
 
+## What the game spends a race in
+
+The sampling profiler splits the main thread between translated game code and
+the native runtime, and ranks the guest functions it lands in. In a race:
+
+**80% translated game code, 20% the whole native runtime.**
+
+| share | function (Mario Kart Wii) |
+|---|---|
+| 14.9% | `0x80064FD0` - unnamed, immediately after `nw4r::g3d::detail::LoadMaterial` |
+| 12.6% | `0x80063870` - unnamed, among the `nw4r::g3d::G3DState::LoadRes*` loaders |
+| 3.2% | `nw4r::g3d::ScnMdl::G3dProc` |
+| 2.5% | `nw4r::g3d::CalcWorld` |
+| 1.9% | `0x80066AA0` - unnamed, same g3d block |
+| 1.4% + 0.9% | `nw4r::snd::detail::SoundThread::AxCallbackFunc`, `SoundThreadFunc` |
+| 1.3% | `nw4r::ef::DrawBillboardStrategy::DrawNormalBillboard` |
+| 1.1% | `__AXOutAiCallback` |
+| 1.0% | `RaceScene::OnCalc`, `WheelPhysics::UpdateCollision` |
+
+Over a quarter of the frame is nw4r g3d loading material and scene state into
+the GX FIFO, and almost none of the top of the list is the game's own logic.
+That is what the `accel/nw4r` g3d natives are for, and it is shared by every
+nw4r game rather than being Mario Kart Wii's problem.
+
+The two largest are unnamed in every map we have: Wii Sports' g3d is 2007-06,
+Brawl's is 2007-12, Mario Kart Wii's is 2008-03, and these particular functions
+differ enough between those builds that signatures do not carry the names
+across. Their neighbours place them.
+
 ## Where a frame goes (threaded off, menus)
 
 | | |
@@ -44,6 +73,9 @@ callback - translated game code, not the runtime's mixer.
 
 ## Notes
 
+- 2026-09-23: the graphics-command worker is not the thing to fix. It lives in
+  the 20% the native runtime costs, and the whole graphics path is under 2.5 ms
+  of a ~66 ms frame; the 53 ms is translated code.
 - 2026-09-23: first measurements of a libwii-nx build on hardware. The game
   reaches a race; it runs about four times slower than the console, which is
   where it was before the port, so the move cost nothing measurable.
