@@ -1,4 +1,4 @@
-// THPVideoDecode, natively (RVL SDK THP).
+// THP: Nintendo's movie format, decoded.
 //
 // THP is the SDK's movie format: baseline JPEG frames, 4:2:0, decoded straight
 // into GX I8 textures that the game combines with a YUV-to-RGB TEV pass. Run as
@@ -25,36 +25,21 @@
 // on the work of the Independent JPEG Group - see THIRD-PARTY-NOTICES.md): the SDK uses the same
 // algorithm with the same constants, AAN-scaled quantisation tables and a
 // 1024-bias / 8 output step, so the pixels agree with the original's.
-#include "wiinx/accel/sdk.hpp"
-#include "wiinx/core/guest.hpp"
-#include "wiinx/core/host.hpp"
+#include "wiinx/format/media/thp.hpp"
 
 #if defined(__ARM_NEON)
 #include <arm_neon.h>
 #endif
 
 #include <algorithm>
-#include <atomic>
-#include <chrono>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <iterator>
 
-namespace wiinx::sdk::thp {
+namespace wiinx::media {
 namespace {
 
-// SDK error codes, kept so a caller that checks them behaves the same.
-constexpr int32_t kThpOk = 0;
-constexpr int32_t kThpBadSyntax = 3;
-constexpr int32_t kThpBadPrecision = 10;
-constexpr int32_t kThpUnsupportedMarker = 11;
-constexpr int32_t kThpBadComponents = 12;
-constexpr int32_t kThpMissingHuffman = 15;
-constexpr int32_t kThpBadSampling = 19;
-constexpr int32_t kThpNoInput = 25;
-constexpr int32_t kThpNoWork = 26;
-constexpr int32_t kThpNoOutput = 27;
 
 // Zig-zag position -> natural (row-major) position.
 constexpr uint8_t kNaturalOrder[64] = {
@@ -533,97 +518,28 @@ int32_t Decoder::Decode(uint8_t* yPlane, uint8_t* uPlane, uint8_t* vPlane) {
     return kThpOk;
 }
 
-// The frame's length is not passed in, so find how much guest memory is readable
-// from its start, up to a bound no THP frame approaches.
-size_t ReadableFrom(uint32_t address) {
-    size_t good = 0;
-    size_t probe = 64u * 1024u;
-    constexpr size_t kLimit = 4u * 1024u * 1024u;
-    while (probe <= kLimit && host().valid(address, static_cast<u32>(probe))) {
-        good = probe;
-        probe *= 2;
-    }
-    return good;
-}
-
-std::atomic<uint32_t> g_frames{0};
-std::atomic<uint64_t> g_micros{0};
-
-int32_t Decode(uint32_t file, uint32_t tileY, uint32_t tileU, uint32_t tileV, uint32_t work) {
-    if (file == 0) return kThpNoInput;
-    if (tileY == 0 || tileU == 0 || tileV == 0) return kThpNoOutput;
-    if (work == 0) return kThpNoWork;
-
-    const Host& h = host();
-    const auto start = std::chrono::steady_clock::now();
-
-    const size_t readable = ReadableFrom(file);
-    if (readable == 0) return kThpBadSyntax;
-
-    u8* const fileBytes = at(file, static_cast<u32>(readable));
-    if (fileBytes == nullptr) {
-        return kThpNoOutput;
-    }
-    Decoder decoder(fileBytes, readable);
-    const int32_t header = decoder.ParseHeaders();
-    if (header != kThpOk) return header;
-
-    const u32 lumaBytes = static_cast<u32>(decoder.Width()) * decoder.Height();
-    if (lumaBytes == 0 || !h.valid(tileY, lumaBytes) || !h.valid(tileU, lumaBytes / 4) ||
-        !h.valid(tileV, lumaBytes / 4)) {
-        return kThpNoOutput;
-    }
-
-    u8* const luma = at(tileY, lumaBytes);
-    u8* const chromaU = at(tileU, lumaBytes / 4);
-    u8* const chromaV = at(tileV, lumaBytes / 4);
-    if (luma == nullptr || chromaU == nullptr || chromaV == nullptr) {
-        return kThpNoOutput;
-    }
-    const int32_t result = decoder.Decode(luma, chromaU, chromaV);
-
-    // The planes are GX textures, and the renderer only re-reads a texture when
-    // told its memory changed. The SDK decoder writes each strip with
-    // LCStoreData, which the platform reports as a DMA; writing the planes
-    // directly skips it, and the renderer went on drawing cached frames for
-    // some planes and fresh ones for others - two videos flickering over each
-    // other in Mario Kart Wii's menu buttons.
-    if (result == kThpOk && h.notify_write != nullptr) {
-        h.notify_write(tileY, lumaBytes);
-        h.notify_write(tileU, lumaBytes / 4);
-        h.notify_write(tileV, lumaBytes / 4);
-    }
-
-    g_micros.fetch_add(static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(
-                           std::chrono::steady_clock::now() - start).count()),
-                       std::memory_order_relaxed);
-    const uint32_t frames = g_frames.fetch_add(1, std::memory_order_relaxed) + 1;
-    if (h.log != nullptr && (frames == 1 || (frames % 300) == 0)) {
-        char line[128];
-        std::snprintf(line, sizeof(line), "[thp] native decode #%u %ux%u avg=%lluus", frames,
-                      decoder.Width(), decoder.Height(),
-                      static_cast<unsigned long long>(g_micros.load(std::memory_order_relaxed) / frames));
-        h.log(line);
-    }
-    return result;
-}
-
-// THPVideoDecode(file, tileY, tileU, tileV, work) -> error code.
-void video_decode(Cpu* cpu) {
-    const Host& h = host();
-    const int32_t result = Decode(h.gpr(cpu, 3), h.gpr(cpu, 4), h.gpr(cpu, 5), h.gpr(cpu, 6), h.gpr(cpu, 7));
-    h.set_gpr(cpu, 3, static_cast<u32>(result));
-}
 
 }  // namespace
 
-int32_t decode_frame(uint32_t file, uint32_t tileY, uint32_t tileU, uint32_t tileV, uint32_t work) {
-    return Decode(file, tileY, tileU, tileV, work);
+// The public decoder is the class above, kept out of the header so a caller
+// does not carry its Huffman tables about.
+struct ThpDecoder::State {
+    Decoder decoder;
+    State(const std::uint8_t* data, std::size_t size) : decoder(data, size) {}
+};
+
+ThpDecoder::ThpDecoder(const std::uint8_t* data, std::size_t size)
+    : mState(std::make_unique<State>(data, size)) {}
+ThpDecoder::~ThpDecoder() = default;
+ThpDecoder::ThpDecoder(ThpDecoder&&) noexcept = default;
+ThpDecoder& ThpDecoder::operator=(ThpDecoder&&) noexcept = default;
+
+std::int32_t ThpDecoder::ParseHeaders() { return mState->decoder.ParseHeaders(); }
+std::uint16_t ThpDecoder::Width() const { return mState->decoder.Width(); }
+std::uint16_t ThpDecoder::Height() const { return mState->decoder.Height(); }
+
+std::int32_t ThpDecoder::Decode(std::uint8_t* luma, std::uint8_t* chromaU, std::uint8_t* chromaV) {
+    return mState->decoder.Decode(luma, chromaU, chromaV);
 }
 
-extern const Native kThpNatives[] = {
-    WIINX_NATIVE("THPVideoDecode", kThp_2007_08, video_decode),
-};
-extern const std::size_t kThpNativeCount = std::size(kThpNatives);
-
-}  // namespace wiinx::sdk::thp
+}  // namespace wiinx::media

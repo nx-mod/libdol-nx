@@ -44,6 +44,7 @@ add_library(wiinx_format STATIC
     src/format/nand/sysconf.cpp
     src/format/nand/title.cpp
     src/format/nand/wad.cpp
+    src/format/media/thp.cpp
 )
 wiinx_section(wiinx_format)
 add_library(wiinx::format ALIAS wiinx_format)
@@ -56,9 +57,9 @@ add_library(wiinx_sdk STATIC
     src/accel/sdk/sdk.cpp
     src/accel/sdk/msl/msl.cpp
     src/accel/sdk/mtx/mtx.cpp
-    src/accel/sdk/thp/thp_decode.cpp
+    src/accel/sdk/thp/thp.cpp
 )
-target_link_libraries(wiinx_sdk PUBLIC wiinx_core)
+target_link_libraries(wiinx_sdk PUBLIC wiinx_core wiinx_format)
 wiinx_section(wiinx_sdk)
 add_library(wiinx::sdk ALIAS wiinx_sdk)
 
