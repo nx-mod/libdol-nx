@@ -472,8 +472,11 @@ def find_exact(dol, signatures):
 
 
 def scan(dol):
+    return scan_with(dol, load_signatures())
+
+
+def scan_with(dol, signatures):
     linked = {build_id for build_id, _ in builds(dol).values()}
-    signatures = load_signatures()
     # A signature for a build this game does not link cannot be its code, but
     # one written for no build in particular (hand-written assembly, the same
     # everywhere) applies to every game.

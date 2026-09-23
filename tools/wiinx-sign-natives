@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
-"""Sign every native the library registers, from the game they were written in.
+"""Sign every native the library registers, from a game whose symbols are known.
 
-    tools/wiinx-sign-natives <game.dol> <symbol map> [--src DIR] [--write]
+    tools/wiinx-sign-natives <game.dol> <symbol map> [--src DIR] [--by-name] [--write]
 
 A native is registered at the address it has in one game. Signing it there -
 the masked hashes, never the code - lets `wiinx-scan scan` find the same
 function in any other game, at that game's own address. Function extents come
 from the symbol map, so what is signed is the whole function and nothing else.
+
+--by-name signs from a game other than the one the natives were registered in:
+the registrations are located in that game's map by name rather than by
+address. Each library build has its own copy of these functions, so signing the
+same native from several games is what lets it be found in all of them.
 
 Without --write it prints what it would add.
 """
@@ -47,6 +52,36 @@ def registrations(src_root):
     return found
 
 
+def canonical(name):
+    """A name in the form two maps can be compared in: GX::Begin and GXBegin."""
+    name = re.sub(r"_HLE$", "", name)
+    name = re.sub(r"_HLE_8[0-9a-fA-F]{7}$", "", name)
+    name = re.sub(r"_8[0-9a-fA-F]{7}$", "", name)
+    return name.replace("::", "").replace("_", "").lower()
+
+
+def by_name(src_root, entries, known):
+    """{address in this game: registration}, matched by name through its map."""
+    index = {}
+    for address, name in entries:
+        index.setdefault(canonical(name), address)
+    found = {}
+    for registration in registrations(src_root).values():
+        keys = [canonical(registration)]
+        keys += [canonical(name) for name, reg in known if reg == registration]
+        for key in keys:
+            if key in index:
+                found[index[key]] = registration
+                break
+    return found
+
+
+# Labels a compiler left in the map - a switch's jump table, a case body - are
+# not functions, and a signature taken from one describes a fragment that can
+# turn up anywhere.
+NOT_A_FUNCTION = re.compile(r"_case[0-9A-Za-z]*_|_switch$|^\.|^@")
+
+
 def symbol_map(path):
     """[(address, name)] ascending, from a `hexaddr name` map."""
     entries = []
@@ -55,9 +90,23 @@ def symbol_map(path):
         for line in handle:
             match = line_pattern.match(line.strip())
             if match:
-                entries.append((int(match.group(1), 16), match.group(2).strip()))
+                name = match.group(2).strip()
+                entries.append((int(match.group(1), 16), name))
     entries.sort()
     return entries
+
+
+def game_id(dol_path):
+    """Which game a signature came from: the disc's own ID, beside the DOL."""
+    boot = os.path.join(os.path.dirname(os.path.abspath(dol_path)), "boot.bin")
+    try:
+        with open(boot, "rb") as handle:
+            code = handle.read(6).decode("ascii", "replace")
+        if code.isalnum():
+            return code
+    except OSError:
+        pass
+    return os.path.basename(dol_path)
 
 
 def main(argv):
@@ -70,22 +119,48 @@ def main(argv):
 
     scan = load_scan()
     dol = scan.Dol(dol_path)
+    source = game_id(dol_path)
     game = {build_id for build_id, _ in scan.builds(dol).values()}
-    natives = registrations(src_root)
     entries = symbol_map(map_path)
+    if "--by-name" in argv:
+        shipped = json.load(open(SIGNATURES))["natives"]
+        natives = by_name(src_root, entries,
+                          [(e["name"], e.get("registration")) for e in shipped])
+    else:
+        natives = registrations(src_root)
     extent = {address: (entries[index + 1][0] - address if index + 1 < len(entries) else 0)
               for index, (address, _) in enumerate(entries)}
     names = dict(entries)
 
+    natives = {address: registration for address, registration in natives.items()
+               if not NOT_A_FUNCTION.search(names.get(address, ""))}
     signed, short, missing, ambiguous = [], 0, 0, 0
+    short_signed = []
     for address, registration in sorted(natives.items()):
         size = extent.get(address, 0)
         if size <= 0:
             missing += 1
             continue
+        spans = 1
         if size < WINDOW_BYTES:
-            short += 1          # too small to be unique; sign-asm handles these
-            continue
+            # Too short to be unique on its own - many SDK functions are four
+            # or five instructions. Sign from its start through the functions
+            # that follow it, until there is enough code to identify: the
+            # linker keeps a translation unit's functions in source order, so
+            # the run is the same in every build that has them. The native is
+            # at the start of the window, so a match gives its address
+            # directly.
+            index = next((i for i, (a, _) in enumerate(entries) if a == address), None)
+            if index is None:
+                missing += 1
+                continue
+            while size < WINDOW_BYTES and index + spans < len(entries):
+                size = entries[index + spans][0] - address
+                spans += 1
+            if size < WINDOW_BYTES:
+                short += 1
+                continue
+            short_signed.append(entry_name := names.get(address, registration))
         code = dol.read(address, size)
         if code is None:
             missing += 1
@@ -98,9 +173,13 @@ def main(argv):
             "size": size,
             "start": scan.masked_hash(code[:WINDOW_BYTES]),
             "body": scan.masked_hash(code),
-            "signed_from": os.path.basename(dol_path),
+            "signed_from": source,
             "registration": registration,
         }
+        if spans > 1:
+            # Said plainly in the data: this signature covers the native and
+            # the functions after it, because the native alone is too short.
+            entry["spans"] = spans
         signed.append(entry)
 
     # A signature that matches more than one place in the game it came from
@@ -130,22 +209,77 @@ def main(argv):
 
     print(f"registered natives:      {len(natives)}")
     print(f"  signed:                {len(unique)}")
-    print(f"  too short to sign:     {short}  (sign-asm covers these)")
+    print(f"  signed with neighbours:{len(short_signed)}  (too short alone)")
+    print(f"  too short to sign:     {short}")
     print(f"  not in the symbol map: {missing}")
     print(f"  not unique in-game:    {ambiguous}")
     print(f"  matched the wrong one: {astray}")
     print(f"game's builds: {len(game)}")
 
+    # Signing checks each signature on its own, which is not enough: signatures
+    # are matched together, and one can take the address another wanted. Scan
+    # the game they came from with the whole set and drop any that does not
+    # land on the native it was signed from.
+    document = json.load(open(SIGNATURES))
+    others = [e for e in document["natives"]
+              if "exact" in e or e.get("signed_from") != source]
+    # Every other game we can check against: a signature that binds the wrong
+    # function there is wrong, however well it behaves at home.
+    crosses = []
+    index = 0
+    while "--cross" in argv[index:]:
+        at = argv.index("--cross", index)
+        cross_dol, cross_map = argv[at + 1], argv[at + 2]
+        cross = scan.Dol(cross_dol)
+        cross_entries = symbol_map(cross_map)
+        cross_natives = by_name(src_root, cross_entries,
+                                [(e["name"], e.get("registration")) for e in others + unique])
+        crosses.append((cross, cross_natives, game_id(cross_dol)))
+        index = at + 3
+
+    proven, misbound = verify(scan, dol, others + unique, natives, source, crosses)
+    print(f"  dropped by verification:  {misbound}")
+    print(f"signatures from this game: {len(proven)}")
+    print(f"game's builds: {len(game)}")
+
     if write:
-        document = json.load(open(SIGNATURES))
-        keep = [e for e in document["natives"] if "exact" in e or e.get("signed_from") != os.path.basename(dol_path)]
-        document["natives"] = keep + unique
+        document["natives"] = others + proven
         document["natives"].sort(key=lambda e: (e["build"], e["name"]))
         with open(SIGNATURES, "w") as handle:
             json.dump(document, handle, indent=1)
             handle.write("\n")
         print(f"wrote {SIGNATURES}: {len(document['natives'])} signatures")
     return 0
+
+
+def verify(scan, dol, signatures, natives, source, crosses=()):
+    """Keep the signatures that bind the right native in every game we can check.
+
+    Signing checks each signature alone, which is not enough: they are matched
+    together, and one can take the address another wanted. Scanning a game
+    whose addresses are known says which ones actually behave - at home, and in
+    every other game we have a map for.
+    """
+    dropped = 0
+    games = [(dol, natives, source)] + list(crosses)
+    while True:
+        wrong = set()
+        for target, truth, _ in games:
+            registered = {registration: address for address, registration in truth.items()}
+            bindings, _ = scan.scan_with(target, signatures)
+            for binding in bindings:
+                registration = binding.get("registration")
+                if registration in registered and registered[registration] != int(binding["address"], 16):
+                    wrong.add(registration)
+        if not wrong:
+            return [e for e in signatures if e.get("signed_from") == source], dropped
+        before = len(signatures)
+        signatures = [e for e in signatures
+                      if not (e.get("signed_from") == source and e.get("registration") in wrong)]
+        dropped += before - len(signatures)
+        if len(signatures) == before:
+            # The offenders came from somewhere else; this run cannot fix them.
+            return [e for e in signatures if e.get("signed_from") == source], dropped
 
 
 if __name__ == "__main__":

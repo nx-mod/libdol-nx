@@ -148,22 +148,38 @@ last one, the same function in two builds of the same library hashed
 differently - four instructions out of 138 in `SelectThread`, each the low half
 of a global's address, was enough.
 
+A native too short to sign on its own - many SDK functions are four or five
+instructions - is signed from its start through the functions that follow it,
+until there is enough code to be unique. The linker keeps a translation unit's
+functions in source order, so that run is the same wherever the library is
+linked, and a match gives the native's address directly.
+
+Signing the same native from more than one game is what covers more of them:
+each game links a different build, and `--by-name` locates the registrations in
+another game's map by name rather than by address.
+
+Nothing is trusted on its own evidence. A signature is kept only when the whole
+set, scanned against every game whose addresses are known, binds each native
+where that game really has it - at home and in the others (`--cross`). Map
+entries that are not functions at all, a switch's jump table or a case body,
+are never signed.
+
 What that bought, from one game's 560 registrations:
 
-| game | SDK vintage | natives bound |
+| game | SDK vintage | natives bound by code |
 |---|---|---|
-| Mario Kart Wii (signed from) | 2007-08 | 242 |
-| Punch-Out!! | 2008 | 198 |
-| Wii Sports rev 1 | 2006-07 | 190 |
-| New Super Mario Bros. Wii | 2009 | 98 |
+| Mario Kart Wii (signed from) | 2007-08 | 350 |
+| Wii Sports rev 1 (signed from) | 2006-07 | 312 |
+| Punch-Out!! | 2008 | 277 |
+| New Super Mario Bros. Wii | 2009 | 97 |
 
 They are matched by code and have not been run. A wrong binding is worse than
 none, which is why the uniqueness and self-checks above exist, and why a native
 that does not match is simply left to the game's own code.
 
-307 of the 560 are shorter than the 16-instruction window and cannot be signed
-this way; the ten that are hand-written assembly are covered by `sign-asm`, and
-the rest wait for a way to identify short functions safely.
+The count falls off with distance from the games signed so far: New Super Mario
+Bros. Wii's 2009 SDK shares least with a 2006-08 one. Signing from a third game
+is what moves it, and needs that game's symbols.
 
 ## The console's own natives
 
