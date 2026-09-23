@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+"""Sign every native the library registers, from the game they were written in.
+
+    tools/wiinx-sign-natives <game.dol> <symbol map> [--src DIR] [--write]
+
+A native is registered at the address it has in one game. Signing it there -
+the masked hashes, never the code - lets `wiinx-scan scan` find the same
+function in any other game, at that game's own address. Function extents come
+from the symbol map, so what is signed is the whole function and nothing else.
+
+Without --write it prints what it would add.
+"""
+import json
+import os
+import re
+import subprocess
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+
+SIGNATURES = os.path.join(HERE, "..", "data", "signatures.json")
+WINDOW_BYTES = 16 * 4  # a signature needs at least this much to be unique
+
+
+def load_scan():
+    """The scanner's own DOL reader and hashing, so signing cannot drift."""
+    source = open(os.path.join(HERE, "wiinx-scan")).read()
+    module = type(sys)("wiinx_scan")
+    module.__dict__["__file__"] = os.path.join(HERE, "wiinx-scan")
+    exec(compile(source.replace("def main(argv):", "def _unused(argv):"), "wiinx-scan", "exec"),
+         module.__dict__)
+    return module
+
+
+def registrations(src_root):
+    """{address: registration name} for every PPC_NATIVE_OVERRIDE in the library."""
+    pattern = re.compile(r"PPC_NATIVE_OVERRIDE[A-Z_]*\(\s*([0-9A-Fa-f]{8})\s*,\s*([A-Za-z_]\w*)")
+    found = {}
+    for root, _, names in os.walk(src_root):
+        for name in names:
+            if not name.endswith((".cpp", ".h", ".inc")):
+                continue
+            with open(os.path.join(root, name), errors="ignore") as handle:
+                for address, symbol in pattern.findall(handle.read()):
+                    found[int(address, 16)] = symbol
+    return found
+
+
+def symbol_map(path):
+    """[(address, name)] ascending, from a `hexaddr name` map."""
+    entries = []
+    line_pattern = re.compile(r"^([0-9a-fA-F]{8})\s+(\S.*)$")
+    with open(path, errors="ignore") as handle:
+        for line in handle:
+            match = line_pattern.match(line.strip())
+            if match:
+                entries.append((int(match.group(1), 16), match.group(2).strip()))
+    entries.sort()
+    return entries
+
+
+def main(argv):
+    if len(argv) < 2:
+        print(__doc__.strip())
+        return 2
+    dol_path, map_path = argv[0], argv[1]
+    src_root = argv[argv.index("--src") + 1] if "--src" in argv else os.path.join(HERE, "..", "src")
+    write = "--write" in argv
+
+    scan = load_scan()
+    dol = scan.Dol(dol_path)
+    game = {build_id for build_id, _ in scan.builds(dol).values()}
+    natives = registrations(src_root)
+    entries = symbol_map(map_path)
+    extent = {address: (entries[index + 1][0] - address if index + 1 < len(entries) else 0)
+              for index, (address, _) in enumerate(entries)}
+    names = dict(entries)
+
+    signed, short, missing, ambiguous = [], 0, 0, 0
+    for address, registration in sorted(natives.items()):
+        size = extent.get(address, 0)
+        if size <= 0:
+            missing += 1
+            continue
+        if size < WINDOW_BYTES:
+            short += 1          # too small to be unique; sign-asm handles these
+            continue
+        code = dol.read(address, size)
+        if code is None:
+            missing += 1
+            continue
+        entry = {
+            "name": names.get(address, registration),
+            # Signed from one game, matched in any: the masking removes what
+            # differs between builds (see docs/signatures.md).
+            "build": scan.ANY_BUILD,
+            "size": size,
+            "start": scan.masked_hash(code[:WINDOW_BYTES]),
+            "body": scan.masked_hash(code),
+            "signed_from": os.path.basename(dol_path),
+            "registration": registration,
+        }
+        signed.append(entry)
+
+    # A signature that matches more than one place in the game it came from
+    # cannot identify anything, so it is dropped rather than shipped.
+    by_start = {}
+    for start, blob in dol.text():
+        for offset in range(0, len(blob) - WINDOW_BYTES + 1, 4):
+            by_start.setdefault(scan.masked_hash(blob[offset:offset + WINDOW_BYTES]), []).append(start + offset)
+    unique = []
+    astray = 0
+    for entry in signed:
+        hits = [a for a in by_start.get(entry["start"], [])
+                if (code := dol.read(a, entry["size"])) is not None
+                and scan.masked_hash(code) == entry["body"]]
+        if len(hits) != 1:
+            ambiguous += 1
+            continue
+        # It has to find the function it was taken from. One that matches
+        # somewhere else instead is describing different code - a map entry
+        # whose extent is wrong, or two functions that mask to the same thing -
+        # and would bind a game to the wrong address.
+        registered = next(a for a, r in natives.items() if r == entry["registration"])
+        if hits[0] != registered:
+            astray += 1
+            continue
+        unique.append(entry)
+
+    print(f"registered natives:      {len(natives)}")
+    print(f"  signed:                {len(unique)}")
+    print(f"  too short to sign:     {short}  (sign-asm covers these)")
+    print(f"  not in the symbol map: {missing}")
+    print(f"  not unique in-game:    {ambiguous}")
+    print(f"  matched the wrong one: {astray}")
+    print(f"game's builds: {len(game)}")
+
+    if write:
+        document = json.load(open(SIGNATURES))
+        keep = [e for e in document["natives"] if "exact" in e or e.get("signed_from") != os.path.basename(dol_path)]
+        document["natives"] = keep + unique
+        document["natives"].sort(key=lambda e: (e["build"], e["name"]))
+        with open(SIGNATURES, "w") as handle:
+            json.dump(document, handle, indent=1)
+            handle.write("\n")
+        print(f"wrote {SIGNATURES}: {len(document['natives'])} signatures")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

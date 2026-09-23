@@ -335,9 +335,38 @@ def mask(word):
 
 
 def masked_hash(code):
+    """Hash a function with everything that legitimately moves blanked out.
+
+    mask() handles what one instruction can decide on its own. The rest needs
+    the stream: an address of a global is built from a `lis` and an `addi` (or
+    `ori`, or the displacement of the load that uses it), and only the `lis`
+    half looks like an immediate. The `addi` that completes the pair carries
+    the low half of an address that is different in every build, so it is
+    blanked too - tracked per register, and forgotten as soon as the register
+    is written by anything else.
+    """
     words = struct.unpack(f">{len(code) // 4}I", code[: len(code) // 4 * 4])
-    masked = struct.pack(f">{len(words)}I", *(mask(w) for w in words))
-    return hashlib.sha256(masked).hexdigest()[:16]
+    masked = []
+    pending = set()
+    for word in words:
+        opcode = word >> 26
+        target = (word >> 21) & 31
+        base = (word >> 16) & 31
+        value = mask(word)
+        if opcode == 15 and base == 0:                       # lis rD, hi
+            pending.add(target)
+        elif base in pending and (32 <= opcode <= 55 or opcode in (14, 24, 25, 28, 29)):
+            # The low half of the same address: addi/ori, or a load or store
+            # reaching through the register the lis set up.
+            value = word & 0xFFFF0000
+            if opcode in (14, 24) and target != base:
+                pending.add(target)                          # the address moved registers
+            elif opcode in (14, 24):
+                pending.discard(base)                        # completed in place
+        elif target in pending and opcode != 15:
+            pending.discard(target)                          # register reused for something else
+        masked.append(value)
+    return hashlib.sha256(struct.pack(f">{len(masked)}I", *masked)).hexdigest()[:16]
 
 
 MONTHS = {m: i + 1 for i, m in enumerate("Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split())}

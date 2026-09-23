@@ -2,6 +2,33 @@
  "about": "Code signatures for libwii-nx natives: hashes of masked instructions, never code. `registration` is the name the runtime registers the native under, which a game's bindings.json maps to its own address. Add entries with tools/wiinx-scan sign.",
  "natives": [
   {
+   "name": "0x8002001c",
+   "build": "any",
+   "size": 184,
+   "start": "6f70d39baaf6c575",
+   "body": "8b6d05ff30b68c9d",
+   "signed_from": "main.dol",
+   "registration": "Stub_8002001C"
+  },
+  {
+   "name": "AIInit",
+   "build": "any",
+   "size": 384,
+   "start": "30510cab7b6726fb",
+   "body": "0071cb30285e92be",
+   "signed_from": "main.dol",
+   "registration": "AIInit_801240b0"
+  },
+  {
+   "name": "AIInitDMA",
+   "build": "any",
+   "size": 124,
+   "start": "fa56df81d83ae694",
+   "body": "b7e7311e417d08cb",
+   "signed_from": "main.dol",
+   "registration": "AIInitDMA_80123fcc"
+  },
+  {
    "name": "DCFlushRange",
    "build": "any",
    "size": 48,
@@ -42,12 +69,1461 @@
    "registration": "DCStoreRangeNoSync_801a16b8"
   },
   {
+   "name": "DSPAssertTask",
+   "build": "any",
+   "size": 188,
+   "start": "640cfea811593cb8",
+   "body": "fa4061241e9d4452",
+   "signed_from": "main.dol",
+   "registration": "DSPAssertTask_8015d57c"
+  },
+  {
+   "name": "DSPInit",
+   "build": "any",
+   "size": 192,
+   "start": "65bb217b7269ca33",
+   "body": "b1f52bcee2fd9a65",
+   "signed_from": "main.dol",
+   "registration": "DSPInit_8015d444"
+  },
+  {
+   "name": "DVD::Init",
+   "build": "any",
+   "size": 340,
+   "start": "2b817c5874fdc2f4",
+   "body": "d9d5eeae6f36cc2b",
+   "signed_from": "main.dol",
+   "registration": "DVDInit_8015EA1C"
+  },
+  {
+   "name": "DVD::LowClearCoverInterrupt",
+   "build": "any",
+   "size": 364,
+   "start": "e7bc446304650c2b",
+   "body": "516a4a1d03e7f2b5",
+   "signed_from": "main.dol",
+   "registration": "DVDLowClearCoverInterrupt_80166964"
+  },
+  {
+   "name": "DVD::LowInit",
+   "build": "any",
+   "size": 612,
+   "start": "ef3b675dc4816b87",
+   "body": "9e2a91b3413b525e",
+   "signed_from": "main.dol",
+   "registration": "DVDLowInit_80164848"
+  },
+  {
+   "name": "DVD::LowInquiry",
+   "build": "any",
+   "size": 360,
+   "start": "cf99e77175815416",
+   "body": "c2023c471d77ab29",
+   "signed_from": "main.dol",
+   "registration": "DVDLowInquiry_80165A30"
+  },
+  {
+   "name": "DVD::LowRead",
+   "build": "any",
+   "size": 432,
+   "start": "74f73543ab2157e6",
+   "body": "5976f5052a60af73",
+   "signed_from": "main.dol",
+   "registration": "DVDLowRead_80166330"
+  },
+  {
+   "name": "DVD::LowReadDiskID",
+   "build": "any",
+   "size": 392,
+   "start": "4bdd84bd314491aa",
+   "body": "55b2ba52830dc34a",
+   "signed_from": "main.dol",
+   "registration": "DVDLowReadDiskID_80164AAC"
+  },
+  {
+   "name": "DVD::LowUnencryptedRead",
+   "build": "any",
+   "size": 404,
+   "start": "a39dffd9d2066cb6",
+   "body": "3c92a724dfd5c997",
+   "signed_from": "main.dol",
+   "registration": "DVDLowUnencryptedRead_80165708"
+  },
+  {
+   "name": "DVD::ReadAbsAsyncPrio",
+   "build": "any",
+   "size": 228,
+   "start": "fc3447c0ad41c397",
+   "body": "ea74b92a01280c61",
+   "signed_from": "main.dol",
+   "registration": "DVD__ReadAbsAsyncPrio_HLE_801628cc"
+  },
+  {
+   "name": "DVD::ReadAsyncPrio",
+   "build": "any",
+   "size": 208,
+   "start": "b99d4f854fb92f5c",
+   "body": "29aba2f65ad436eb",
+   "signed_from": "main.dol",
+   "registration": "DVD__ReadAsyncPrio_HLE_8015e74c"
+  },
+  {
+   "name": "DVDReadPrio",
+   "build": "any",
+   "size": 296,
+   "start": "815583181532c45b",
+   "body": "57e38951e84d513b",
+   "signed_from": "main.dol",
+   "registration": "DVDReadPrio_8015E834"
+  },
+  {
+   "name": "EGG::AsyncDisplay::endRender",
+   "build": "any",
+   "size": 136,
+   "start": "56bd95c985bdf33a",
+   "body": "f3a87bf3342d4371",
+   "signed_from": "main.dol",
+   "registration": "EGG__AsyncDisplay__endRender_HLE_8020ff9c"
+  },
+  {
+   "name": "EGG::Decomp::decodeSZS",
+   "build": "any",
+   "size": 404,
+   "start": "5a12696d5e584e38",
+   "body": "d281db01bf831b3a",
+   "signed_from": "main.dol",
+   "registration": "EGG_Decomp_decodeSZS_80218c2c"
+  },
+  {
+   "name": "EGG::LightTexture::SetupTevFinish",
+   "build": "any",
+   "size": 340,
+   "start": "b08b14b02554ab72",
+   "body": "adaa33b054bc539a",
+   "signed_from": "main.dol",
+   "registration": "EGG__LightTexture__SetupTevFinish_HLE_8022e2bc"
+  },
+  {
+   "name": "EGG::TaskThread::Run",
+   "build": "any",
+   "size": 216,
+   "start": "a3f5a17650b769f4",
+   "body": "4760ce2ed8c9eba9",
+   "signed_from": "main.dol",
+   "registration": "TaskThread_run_HLE_80242d7c"
+  },
+  {
+   "name": "ESP_CloseLib",
+   "build": "any",
+   "size": 72,
+   "start": "39772d66be93f9ae",
+   "body": "6d02de1f2f635c09",
+   "signed_from": "main.dol",
+   "registration": "ESP_CloseLib_stub"
+  },
+  {
+   "name": "ESP_GetDataDir",
+   "build": "any",
+   "size": 152,
+   "start": "ebd1a652e57ff875",
+   "body": "c2fcd6101c57647e",
+   "signed_from": "main.dol",
+   "registration": "ESP_GetDataDir_stub"
+  },
+  {
+   "name": "ESP_GetTitleId",
+   "build": "any",
+   "size": 152,
+   "start": "fb25481990542a9e",
+   "body": "69a006082fab16b8",
+   "signed_from": "main.dol",
+   "registration": "ESP_GetTitleId_stub"
+  },
+  {
+   "name": "ESP_InitLib",
+   "build": "any",
+   "size": 84,
+   "start": "798ab0288671928a",
+   "body": "e1febf4658f266a8",
+   "signed_from": "main.dol",
+   "registration": "ESP_InitLib_stub"
+  },
+  {
+   "name": "EXIInit",
+   "build": "any",
+   "size": 452,
+   "start": "191a1e8374d9dd1f",
+   "body": "5811fac6c4acdd2a",
+   "signed_from": "main.dol",
+   "registration": "EXIInit_80168fa0"
+  },
+  {
+   "name": "GX::AbortFrame",
+   "build": "any",
+   "size": 436,
+   "start": "dd59c97e9c0c827f",
+   "body": "133a7e56b8fcd4d4",
+   "signed_from": "main.dol",
+   "registration": "gx_stub_8016e848"
+  },
+  {
+   "name": "GX::Begin",
+   "build": "any",
+   "size": 332,
+   "start": "f9aa98b38c5a9e09",
+   "body": "7e43d7087b69371a",
+   "signed_from": "main.dol",
+   "registration": "GX__Begin_8016f0f0"
+  },
+  {
+   "name": "GX::BeginDisplayList",
+   "build": "any",
+   "size": 180,
+   "start": "57c7aa0470bc7cbb",
+   "body": "770c3a7344cac4ca",
+   "signed_from": "main.dol",
+   "registration": "GX__BeginDisplayList_80172e00"
+  },
+  {
+   "name": "GX::CPInterruptHandler",
+   "build": "any",
+   "size": 352,
+   "start": "abceb551148ec151",
+   "body": "a705c8c80697bb8b",
+   "signed_from": "main.dol",
+   "registration": "gx_stub_8016c668"
+  },
+  {
+   "name": "GX::CallDisplayList",
+   "build": "any",
+   "size": 116,
+   "start": "84430e8653ffceb2",
+   "body": "3072f25128820864",
+   "signed_from": "main.dol",
+   "registration": "GX__CallDisplayList_80172f64"
+  },
+  {
+   "name": "GX::CopyDisp",
+   "build": "any",
+   "size": 316,
+   "start": "c902c41e4d82e29d",
+   "body": "f3a6cd539fdaaf00",
+   "signed_from": "main.dol",
+   "registration": "GX__CopyDisp_8016fc38"
+  },
+  {
+   "name": "GX::CopyTex",
+   "build": "any",
+   "size": 344,
+   "start": "cc49fa2a82549d93",
+   "body": "311d9455857d9fba",
+   "signed_from": "main.dol",
+   "registration": "GX__CopyTex_8016fd74"
+  },
+  {
+   "name": "GX::DisableBreakPt",
+   "build": "any",
+   "size": 72,
+   "start": "74f2180ef1e6b1db",
+   "body": "b5512ed44042382d",
+   "signed_from": "main.dol",
+   "registration": "gx_stub_8016d138"
+  },
+  {
+   "name": "GX::DrawDone",
+   "build": "any",
+   "size": 192,
+   "start": "9a061e728cb71601",
+   "body": "dc5a0900d6657035",
+   "signed_from": "main.dol",
+   "registration": "GX__DrawDone_8016eab0"
+  },
+  {
+   "name": "GX::DrawSphere",
+   "build": "any",
+   "size": 976,
+   "start": "5d6093d03bc046bc",
+   "body": "6bb706667c814cc2",
+   "signed_from": "main.dol",
+   "registration": "GX__DrawSphere_80172a30"
+  },
+  {
+   "name": "GX::EnableBreakPt",
+   "build": "any",
+   "size": 160,
+   "start": "9ec725137a6f7bc1",
+   "body": "25a4c42271d8373e",
+   "signed_from": "main.dol",
+   "registration": "gx_stub_8016d098"
+  },
+  {
+   "name": "GX::EndDisplayList",
+   "build": "any",
+   "size": 176,
+   "start": "41333f0e7114fbb9",
+   "body": "74a6a093ed178523",
+   "signed_from": "main.dol",
+   "registration": "GX__EndDisplayList_80172eb4"
+  },
+  {
+   "name": "GX::FinishInterruptHandler",
+   "build": "any",
+   "size": 128,
+   "start": "ae906f9b2b8fa25f",
+   "body": "cfe69d696bbcf2d9",
+   "signed_from": "main.dol",
+   "registration": "GX__FinishInterruptHandler_8016ed94"
+  },
+  {
+   "name": "GX::Flush",
+   "build": "any",
+   "size": 92,
+   "start": "961c56a0b4df4a61",
+   "body": "ac8a3907238b7853",
+   "signed_from": "main.dol",
+   "registration": "GX__Flush_8016e654"
+  },
+  {
+   "name": "GX::GetProjectionv",
+   "build": "any",
+   "size": 64,
+   "start": "4bee035baf148e35",
+   "body": "4bee035baf148e35",
+   "signed_from": "main.dol",
+   "registration": "GX__GetProjectionv_801730cc"
+  },
+  {
+   "name": "GX::GetTexObjAll",
+   "build": "any",
+   "size": 100,
+   "start": "93613449d22dbe9a",
+   "body": "e0619dafd7250770",
+   "signed_from": "main.dol",
+   "registration": "GX__GetTexObjAll_80170bf8"
+  },
+  {
+   "name": "GX::GetTexObjLODAll",
+   "build": "any",
+   "size": 228,
+   "start": "aea797dff054fba0",
+   "body": "0a45c883719f309c",
+   "signed_from": "main.dol",
+   "registration": "GX__GetTexObjLODAll_80170cbc"
+  },
+  {
+   "name": "GX::GetVtxAttrFmt_caseD_19",
+   "build": "any",
+   "size": 116,
+   "start": "a8140d22b319d84a",
+   "body": "1d72c4b12d52df16",
+   "signed_from": "main.dol",
+   "registration": "gx_stub_8016e0a4"
+  },
+  {
+   "name": "GX::GetVtxAttrFmtv",
+   "build": "any",
+   "size": 116,
+   "start": "47b73b5456d565bc",
+   "body": "8d6137247c0192f3",
+   "signed_from": "main.dol",
+   "registration": "GX__GetVtxAttrFmtv_8016e2b8"
+  },
+  {
+   "name": "GX::GetVtxDescv",
+   "build": "any",
+   "size": 144,
+   "start": "bd8c44b5ba40c6b7",
+   "body": "2bbc05abc616e329",
+   "signed_from": "main.dol",
+   "registration": "GX__GetVtxDescv_8016dba4"
+  },
+  {
+   "name": "GX::Init",
+   "build": "any",
+   "size": 1284,
+   "start": "32b64a8e34931cb8",
+   "body": "db9adbf9bfe16a62",
+   "signed_from": "main.dol",
+   "registration": "GX__Init_8016b850"
+  },
+  {
+   "name": "GX::InitFogAdjTable",
+   "build": "any",
+   "size": 352,
+   "start": "7229c853e472152b",
+   "body": "f2157d3f759edc17",
+   "signed_from": "main.dol",
+   "registration": "gx_stub_801724f8"
+  },
+  {
+   "name": "GX::InitTexObj",
+   "build": "any",
+   "size": 320,
+   "start": "13b606340147c204",
+   "body": "22ace761bbced19a",
+   "signed_from": "main.dol",
+   "registration": "GX__InitTexObj_801707f8"
+  },
+  {
+   "name": "GX::InitTexObjCI",
+   "build": "any",
+   "size": 72,
+   "start": "a5e30cac62889476",
+   "body": "c1470e7e075cc503",
+   "signed_from": "main.dol",
+   "registration": "GX__InitTexObjCI_80170a04"
+  },
+  {
+   "name": "GX::InitTexObjLOD",
+   "build": "any",
+   "size": 260,
+   "start": "4329b0d7778a5ff1",
+   "body": "21071009f185ffd6",
+   "signed_from": "main.dol",
+   "registration": "GX__InitTexObjLOD_80170a4c"
+  },
+  {
+   "name": "GX::InitTexObjLODBias",
+   "build": "any",
+   "size": 84,
+   "start": "1b464e50d836c35c",
+   "body": "51cef4f2c3c77f6a",
+   "signed_from": "main.dol",
+   "registration": "GX__InitTexObjLODBias_80170b94"
+  },
+  {
+   "name": "GX::InitTexObj_caseD_7",
+   "build": "any",
+   "size": 100,
+   "start": "a0beb01746286ff7",
+   "body": "978507827a53b15f",
+   "signed_from": "main.dol",
+   "registration": "GX__InitTexObj_caseD_7_801709a0"
+  },
+  {
+   "name": "GX::InvalidateTexAll",
+   "build": "any",
+   "size": 72,
+   "start": "82d564b6eefad884",
+   "body": "18724bf1d0eb255d",
+   "signed_from": "main.dol",
+   "registration": "GX__InvalidateTexAll_80171110"
+  },
+  {
+   "name": "GX::LoadLightObjImm",
+   "build": "any",
+   "size": 124,
+   "start": "f8e1e37d300fd750",
+   "body": "910dcd2ee515b488",
+   "signed_from": "main.dol",
+   "registration": "GX__LoadLightObjImm_80170320"
+  },
+  {
+   "name": "GX::LoadNrmMtxImm",
+   "build": "any",
+   "size": 88,
+   "start": "7319dcee25c6ef33",
+   "body": "1ddddaf29af822c0",
+   "signed_from": "main.dol",
+   "registration": "GX__LoadNrmMtxImm_80173188"
+  },
+  {
+   "name": "GX::LoadPosMtxImm",
+   "build": "any",
+   "size": 80,
+   "start": "10e29871e140aa3f",
+   "body": "2f6e5a5626b2cd9f",
+   "signed_from": "main.dol",
+   "registration": "GX__LoadPosMtxImm_8017310c"
+  },
+  {
+   "name": "GX::LoadTexMtxImm",
+   "build": "any",
+   "size": 180,
+   "start": "0bc5b51e63057835",
+   "body": "59713bbe3e80ea82",
+   "signed_from": "main.dol",
+   "registration": "GX__LoadTexMtxImm_80173234"
+  },
+  {
+   "name": "GX::LoadTexObj",
+   "build": "any",
+   "size": 84,
+   "start": "00a703965aef0a9f",
+   "body": "daacbdb475008f6d",
+   "signed_from": "main.dol",
+   "registration": "GX__LoadTexObj_80170f2c"
+  },
+  {
+   "name": "GX::LoadTexObjPreLoaded",
+   "build": "any",
+   "size": 356,
+   "start": "76f2d5fe938360da",
+   "body": "c0ab8cd781081bcb",
+   "signed_from": "main.dol",
+   "registration": "GX__LoadTexObjPreLoaded_80170dc8"
+  },
+  {
+   "name": "GX::LoadTlut",
+   "build": "any",
+   "size": 148,
+   "start": "8668156c6236ffbf",
+   "body": "83c1d0229d1b63e0",
+   "signed_from": "main.dol",
+   "registration": "GX__LoadTlut_80170fa8"
+  },
+  {
+   "name": "GX::PokeBlendMode",
+   "build": "any",
+   "size": 92,
+   "start": "c065e354c27b3863",
+   "body": "92e55cca9f1c3f12",
+   "signed_from": "main.dol",
+   "registration": "gx_stub_8016ebd0"
+  },
+  {
+   "name": "GX::SetArray",
+   "build": "any",
+   "size": 64,
+   "start": "c62172e324722a0c",
+   "body": "c62172e324722a0c",
+   "signed_from": "main.dol",
+   "registration": "GX__SetArray_8016e32c"
+  },
+  {
+   "name": "GX::SetBlendMode",
+   "build": "any",
+   "size": 80,
+   "start": "69d4f5d8124b937e",
+   "body": "ddd54f14228c781f",
+   "signed_from": "main.dol",
+   "registration": "GX__SetBlendMode_8017277c"
+  },
+  {
+   "name": "GX::SetCPUFifo",
+   "build": "any",
+   "size": 480,
+   "start": "a7e560aba676ba2f",
+   "body": "7084d578946a306d",
+   "signed_from": "main.dol",
+   "registration": "GX__SetCPUFifo_8016c94c"
+  },
+  {
+   "name": "GX::SetChanAmbColor",
+   "build": "any",
+   "size": 216,
+   "start": "82338cd05ea161c0",
+   "body": "6d2c5848f637672f",
+   "signed_from": "main.dol",
+   "registration": "GX__SetChanAmbColor_8017039c"
+  },
+  {
+   "name": "GX::SetChanCtrl",
+   "build": "any",
+   "size": 164,
+   "start": "7ec2a9ba6d85587f",
+   "body": "35196e23b3fa7a9b",
+   "signed_from": "main.dol",
+   "registration": "GX__SetChanCtrl_80170570"
+  },
+  {
+   "name": "GX::SetChanMatColor",
+   "build": "any",
+   "size": 216,
+   "start": "82338cd05ea161c0",
+   "body": "e79000c01f3d392d",
+   "signed_from": "main.dol",
+   "registration": "GX__SetChanMatColor_80170474"
+  },
+  {
+   "name": "GX::SetCopyFilter",
+   "build": "any",
+   "size": 484,
+   "start": "fdd3f3c8cd091a5c",
+   "body": "05212e9e8f750a62",
+   "signed_from": "main.dol",
+   "registration": "GX__SetCopyFilter_8016fa40"
+  },
+  {
+   "name": "GX::SetDispCopySrc",
+   "build": "any",
+   "size": 64,
+   "start": "73daaa8a78a2242a",
+   "body": "73daaa8a78a2242a",
+   "signed_from": "main.dol",
+   "registration": "GX__SetDispCopySrc_8016f438"
+  },
+  {
+   "name": "GX::SetDrawSync",
+   "build": "any",
+   "size": 180,
+   "start": "f607706b625da91d",
+   "body": "d03d9137882823e8",
+   "signed_from": "main.dol",
+   "registration": "GX__SetDrawSync_8016e9fc"
+  },
+  {
+   "name": "GX::SetFog",
+   "build": "any",
+   "size": 556,
+   "start": "ce4cc6c86e6096e3",
+   "body": "65771b61384466c0",
+   "signed_from": "main.dol",
+   "registration": "GX__SetFog_801722cc"
+  },
+  {
+   "name": "GX::SetGPFifo",
+   "build": "any",
+   "size": 656,
+   "start": "5991d4ea8676a634",
+   "body": "2fe3c00398ea4207",
+   "signed_from": "main.dol",
+   "registration": "GX__SetGPFifo_8016cb2c"
+  },
+  {
+   "name": "GX::SetGPMetric",
+   "build": "any",
+   "size": 296,
+   "start": "e9506c63897f4ac3",
+   "body": "738ff3613a01f4b4",
+   "signed_from": "main.dol",
+   "registration": "gx_stub_801735cc"
+  },
+  {
+   "name": "GX::SetIndTexCoordScale",
+   "build": "any",
+   "size": 260,
+   "start": "22c26419fb40ceb9",
+   "body": "da501d0dbee34f86",
+   "signed_from": "main.dol",
+   "registration": "GX__SetIndTexCoordScale_80171968"
+  },
+  {
+   "name": "GX::SetIndTexMtx",
+   "build": "any",
+   "size": 340,
+   "start": "7a6169e483e6a7df",
+   "body": "630b509eb71ef638",
+   "signed_from": "main.dol",
+   "registration": "GX__SetIndTexMtx_80171814"
+  },
+  {
+   "name": "GX::SetIndTexOrder",
+   "build": "any",
+   "size": 204,
+   "start": "8fa4d1926597e269",
+   "body": "e8a459bc3f7385d1",
+   "signed_from": "main.dol",
+   "registration": "GX__SetIndTexOrder_80171a6c"
+  },
+  {
+   "name": "GX::SetPixelFmt",
+   "build": "any",
+   "size": 168,
+   "start": "1ce335bcaab6970d",
+   "body": "7b52ed1ed0eccc50",
+   "signed_from": "main.dol",
+   "registration": "GX__SetPixelFmt_80172888"
+  },
+  {
+   "name": "GX::SetProjection",
+   "build": "any",
+   "size": 100,
+   "start": "064cb4ad3aa741ee",
+   "body": "540d5d1abafd7961",
+   "signed_from": "main.dol",
+   "registration": "GX__SetProjection_8017301c"
+  },
+  {
+   "name": "GX::SetProjectionv",
+   "build": "any",
+   "size": 76,
+   "start": "35fdf1682f57984c",
+   "body": "9d2231644e6f6fac",
+   "signed_from": "main.dol",
+   "registration": "GX__SetProjectionv_80173080"
+  },
+  {
+   "name": "GX::SetScissor",
+   "build": "any",
+   "size": 104,
+   "start": "71882ab8b1959461",
+   "body": "771dda6f45821cd2",
+   "signed_from": "main.dol",
+   "registration": "GX__SetScissor_80173430"
+  },
+  {
+   "name": "GX::SetTevAlphaIn",
+   "build": "any",
+   "size": 64,
+   "start": "1081ce8f4f678219",
+   "body": "1081ce8f4f678219",
+   "signed_from": "main.dol",
+   "registration": "GX__SetTevAlphaIn_80171d20"
+  },
+  {
+   "name": "GX::SetTevAlphaOp",
+   "build": "any",
+   "size": 88,
+   "start": "c1499cda8569280c",
+   "body": "e1f48ae95af9e503",
+   "signed_from": "main.dol",
+   "registration": "GX__SetTevAlphaOp_80171db8"
+  },
+  {
+   "name": "GX::SetTevColor",
+   "build": "any",
+   "size": 96,
+   "start": "c6d01ad333ffb13e",
+   "body": "315ab112adfc5a66",
+   "signed_from": "main.dol",
+   "registration": "GX__SetTevColor_80171e10"
+  },
+  {
+   "name": "GX::SetTevColorIn",
+   "build": "any",
+   "size": 64,
+   "start": "3f1e9ae89cff6331",
+   "body": "3f1e9ae89cff6331",
+   "signed_from": "main.dol",
+   "registration": "GX__SetTevColorIn_80171ce0"
+  },
+  {
+   "name": "GX::SetTevColorOp",
+   "build": "any",
+   "size": 88,
+   "start": "e86bf2aea817f2ee",
+   "body": "bb1120a79dbf0229",
+   "signed_from": "main.dol",
+   "registration": "GX__SetTevColorOp_80171d60"
+  },
+  {
+   "name": "GX::SetTevColorS10",
+   "build": "any",
+   "size": 100,
+   "start": "4d160ebeeb06582c",
+   "body": "2784e1cd99626cab",
+   "signed_from": "main.dol",
+   "registration": "GX__SetTevColorS10_80171e70"
+  },
+  {
+   "name": "GX::SetTevDirect",
+   "build": "any",
+   "size": 72,
+   "start": "a257834ea68ba44f",
+   "body": "15f569357f34602c",
+   "signed_from": "main.dol",
+   "registration": "GX__SetTevDirect_80171b58"
+  },
+  {
+   "name": "GX::SetTevIndWarp",
+   "build": "any",
+   "size": 84,
+   "start": "a9aa9fbccebf6401",
+   "body": "15fd00326263f12b",
+   "signed_from": "main.dol",
+   "registration": "GX__SetTevIndWarp_80171ba0"
+  },
+  {
+   "name": "GX::SetTevIndirect",
+   "build": "any",
+   "size": 104,
+   "start": "11e1b15459fdcf50",
+   "body": "21a41d00a01869f3",
+   "signed_from": "main.dol",
+   "registration": "GX__SetTevIndirect_801717ac"
+  },
+  {
+   "name": "GX::SetTevKAlphaSel",
+   "build": "any",
+   "size": 80,
+   "start": "b211d4968f99d63e",
+   "body": "6c4e9eac4f4535a7",
+   "signed_from": "main.dol",
+   "registration": "GX__SetTevKAlphaSel_80171f80"
+  },
+  {
+   "name": "GX::SetTevKColor",
+   "build": "any",
+   "size": 92,
+   "start": "9b2ee92499aae7ba",
+   "body": "4f8e96801e056b3e",
+   "signed_from": "main.dol",
+   "registration": "GX__SetTevKColor_80171ed4"
+  },
+  {
+   "name": "GX::SetTevKColorSel",
+   "build": "any",
+   "size": 80,
+   "start": "68046117e8ada0e6",
+   "body": "08e60f477d0342ca",
+   "signed_from": "main.dol",
+   "registration": "GX__SetTevKColorSel_80171f30"
+  },
+  {
+   "name": "GX::SetTevOp",
+   "build": "any",
+   "size": 148,
+   "start": "3412c75074760b60",
+   "body": "8ba7258c69951f9a",
+   "signed_from": "main.dol",
+   "registration": "GX__SetTevOp_80171c4c"
+  },
+  {
+   "name": "GX::SetTevOrder",
+   "build": "any",
+   "size": 348,
+   "start": "ac471f8fb99afbed",
+   "body": "f1150d7c7780fe0f",
+   "signed_from": "main.dol",
+   "registration": "GX__SetTevOrder_8017214c"
+  },
+  {
+   "name": "GX::SetTevSwapModeTable",
+   "build": "any",
+   "size": 124,
+   "start": "7aeb9475a12010ae",
+   "body": "fe261d4ae7779374",
+   "signed_from": "main.dol",
+   "registration": "GX__SetTevSwapModeTable_8017200c"
+  },
+  {
+   "name": "GX::SetTexCoordBias",
+   "build": "any",
+   "size": 100,
+   "start": "0cd51d5fde4ce186",
+   "body": "7eb7f0b1abab1d85",
+   "signed_from": "main.dol",
+   "registration": "GX__SetTexCoordBias_801711fc"
+  },
+  {
+   "name": "GX::SetTexCoordGen2_caseD_10",
+   "build": "any",
+   "size": 240,
+   "start": "3d6a6d6a06645502",
+   "body": "3ad60be5b7520644",
+   "signed_from": "main.dol",
+   "registration": "gx_stub_8016e424"
+  },
+  {
+   "name": "GX::SetTexCoordScaleManually",
+   "build": "any",
+   "size": 124,
+   "start": "45a9e2a42652d741",
+   "body": "9ed6d2a4b3aed55b",
+   "signed_from": "main.dol",
+   "registration": "GX__SetTexCoordScaleManually_80171180"
+  },
+  {
+   "name": "GX::SetTexCopyDst",
+   "build": "any",
+   "size": 284,
+   "start": "bb108c5ab547e887",
+   "body": "e1820f97a62751a0",
+   "signed_from": "main.dol",
+   "registration": "GX__SetTexCopyDst_8016f4dc"
+  },
+  {
+   "name": "GX::SetTexCopySrc",
+   "build": "any",
+   "size": 64,
+   "start": "8b2505a9e51763c8",
+   "body": "8b2505a9e51763c8",
+   "signed_from": "main.dol",
+   "registration": "GX__SetTexCopySrc_8016f478"
+  },
+  {
+   "name": "GX::SetVtxAttrFmtv_caseD_15",
+   "build": "any",
+   "size": 64,
+   "start": "5c699936f9678cf5",
+   "body": "5c699936f9678cf5",
+   "signed_from": "main.dol",
+   "registration": "gx_stub_8016df8c"
+  },
+  {
+   "name": "GX::SetVtxDesc_caseD_15",
+   "build": "any",
+   "size": 80,
+   "start": "b14976433b8be4de",
+   "body": "a12ef9f30681e3bc",
+   "signed_from": "main.dol",
+   "registration": "gx_stub_8016d5b8"
+  },
+  {
+   "name": "GX::SetZTexture",
+   "build": "any",
+   "size": 140,
+   "start": "5d8f25847343b3b2",
+   "body": "c2df1b9c0f9c58b0",
+   "signed_from": "main.dol",
+   "registration": "GX__SetZTexture_801720c0"
+  },
+  {
    "name": "ICInvalidateRange",
    "build": "any",
    "size": 52,
    "exact": "5c0cb4f4df95f7fb",
    "signed_from": "main.dol",
    "registration": "ICInvalidateRange_HLE"
+  },
+  {
+   "name": "IOS::Close",
+   "build": "any",
+   "size": 168,
+   "start": "dc184dc934de7ddd",
+   "body": "1fefece5121eb6f8",
+   "signed_from": "main.dol",
+   "registration": "NAND_IOS_Close_HLE"
+  },
+  {
+   "name": "IOS::CloseAsync",
+   "build": "any",
+   "size": 192,
+   "start": "5596916b10797468",
+   "body": "6adbc45b16da058c",
+   "signed_from": "main.dol",
+   "registration": "IOS_CloseAsync_HLE"
+  },
+  {
+   "name": "IOS::Ioctl",
+   "build": "any",
+   "size": 304,
+   "start": "b9ac1c80af4fb1d6",
+   "body": "0453bf4f8092ca0a",
+   "signed_from": "main.dol",
+   "registration": "NAND_IOS_Ioctl_Entry_HLE"
+  },
+  {
+   "name": "IOS::IoctlAsync",
+   "build": "any",
+   "size": 312,
+   "start": "f455366abb03e577",
+   "body": "fc3a9b9602cb6be1",
+   "signed_from": "main.dol",
+   "registration": "IOS_IoctlAsync_80194158"
+  },
+  {
+   "name": "IOS::Ioctlv",
+   "build": "any",
+   "size": 220,
+   "start": "781a47ade1ece623",
+   "body": "0c3b2073bad8bcb5",
+   "signed_from": "main.dol",
+   "registration": "NAND_IOS_Ioctlv_Entry_HLE"
+  },
+  {
+   "name": "IOS::IoctlvAsync",
+   "build": "any",
+   "size": 228,
+   "start": "03f892537b7712af",
+   "body": "236b5dec58913924",
+   "signed_from": "main.dol",
+   "registration": "IOS_IoctlvAsync_HLE"
+  },
+  {
+   "name": "IOS::Open",
+   "build": "any",
+   "size": 288,
+   "start": "bb6079a916ec1aee",
+   "body": "42d480137df8884a",
+   "signed_from": "main.dol",
+   "registration": "NAND_IOS_Open_HLE"
+  },
+  {
+   "name": "IOS::OpenAsync",
+   "build": "any",
+   "size": 280,
+   "start": "7a9c2739eb6e136e",
+   "body": "7704fe1ca153dd87",
+   "signed_from": "main.dol",
+   "registration": "IOS_OpenAsync_HLE"
+  },
+  {
+   "name": "IOS::Read",
+   "build": "any",
+   "size": 264,
+   "start": "df13bdcf7148b224",
+   "body": "8935ddcc3ede65c4",
+   "signed_from": "main.dol",
+   "registration": "NAND_IOS_Read_HLE"
+  },
+  {
+   "name": "IOS::ReadAsync",
+   "build": "any",
+   "size": 256,
+   "start": "e52d32e215c648fd",
+   "body": "0d6962be5579a62f",
+   "signed_from": "main.dol",
+   "registration": "IOS_ReadAsync_HLE"
+  },
+  {
+   "name": "IOS::Seek",
+   "build": "any",
+   "size": 232,
+   "start": "5596916b10797468",
+   "body": "7514ddd32df40242",
+   "signed_from": "main.dol",
+   "registration": "NAND_IOS_Seek_HLE"
+  },
+  {
+   "name": "IOS::SeekAsync",
+   "build": "any",
+   "size": 224,
+   "start": "781a47ade1ece623",
+   "body": "7fffaa3af277d3dd",
+   "signed_from": "main.dol",
+   "registration": "IOS_SeekAsync_HLE"
+  },
+  {
+   "name": "IOS::Write",
+   "build": "any",
+   "size": 264,
+   "start": "5596916b10797468",
+   "body": "e6e79e0e7c0c4b76",
+   "signed_from": "main.dol",
+   "registration": "NAND_IOS_Write_HLE"
+  },
+  {
+   "name": "IOS::WriteAsync",
+   "build": "any",
+   "size": 256,
+   "start": "781a47ade1ece623",
+   "body": "9eb9914f96052314",
+   "signed_from": "main.dol",
+   "registration": "IOS_WriteAsync_HLE"
+  },
+  {
+   "name": "IPCCltInit",
+   "build": "any",
+   "size": 180,
+   "start": "ca421ce53b5a2ef7",
+   "body": "ecb8b5f6cf17ecb1",
+   "signed_from": "main.dol",
+   "registration": "IPCCltInit_80193478"
+  },
+  {
+   "name": "KPAD::GetUnifiedWpadStatus",
+   "build": "any",
+   "size": 192,
+   "start": "9d36d0be1d503fd9",
+   "body": "a563640804ffe173",
+   "signed_from": "main.dol",
+   "registration": "KPAD__GetUnifiedWpadStatus_HLE"
+  },
+  {
+   "name": "KPAD::Read",
+   "build": "any",
+   "size": 1836,
+   "start": "6833a0ebc7703bd4",
+   "body": "0ac025cf333f1cd7",
+   "signed_from": "main.dol",
+   "registration": "KPAD__Read_HLE"
+  },
+  {
+   "name": "LCStoreData",
+   "build": "any",
+   "size": 160,
+   "start": "66b6492ba0b1ee6f",
+   "body": "ec837ae5dae70abf",
+   "signed_from": "main.dol",
+   "registration": "LCStoreData_HLE_801a18dc"
+  },
+  {
+   "name": "NAND::Check",
+   "build": "any",
+   "size": 264,
+   "start": "86292256b4ba58a0",
+   "body": "46926ce2e06481b3",
+   "signed_from": "main.dol",
+   "registration": "NANDCheck_HLE"
+  },
+  {
+   "name": "NAND::Close",
+   "build": "any",
+   "size": 108,
+   "start": "1353eba3b5585375",
+   "body": "af4eee126a44ce81",
+   "signed_from": "main.dol",
+   "registration": "NANDClose_HLE"
+  },
+  {
+   "name": "NAND::CloseAsync",
+   "build": "any",
+   "size": 136,
+   "start": "4f248738b9716671",
+   "body": "3ee29fb6ceb8fa3d",
+   "signed_from": "main.dol",
+   "registration": "NANDCloseAsync_HLE"
+  },
+  {
+   "name": "NAND::Delete",
+   "build": "any",
+   "size": 176,
+   "start": "c793e56d4ae7efc1",
+   "body": "f141113db316a5ec",
+   "signed_from": "main.dol",
+   "registration": "NANDDelete_HLE"
+  },
+  {
+   "name": "NAND::GetCurrentDir",
+   "build": "any",
+   "size": 124,
+   "start": "5865422953357f58",
+   "body": "f455ea21ccab8b11",
+   "signed_from": "main.dol",
+   "registration": "NANDGetCurrentDir_HLE"
+  },
+  {
+   "name": "NAND::GetLength",
+   "build": "any",
+   "size": 136,
+   "start": "4c79cbed27d623f0",
+   "body": "8c0b7b545afeeb1f",
+   "signed_from": "main.dol",
+   "registration": "NANDGetLength_HLE"
+  },
+  {
+   "name": "NAND::GetLengthAsync",
+   "build": "any",
+   "size": 144,
+   "start": "e7b27144ae66a9e1",
+   "body": "34f51753c62be617",
+   "signed_from": "main.dol",
+   "registration": "NANDGetLengthAsync_HLE"
+  },
+  {
+   "name": "NAND::GetType",
+   "build": "any",
+   "size": 68,
+   "start": "997534e5177c838f",
+   "body": "f9d44f3a2daa195d",
+   "signed_from": "main.dol",
+   "registration": "NANDGetType_HLE"
+  },
+  {
+   "name": "NAND::Init",
+   "build": "any",
+   "size": 300,
+   "start": "bb189fc76b77ef9e",
+   "body": "f9c8788af3efef89",
+   "signed_from": "main.dol",
+   "registration": "NANDInit_HLE"
+  },
+  {
+   "name": "NAND::Open",
+   "build": "any",
+   "size": 140,
+   "start": "85b88ba16d7659b6",
+   "body": "b6995f1f2d2d73e5",
+   "signed_from": "main.dol",
+   "registration": "NANDOpen_HLE"
+  },
+  {
+   "name": "NAND::OpenAsync",
+   "build": "any",
+   "size": 120,
+   "start": "d05147e1ce0e485c",
+   "body": "c5a622f1d0472f7c",
+   "signed_from": "main.dol",
+   "registration": "NANDOpenAsync_HLE"
+  },
+  {
+   "name": "NAND::Private::DeleteAsync",
+   "build": "any",
+   "size": 192,
+   "start": "e2e3f7bab690123e",
+   "body": "ac77d0d0bfb4b290",
+   "signed_from": "main.dol",
+   "registration": "NANDPrivateDeleteAsync_HLE"
+  },
+  {
+   "name": "NAND::Private::GetStatusAsync",
+   "build": "any",
+   "size": 132,
+   "start": "e7b27144ae66a9e1",
+   "body": "5aebbc6b4e75a9ee",
+   "signed_from": "main.dol",
+   "registration": "NANDPrivateGetStatusAsync_HLE"
+  },
+  {
+   "name": "NAND::Private::GetTypeAsync",
+   "build": "any",
+   "size": 72,
+   "start": "8347765477d78ec5",
+   "body": "e8f0939d5507a33c",
+   "signed_from": "main.dol",
+   "registration": "NANDPrivateGetTypeAsync_HLE"
+  },
+  {
+   "name": "NAND::Private::OpenAsync",
+   "build": "any",
+   "size": 120,
+   "start": "d05147e1ce0e485c",
+   "body": "0d6aed6edc78e00a",
+   "signed_from": "main.dol",
+   "registration": "NANDPrivateOpenAsync_HLE"
+  },
+  {
+   "name": "NAND::Seek",
+   "build": "any",
+   "size": 160,
+   "start": "95bb8ba5cd571767",
+   "body": "cb3b823f0d255f1a",
+   "signed_from": "main.dol",
+   "registration": "NANDSeek_HLE"
+  },
+  {
+   "name": "NAND::SeekAsync",
+   "build": "any",
+   "size": 176,
+   "start": "d05147e1ce0e485c",
+   "body": "d8dc90f9faf9b950",
+   "signed_from": "main.dol",
+   "registration": "NANDSeekAsync_HLE"
+  },
+  {
+   "name": "OS::CancelThread",
+   "build": "any",
+   "size": 472,
+   "start": "293e05d29719b906",
+   "body": "a480552dceb5d534",
+   "signed_from": "main.dol",
+   "registration": "OSCancelThread_HLE_801aa1d4"
+  },
+  {
+   "name": "OS::CheckInstall",
+   "build": "any",
+   "size": 212,
+   "start": "2dc496621db2bf17",
+   "body": "ac3a52d0f50247c5",
+   "signed_from": "main.dol",
+   "registration": "OS__CheckInstall"
+  },
+  {
+   "name": "OS::CreateThread",
+   "build": "any",
+   "size": 620,
+   "start": "f17ec6bb7608eb4f",
+   "body": "b9a6129da4233516",
+   "signed_from": "main.dol",
+   "registration": "OSCreateThread_HLE_801a9e84"
+  },
+  {
+   "name": "OS::DetachThread",
+   "build": "any",
+   "size": 160,
+   "start": "91dde8e78744821c",
+   "body": "1868398b02b0b6ce",
+   "signed_from": "main.dol",
+   "registration": "OSDetachThread_HLE_801aa4ec"
+  },
+  {
+   "name": "OS::ExceptionInit",
+   "build": "any",
+   "size": 88,
+   "start": "5941f68908bdfb8e",
+   "body": "c357c6786c15cd60",
+   "signed_from": "main.dol",
+   "registration": "OS__ExceptionInit_801a00e0"
+  },
+  {
+   "name": "OS::GetConsoleType",
+   "build": "any",
+   "size": 644,
+   "start": "b9e98751fb7908ef",
+   "body": "913d1bb8a3898e90",
+   "signed_from": "main.dol",
+   "registration": "OS__GetConsoleType_8019f33c"
+  },
+  {
+   "name": "OS::IsTitleInstalled",
+   "build": "any",
+   "size": 132,
+   "start": "ff116b25b96d1c84",
+   "body": "4f4174e7ac1b1ac1",
+   "signed_from": "main.dol",
+   "registration": "OS__IsTitleInstalled"
+  },
+  {
+   "name": "OS::JoinThread",
+   "build": "any",
+   "size": 320,
+   "start": "987f8d1813dbaa0f",
+   "body": "3d15fc5bcb49f343",
+   "signed_from": "main.dol",
+   "registration": "OSJoinThread_HLE_801aa3ac"
+  },
+  {
+   "name": "OS::LoadContext",
+   "build": "any",
+   "size": 216,
+   "start": "917a45aec1a36769",
+   "body": "2476f7b91d5026dd",
+   "signed_from": "main.dol",
+   "registration": "OS__LoadContext_801a1f58"
+  },
+  {
+   "name": "OS::LockMutex",
+   "build": "any",
+   "size": 220,
+   "start": "3f930a77e06dd8ed",
+   "body": "f04a5a7c3c345eb8",
+   "signed_from": "main.dol",
+   "registration": "OSLockMutex_HLE_801a7ee4"
+  },
+  {
+   "name": "OS::Panic",
+   "build": "any",
+   "size": 300,
+   "start": "38fb1af64ac0ae2c",
+   "body": "b6bc52d5d7f8a277",
+   "signed_from": "main.dol",
+   "registration": "OS__Panic_801A2660_Cpu"
+  },
+  {
+   "name": "OS::Report",
+   "build": "any",
+   "size": 140,
+   "start": "0b39a3d15f8db39b",
+   "body": "a8a9ed7f04b29412",
+   "signed_from": "main.dol",
+   "registration": "OS__Report_801a25d0"
+  },
+  {
+   "name": "OS::ResumeThread",
+   "build": "any",
+   "size": 664,
+   "start": "bd0a25e2e1bb5cf5",
+   "body": "71dcb9363c76699f",
+   "signed_from": "main.dol",
+   "registration": "OSResumeThread_HLE_801aa58c"
+  },
+  {
+   "name": "OS::SetAlarm",
+   "build": "any",
+   "size": 112,
+   "start": "17734864a57b5cb8",
+   "body": "afa352b9c070a1ec",
+   "signed_from": "main.dol",
+   "registration": "OSSetAlarm_HLE_801a0870"
+  },
+  {
+   "name": "OS::SetCurrentContext",
+   "build": "any",
+   "size": 92,
+   "start": "2555b1f3548229a9",
+   "body": "375f043f78b4b068",
+   "signed_from": "main.dol",
+   "registration": "OS__SetCurrentContext_801a1e70"
+  },
+  {
+   "name": "OS::SetPeriodicAlarm",
+   "build": "any",
+   "size": 132,
+   "start": "3ccd0aea783cdea5",
+   "body": "a0a82ebe2d759811",
+   "signed_from": "main.dol",
+   "registration": "OS__SetPeriodicAlarm_801a08e0"
+  },
+  {
+   "name": "OS::SleepThread",
+   "build": "any",
+   "size": 236,
+   "start": "89c03421380e284e",
+   "body": "a85113a55c6c616e",
+   "signed_from": "main.dol",
+   "registration": "OSSleepThread_HLE_801aa9b8"
+  },
+  {
+   "name": "OS::UnlockMutex",
+   "build": "any",
+   "size": 200,
+   "start": "1c052c7a74bef658",
+   "body": "8ca5e1f00b803f0f",
+   "signed_from": "main.dol",
+   "registration": "OSUnlockMutex_HLE_801a7fc0"
+  },
+  {
+   "name": "OS::WakeupThread",
+   "build": "any",
+   "size": 244,
+   "start": "4b2c5b4371c4a2b9",
+   "body": "91d0565fbad8b8ee",
+   "signed_from": "main.dol",
+   "registration": "OSWakeupThread_HLE_801aaaa4"
+  },
+  {
+   "name": "OS::__GetSystemTime",
+   "build": "any",
+   "size": 100,
+   "start": "1ba520efbfb3cdbd",
+   "body": "cf828a46a1eb80dc",
+   "signed_from": "main.dol",
+   "registration": "OS____GetSystemTime_801aad7c"
+  },
+  {
+   "name": "OS::__InitAudioSystem",
+   "build": "any",
+   "size": 456,
+   "start": "720dcc1704b873e2",
+   "body": "7a7e096e6ad49887",
+   "signed_from": "main.dol",
+   "registration": "OSInitAudioSystem_801A1358"
+  },
+  {
+   "name": "OS::__InitMemoryProtection",
+   "build": "any",
+   "size": 176,
+   "start": "076592840a6a42de",
+   "body": "b48294dcf80be735",
+   "signed_from": "main.dol",
+   "registration": "OS____InitMemoryProtection_801a7dfc"
+  },
+  {
+   "name": "OS::__InitSTM",
+   "build": "any",
+   "size": 280,
+   "start": "9196b410cba22d7a",
+   "body": "8275eb95bc49d20a",
+   "signed_from": "main.dol",
+   "registration": "__OSInitSTM_HLE_801ab848"
+  },
+  {
+   "name": "OS::__InterruptInit",
+   "build": "any",
+   "size": 196,
+   "start": "39458daf68ac66d1",
+   "body": "e89e11bb3cc6ec9c",
+   "signed_from": "main.dol",
+   "registration": "OS____InterruptInit_801a661c"
+  },
+  {
+   "name": "OS::__MaskInterrupts",
+   "build": "any",
+   "size": 128,
+   "start": "3abf60b832d89dfa",
+   "body": "4c5af7e4589f8b32",
+   "signed_from": "main.dol",
+   "registration": "OS____MaskInterrupts_801a693c"
+  },
+  {
+   "name": "OS::__PSInit",
+   "build": "any",
+   "size": 84,
+   "start": "1b28d6c4d8e6e4ab",
+   "body": "a25855eb32078214",
+   "signed_from": "main.dol",
+   "registration": "OS____PSInit_801a04a0"
+  },
+  {
+   "name": "OS::__StopAudioSystem",
+   "build": "any",
+   "size": 204,
+   "start": "189a053bced66f5f",
+   "body": "36ab5bb7cbfbb21b",
+   "signed_from": "main.dol",
+   "registration": "OSStopAudioSystem_801A1520"
   },
   {
    "name": "OSDisableInterrupts",
@@ -80,6 +1556,609 @@
    "exact": "54db610a580003e2",
    "signed_from": "main.dol",
    "registration": "OS__RestoreInterrupts_801a65d4"
+  },
+  {
+   "name": "PAD::ControlMotor",
+   "build": "any",
+   "size": 184,
+   "start": "e9caf26901a437d7",
+   "body": "81cfda70487720ec",
+   "signed_from": "main.dol",
+   "registration": "PAD__ControlMotor_HLE"
+  },
+  {
+   "name": "PAD::Init",
+   "build": "any",
+   "size": 348,
+   "start": "252d7ade588287f6",
+   "body": "09eae1bca89a84e1",
+   "signed_from": "main.dol",
+   "registration": "PAD__Init_HLE"
+  },
+  {
+   "name": "PAD::Read",
+   "build": "any",
+   "size": 1212,
+   "start": "6bba8dc1d34d4834",
+   "body": "ed91c0778f8a64e9",
+   "signed_from": "main.dol",
+   "registration": "PAD__Read_HLE"
+  },
+  {
+   "name": "PAD::Recalibrate",
+   "build": "any",
+   "size": 268,
+   "start": "018a7bfa29da6b1a",
+   "body": "d8ea294e5d10b54d",
+   "signed_from": "main.dol",
+   "registration": "PAD__Recalibrate_HLE"
+  },
+  {
+   "name": "PAD::Reset",
+   "build": "any",
+   "size": 264,
+   "start": "1a70951d8ddc6765",
+   "body": "663bf8e765bfc8cc",
+   "signed_from": "main.dol",
+   "registration": "PAD__Reset_HLE"
+  },
+  {
+   "name": "PPCMthid4",
+   "build": "any",
+   "size": 80,
+   "start": "795809e06d411f69",
+   "body": "2f301830d4e9a400",
+   "signed_from": "main.dol",
+   "registration": "PPCMthid4_8012e684"
+  },
+  {
+   "name": "RVL::EXIDeselect",
+   "build": "any",
+   "size": 256,
+   "start": "25d66072fcdacecd",
+   "body": "abb69d6e7ceb0def",
+   "signed_from": "main.dol",
+   "registration": "EXIDeselect_80168b00"
+  },
+  {
+   "name": "RVL::EXIDma",
+   "build": "any",
+   "size": 248,
+   "start": "f03a1d88bfa5da8f",
+   "body": "c139539637656e0f",
+   "signed_from": "main.dol",
+   "registration": "EXIDma_80168288"
+  },
+  {
+   "name": "RVL::EXIImm",
+   "build": "any",
+   "size": 636,
+   "start": "f03a1d88bfa5da8f",
+   "body": "72eabe0c0287776d",
+   "signed_from": "main.dol",
+   "registration": "EXIImm_80167f68"
+  },
+  {
+   "name": "RVL::EXISelect",
+   "build": "any",
+   "size": 304,
+   "start": "0ff95f4259e87f7d",
+   "body": "9d7ffe07abceeaa9",
+   "signed_from": "main.dol",
+   "registration": "EXISelect_801689d0"
+  },
+  {
+   "name": "RVL::EXISync",
+   "build": "any",
+   "size": 636,
+   "start": "e4efccbb52a96279",
+   "body": "a0a07393acc53139",
+   "signed_from": "main.dol",
+   "registration": "EXISync_80168380"
+  },
+  {
+   "name": "RVL::EXIUnlock",
+   "build": "any",
+   "size": 216,
+   "start": "812b327562f5eea5",
+   "body": "ef2731fcedc0afb8",
+   "signed_from": "main.dol",
+   "registration": "EXIUnlock_80169260"
+  },
+  {
+   "name": "RVL::OS::ExitThread",
+   "build": "any",
+   "size": 228,
+   "start": "34c2c1d3f266b23d",
+   "body": "def8bea5a5966d7e",
+   "signed_from": "main.dol",
+   "registration": "OSExitThread_HLE_801aa0f0"
+  },
+  {
+   "name": "SCCheckStatus",
+   "build": "any",
+   "size": 284,
+   "start": "1671bf26b408833a",
+   "body": "5fef726df971ad3b",
+   "signed_from": "main.dol",
+   "registration": "SCCheckStatus_HLE"
+  },
+  {
+   "name": "SCGetAspectRatio",
+   "build": "any",
+   "size": 84,
+   "start": "e40d3aa58c52b3c8",
+   "body": "7f6bcfba03a85b11",
+   "signed_from": "main.dol",
+   "registration": "SCGetAspectRatio_HLE"
+  },
+  {
+   "name": "SCGetEuRgb60Mode",
+   "build": "any",
+   "size": 84,
+   "start": "59ea1beefe838953",
+   "body": "704c0490bca0a19b",
+   "signed_from": "main.dol",
+   "registration": "SCGetEuRgb60Mode_HLE"
+  },
+  {
+   "name": "SCGetProductArea",
+   "build": "any",
+   "size": 132,
+   "start": "f623055c37d88956",
+   "body": "02e3ba88227f78c5",
+   "signed_from": "main.dol",
+   "registration": "SCGetProductArea_HLE"
+  },
+  {
+   "name": "SCGetProductGameRegion",
+   "build": "any",
+   "size": 132,
+   "start": "891ccb115863dd83",
+   "body": "140adbafd294ed73",
+   "signed_from": "main.dol",
+   "registration": "SCGetProductGameRegion_HLE"
+  },
+  {
+   "name": "SCGetProductSN",
+   "build": "any",
+   "size": 104,
+   "start": "8e4136315357d544",
+   "body": "5a4494df9f55c4c9",
+   "signed_from": "main.dol",
+   "registration": "SCGetProductSN_HLE"
+  },
+  {
+   "name": "SISetSamplingRate",
+   "build": "any",
+   "size": 216,
+   "start": "d143ab360ea5787b",
+   "body": "cc81337bd2461025",
+   "signed_from": "main.dol",
+   "registration": "HLE_SISetSamplingRate_801b3acc"
+  },
+  {
+   "name": "SelectThread",
+   "build": "any",
+   "size": 552,
+   "start": "b8f4c66335b47a64",
+   "body": "8f6889a26a765126",
+   "signed_from": "main.dol",
+   "registration": "SelectThread_801a9c08"
+  },
+  {
+   "name": "SetExiInterruptMask",
+   "build": "any",
+   "size": 240,
+   "start": "94bbb8ec0c411d39",
+   "body": "ed0b47decd064612",
+   "signed_from": "main.dol",
+   "registration": "SetExiInterruptMask_80167e78"
+  },
+  {
+   "name": "SetInterruptMask",
+   "build": "any",
+   "size": 604,
+   "start": "4065bc0719404899",
+   "body": "675bc05ce1fe75f5",
+   "signed_from": "main.dol",
+   "registration": "SetInterruptMask_801a66e0"
+  },
+  {
+   "name": "THPVideoDecode",
+   "build": "any",
+   "size": 704,
+   "start": "c9b9b1122a96b69c",
+   "body": "b7067c1bfd095fd8",
+   "signed_from": "main.dol",
+   "registration": "THPVideoDecode_HLE"
+  },
+  {
+   "name": "VIConfigure",
+   "build": "any",
+   "size": 1764,
+   "start": "94d9cc6bf795124c",
+   "body": "fd10193d3f45d56b",
+   "signed_from": "main.dol",
+   "registration": "VIConfigure_HLE_801b9f6c"
+  },
+  {
+   "name": "VIFlush",
+   "build": "any",
+   "size": 276,
+   "start": "2aa6238b593c0885",
+   "body": "d140c4fa05c32faf",
+   "signed_from": "main.dol",
+   "registration": "VIFlush_HLE_801ba9a4"
+  },
+  {
+   "name": "VIGetCurrentLine",
+   "build": "any",
+   "size": 144,
+   "start": "8bbc1e074127d1d8",
+   "body": "de14e69c2fc65cc3",
+   "signed_from": "main.dol",
+   "registration": "VIGetCurrentLine_HLE_801bac48"
+  },
+  {
+   "name": "VIGetNextField",
+   "build": "any",
+   "size": 156,
+   "start": "dfa6a90c2ab0b75e",
+   "body": "83c745bfa0e9f020",
+   "signed_from": "main.dol",
+   "registration": "VIGetNextField_HLE_801babac"
+  },
+  {
+   "name": "VIInit",
+   "build": "any",
+   "size": 1164,
+   "start": "6f4887b0bb97f59b",
+   "body": "ecd02611bccae37d",
+   "signed_from": "main.dol",
+   "registration": "VIInit_HLE_801b94a4"
+  },
+  {
+   "name": "VIInit_caseD_2",
+   "build": "any",
+   "size": 168,
+   "start": "aaedfdc4b0bea269",
+   "body": "4980e4d7c966ce8b",
+   "signed_from": "main.dol",
+   "registration": "VIInit_caseD_2_HLE_801b9944"
+  },
+  {
+   "name": "VISetBlack",
+   "build": "any",
+   "size": 120,
+   "start": "a7ddff3c6e9a4819",
+   "body": "edddcdec1e695ea1",
+   "signed_from": "main.dol",
+   "registration": "VISetBlack_HLE_801bab2c"
+  },
+  {
+   "name": "VISetNextFrameBuffer",
+   "build": "any",
+   "size": 108,
+   "start": "083cb5835ec8b4c9",
+   "body": "b3abbbde81530a70",
+   "signed_from": "main.dol",
+   "registration": "VISetNextFrameBuffer_HLE_801baab8"
+  },
+  {
+   "name": "VIWaitForRetrace",
+   "build": "any",
+   "size": 84,
+   "start": "c23543c6902b1c58",
+   "body": "ddb8e82e722eba48",
+   "signed_from": "main.dol",
+   "registration": "VIWaitForRetrace_HLE_801b99ec"
+  },
+  {
+   "name": "WPAD::ControlMotor",
+   "build": "any",
+   "size": 204,
+   "start": "c10312a977af9d11",
+   "body": "e8769ebd6cc0362d",
+   "signed_from": "main.dol",
+   "registration": "WPADControlMotor_HLE"
+  },
+  {
+   "name": "WPAD::GetDataFormat",
+   "build": "any",
+   "size": 72,
+   "start": "7f5740cd038af1a6",
+   "body": "dccefc1d7bb37788",
+   "signed_from": "main.dol",
+   "registration": "WPADGetDataFormat_HLE"
+  },
+  {
+   "name": "WPAD::GetInfoAsync",
+   "build": "any",
+   "size": 544,
+   "start": "94977028c4dac899",
+   "body": "11cc08c1005ea32a",
+   "signed_from": "main.dol",
+   "registration": "WPADGetInfoAsync_HLE"
+  },
+  {
+   "name": "WPAD::Init",
+   "build": "any",
+   "size": 112,
+   "start": "89e430a5d0c30bf9",
+   "body": "4f1317d7b6a4b1a5",
+   "signed_from": "main.dol",
+   "registration": "WPADInit_HLE"
+  },
+  {
+   "name": "WPAD::Probe",
+   "build": "any",
+   "size": 140,
+   "start": "b9832be5c62e6cd3",
+   "body": "5084907fd32b1a8d",
+   "signed_from": "main.dol",
+   "registration": "WPADProbe_HLE"
+  },
+  {
+   "name": "WPAD::SetDataFormat",
+   "build": "any",
+   "size": 180,
+   "start": "7d531cf09181df8c",
+   "body": "e76dd0bc40fb2e8e",
+   "signed_from": "main.dol",
+   "registration": "WPADSetDataFormat_HLE"
+  },
+  {
+   "name": "WPADControlLed",
+   "build": "any",
+   "size": 488,
+   "start": "f5f2a6dcd717d97b",
+   "body": "5fadb3b40343081f",
+   "signed_from": "main.dol",
+   "registration": "WPADControlLed_HLE"
+  },
+  {
+   "name": "WPADiInitSub",
+   "build": "any",
+   "size": 528,
+   "start": "588a0734eec16e3a",
+   "body": "cef03c08d0050a94",
+   "signed_from": "main.dol",
+   "registration": "WPADInitSub_HLE"
+  },
+  {
+   "name": "__AIClockInit",
+   "build": "any",
+   "size": 544,
+   "start": "d13a911ea9a4c440",
+   "body": "f1215b50a75e87b6",
+   "signed_from": "main.dol",
+   "registration": "AIClockInit_801A1138"
+  },
+  {
+   "name": "__AXOutInitDSP",
+   "build": "any",
+   "size": 240,
+   "start": "771ece1da71c4b85",
+   "body": "1fa486485752ba75",
+   "signed_from": "main.dol",
+   "registration": "__AXOutInitDSP_801269bc"
+  },
+  {
+   "name": "__DSP_boot_task",
+   "build": "any",
+   "size": 396,
+   "start": "5d7f4c8d48ebf277",
+   "body": "ee0264a75f050235",
+   "signed_from": "main.dol",
+   "registration": "__DSP_boot_task_8015dc60"
+  },
+  {
+   "name": "__DVDCheckDevice",
+   "build": "any",
+   "size": 648,
+   "start": "90bc96ecf8dc3b28",
+   "body": "7550b74b344c337b",
+   "signed_from": "main.dol",
+   "registration": "DVDCheckDevice_801643FC"
+  },
+  {
+   "name": "__GX::Abort",
+   "build": "any",
+   "size": 356,
+   "start": "95ecfd5ec6f415e8",
+   "body": "2b6e45b3332a1d94",
+   "signed_from": "main.dol",
+   "registration": "gx_stub_8016e6e4"
+  },
+  {
+   "name": "__GX::CalculateVLim",
+   "build": "any",
+   "size": 300,
+   "start": "6108fd26b5207354",
+   "body": "aa2d9c523cf3955d",
+   "signed_from": "main.dol",
+   "registration": "gx_stub_8016d8c4"
+  },
+  {
+   "name": "__GX::CleanGPFifo",
+   "build": "any",
+   "size": 416,
+   "start": "39b24f8ae1b0d733",
+   "body": "e810e8a3e1752cb2",
+   "signed_from": "main.dol",
+   "registration": "gx_stub_8016d1fc"
+  },
+  {
+   "name": "__GX::DefaultTexRegionCallback",
+   "build": "any",
+   "size": 244,
+   "start": "af91b65af3a036df",
+   "body": "abaf2eafe6249591",
+   "signed_from": "main.dol",
+   "registration": "gx_stub_8016b49c"
+  },
+  {
+   "name": "__GX::InitRevisionBits",
+   "build": "any",
+   "size": 304,
+   "start": "cccae0c05a3016b3",
+   "body": "23c3279d99da2c12",
+   "signed_from": "main.dol",
+   "registration": "__GX__InitRevisionBits_8016b720"
+  },
+  {
+   "name": "__GX::PEInit",
+   "build": "any",
+   "size": 100,
+   "start": "c9699a8ed79e34e5",
+   "body": "ae52e9bd5345e713",
+   "signed_from": "main.dol",
+   "registration": "__GX__PEInit_8016ee14"
+  },
+  {
+   "name": "__GX::SaveFifo",
+   "build": "any",
+   "size": 256,
+   "start": "961af322614d162b",
+   "body": "b09e9a71d0a9abe3",
+   "signed_from": "main.dol",
+   "registration": "__GX__SaveFifo_8016cdbc"
+  },
+  {
+   "name": "__GX::SetDirtyState",
+   "build": "any",
+   "size": 632,
+   "start": "16922fabc5a91b15",
+   "body": "b4d355e671699ff1",
+   "signed_from": "main.dol",
+   "registration": "GX__SetDirtyState_8016ee78"
+  },
+  {
+   "name": "__GX::SetMatrixIndex",
+   "build": "any",
+   "size": 136,
+   "start": "e71ab95f6fffd6c6",
+   "body": "e9ed68dff6c9a85b",
+   "signed_from": "main.dol",
+   "registration": "gx_stub_80173544"
+  },
+  {
+   "name": "__GX::SetProjection",
+   "build": "any",
+   "size": 68,
+   "start": "356a6bb26dd4b1f1",
+   "body": "dd38c3e8a29712df",
+   "signed_from": "main.dol",
+   "registration": "gx_stub_80172fd8"
+  },
+  {
+   "name": "__GX::SetSUTexRegs",
+   "build": "any",
+   "size": 360,
+   "start": "2a31760c3c934a13",
+   "body": "f47206df0fe31a5f",
+   "signed_from": "main.dol",
+   "registration": "__GX__SetSUTexRegs_801712f0"
+  },
+  {
+   "name": "__GX::SetTmemConfig",
+   "build": "any",
+   "size": 792,
+   "start": "9ab6103136922404",
+   "body": "be79cbb7db6a5ae2",
+   "signed_from": "main.dol",
+   "registration": "__GX__SetTmemConfig_80171458"
+  },
+  {
+   "name": "__GX::SetVAT",
+   "build": "any",
+   "size": 128,
+   "start": "231a675a531248ad",
+   "body": "4cecac50efa6eeae",
+   "signed_from": "main.dol",
+   "registration": "gx_stub_8016dfcc"
+  },
+  {
+   "name": "__GX::SetVCD",
+   "build": "any",
+   "size": 176,
+   "start": "0da5203a8955d226",
+   "body": "2d3a457b04fb40a8",
+   "signed_from": "main.dol",
+   "registration": "gx_stub_8016d814"
+  },
+  {
+   "name": "__GX::SetViewport",
+   "build": "any",
+   "size": 144,
+   "start": "4edfcd8b5e38a868",
+   "body": "3729dbdbf2aee78e",
+   "signed_from": "main.dol",
+   "registration": "gx_stub_801732e8"
+  },
+  {
+   "name": "__GX::Shutdown",
+   "build": "any",
+   "size": 364,
+   "start": "6aaa3d78ae4015ca",
+   "body": "2da4f23f642e9060",
+   "signed_from": "main.dol",
+   "registration": "gx_stub_8016b5b4"
+  },
+  {
+   "name": "__VIInit",
+   "build": "any",
+   "size": 528,
+   "start": "27bc5e01b0529bc2",
+   "body": "3f7de708417cd754",
+   "signed_from": "main.dol",
+   "registration": "__VIInit_HLE_801b9294"
+  },
+  {
+   "name": "__write_console",
+   "build": "any",
+   "size": 208,
+   "start": "5a40d64c261136d7",
+   "body": "49bd7c8760d86db4",
+   "signed_from": "main.dol",
+   "registration": "ConsoleWrite_HLE_80015500"
+  },
+  {
+   "name": "contentFastOpenNAND",
+   "build": "any",
+   "size": 108,
+   "start": "e1c3cadb5cab7e31",
+   "body": "911827b09d2bfb5d",
+   "signed_from": "main.dol",
+   "registration": "contentFastOpenNAND_HLE"
+  },
+  {
+   "name": "contentReadNAND",
+   "build": "any",
+   "size": 160,
+   "start": "b11cdd23b972ac80",
+   "body": "6563215848783c1f",
+   "signed_from": "main.dol",
+   "registration": "contentReadNAND_HLE"
+  },
+  {
+   "name": "exit",
+   "build": "any",
+   "size": 76,
+   "start": "517109188d412265",
+   "body": "d365885c768e89f2",
+   "signed_from": "main.dol",
+   "registration": "Exit_801AE58C"
+  },
+  {
+   "name": "nw4r::lyt::Pane::CalculateMtx",
+   "build": "any",
+   "size": 768,
+   "start": "541510397e9b2cb9",
+   "body": "9ef42c69bec34bf1",
+   "signed_from": "main.dol",
+   "registration": "LytPaneCalculateMtx_HLE"
   },
   {
    "name": "nw4r::lyt::Pane::CalculateMtx",

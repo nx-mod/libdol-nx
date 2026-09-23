@@ -126,6 +126,45 @@ signature against a second game before adding it, which is what the uniqueness
 check inside it is for. Compiled C changes between builds and still needs a
 signature per build.
 
+## Signing the library's own natives
+
+The console's natives are registered at the address they have in the game they
+were written from. `wiinx-sign-natives` signs them all from that game, using
+its symbol map for the function extents:
+
+```sh
+tools/wiinx-sign-natives mkwii-nx/disc/sys/main.dol mkwii-nx/MAP.txt --write
+```
+
+Each signature must find the function it was taken from, in that same game,
+and find it once - a signature that matches somewhere else is describing
+different code and is dropped rather than shipped.
+
+They are signed against no build, because the masking removes what differs
+between builds. That is worth stating plainly: the masker blanks branch
+targets, `lis` halves, small-data displacements, **and the `addi`, `ori` or
+load displacement that completes an address a `lis` started**. Without that
+last one, the same function in two builds of the same library hashed
+differently - four instructions out of 138 in `SelectThread`, each the low half
+of a global's address, was enough.
+
+What that bought, from one game's 560 registrations:
+
+| game | SDK vintage | natives bound |
+|---|---|---|
+| Mario Kart Wii (signed from) | 2007-08 | 242 |
+| Punch-Out!! | 2008 | 198 |
+| Wii Sports rev 1 | 2006-07 | 190 |
+| New Super Mario Bros. Wii | 2009 | 98 |
+
+They are matched by code and have not been run. A wrong binding is worse than
+none, which is why the uniqueness and self-checks above exist, and why a native
+that does not match is simply left to the game's own code.
+
+307 of the 560 are shorter than the 16-instruction window and cannot be signed
+this way; the ten that are hand-written assembly are covered by `sign-asm`, and
+the rest wait for a way to identify short functions safely.
+
 ## The console's own natives
 
 `accel` natives are bound this way today, and so are the ten assembly
