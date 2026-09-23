@@ -29,6 +29,10 @@
 #include "wiinx/core/guest.hpp"
 #include "wiinx/core/host.hpp"
 
+#if defined(__ARM_NEON)
+#include <arm_neon.h>
+#endif
+
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -343,6 +347,69 @@ void Decoder::Idct(const float coef[64], const float quant[64], uint8_t* plane,
                    uint32_t planeWidth, uint32_t x0, uint32_t y0) const {
     float ws[64];
 
+#if defined(__ARM_NEON)
+    // The column pass does the same arithmetic to eight independent columns, so
+    // four of them fit in one register and the whole pass is two iterations.
+    // The DC-only shortcut survives: it is taken when all four columns have no
+    // AC coefficients, which is the common case in video.
+    for (int col = 0; col < 8; col += 4) {
+        const float32x4_t q0 = vld1q_f32(quant + col);
+        const float32x4_t c0 = vmulq_f32(vld1q_f32(coef + col), q0);
+
+        float32x4_t ac = vabsq_f32(vld1q_f32(coef + col + 8));
+        for (int k = 16; k <= 56; k += 8) {
+            ac = vaddq_f32(ac, vabsq_f32(vld1q_f32(coef + col + k)));
+        }
+        if (vmaxvq_f32(ac) == 0.0f) {
+            for (int row = 0; row < 8; ++row) {
+                vst1q_f32(ws + row * 8 + col, c0);
+            }
+            continue;
+        }
+
+        const float32x4_t c2 = vmulq_f32(vld1q_f32(coef + col + 32), vld1q_f32(quant + col + 32));
+        const float32x4_t c1 = vmulq_f32(vld1q_f32(coef + col + 16), vld1q_f32(quant + col + 16));
+        const float32x4_t c3 = vmulq_f32(vld1q_f32(coef + col + 48), vld1q_f32(quant + col + 48));
+
+        const float32x4_t t10 = vaddq_f32(c0, c2);
+        const float32x4_t t11 = vsubq_f32(c0, c2);
+        const float32x4_t t13 = vaddq_f32(c1, c3);
+        const float32x4_t t12 = vsubq_f32(vmulq_n_f32(vsubq_f32(c1, c3), 1.414213562f), t13);
+
+        const float32x4_t e0 = vaddq_f32(t10, t13);
+        const float32x4_t e3 = vsubq_f32(t10, t13);
+        const float32x4_t e1 = vaddq_f32(t11, t12);
+        const float32x4_t e2 = vsubq_f32(t11, t12);
+
+        const float32x4_t o4 = vmulq_f32(vld1q_f32(coef + col + 8), vld1q_f32(quant + col + 8));
+        const float32x4_t o5 = vmulq_f32(vld1q_f32(coef + col + 24), vld1q_f32(quant + col + 24));
+        const float32x4_t o6 = vmulq_f32(vld1q_f32(coef + col + 40), vld1q_f32(quant + col + 40));
+        const float32x4_t o7 = vmulq_f32(vld1q_f32(coef + col + 56), vld1q_f32(quant + col + 56));
+
+        const float32x4_t z13 = vaddq_f32(o6, o5);
+        const float32x4_t z10 = vsubq_f32(o6, o5);
+        const float32x4_t z11 = vaddq_f32(o4, o7);
+        const float32x4_t z12 = vsubq_f32(o4, o7);
+
+        const float32x4_t f7 = vaddq_f32(z11, z13);
+        const float32x4_t f11 = vmulq_n_f32(vsubq_f32(z11, z13), 1.414213562f);
+        const float32x4_t z5 = vmulq_n_f32(vaddq_f32(z10, z12), 1.847759065f);
+        const float32x4_t f10 = vsubq_f32(vmulq_n_f32(z12, 1.082392200f), z5);
+        const float32x4_t f12 = vaddq_f32(vmulq_n_f32(z10, -2.613125930f), z5);
+        const float32x4_t f6 = vsubq_f32(f12, f7);
+        const float32x4_t f5 = vsubq_f32(f11, f6);
+        const float32x4_t f4 = vaddq_f32(f10, f5);
+
+        vst1q_f32(ws + 0 * 8 + col, vaddq_f32(e0, f7));
+        vst1q_f32(ws + 7 * 8 + col, vsubq_f32(e0, f7));
+        vst1q_f32(ws + 1 * 8 + col, vaddq_f32(e1, f6));
+        vst1q_f32(ws + 6 * 8 + col, vsubq_f32(e1, f6));
+        vst1q_f32(ws + 2 * 8 + col, vaddq_f32(e2, f5));
+        vst1q_f32(ws + 5 * 8 + col, vsubq_f32(e2, f5));
+        vst1q_f32(ws + 4 * 8 + col, vaddq_f32(e3, f4));
+        vst1q_f32(ws + 3 * 8 + col, vsubq_f32(e3, f4));
+    }
+#else
     for (int col = 0; col < 8; ++col) {
         const float* in = coef + col;
         const float* q = quant + col;
@@ -377,6 +444,7 @@ void Decoder::Idct(const float coef[64], const float quant[64], uint8_t* plane,
         ws[2 * 8 + col] = tmp2 + tmp5; ws[5 * 8 + col] = tmp2 - tmp5;
         ws[4 * 8 + col] = tmp3 + tmp4; ws[3 * 8 + col] = tmp3 - tmp4;
     }
+#endif
 
     const auto store = [&](uint32_t x, uint32_t y, float value) {
         int32_t v = static_cast<int32_t>((value + 1024.0f) * 0.125f);
@@ -403,6 +471,22 @@ void Decoder::Idct(const float coef[64], const float quant[64], uint8_t* plane,
         const float tmp6 = tmp12 - tmp7, tmp5 = tmp11 - tmp6, tmp4 = tmp10 + tmp5;
 
         const uint32_t y = y0 + static_cast<uint32_t>(row);
+#if defined(__ARM_NEON)
+        // The eight pixels of a row land in eight consecutive bytes of the
+        // tile, so the scale, the clamp and the store are one vector each
+        // instead of eight scalar clamps and eight byte writes.
+        if ((x0 & 7) == 0) {
+            const float32x4_t lo{tmp0 + tmp7, tmp1 + tmp6, tmp2 + tmp5, tmp3 - tmp4};
+            const float32x4_t hi{tmp3 + tmp4, tmp2 - tmp5, tmp1 - tmp6, tmp0 - tmp7};
+            const float32x4_t bias = vdupq_n_f32(1024.0f);
+            const int32x4_t iLo = vcvtq_s32_f32(vmulq_n_f32(vaddq_f32(lo, bias), 0.125f));
+            const int32x4_t iHi = vcvtq_s32_f32(vmulq_n_f32(vaddq_f32(hi, bias), 0.125f));
+            const uint8x8_t packed =
+                vqmovn_u16(vcombine_u16(vqmovun_s32(iLo), vqmovun_s32(iHi)));
+            vst1_u8(plane + (y >> 2) * (planeWidth * 4) + (x0 >> 3) * 32 + (y & 3) * 8, packed);
+            continue;
+        }
+#endif
         store(x0 + 0, y, tmp0 + tmp7); store(x0 + 7, y, tmp0 - tmp7);
         store(x0 + 1, y, tmp1 + tmp6); store(x0 + 6, y, tmp1 - tmp6);
         store(x0 + 2, y, tmp2 + tmp5); store(x0 + 5, y, tmp2 - tmp5);

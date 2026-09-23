@@ -56,6 +56,11 @@ std::atomic<uint32_t> g_schedIdleEntries{0};      // times the scheduler found n
 std::atomic<uint64_t> g_schedIdleUs{0};           // and how long it spun there
 std::atomic<uint32_t> g_gxDrawDoneCalls{0};       // guest waits for the GP to drain
 std::atomic<uint64_t> g_gxDrawDoneUs{0};
+extern "C" {
+extern uint64_t g_auroraRegWrites[3];
+extern uint64_t g_auroraProcessCalls;
+extern uint64_t g_auroraProcessBytes;
+}
 extern std::atomic<uint32_t> g_dlScanHits;
 extern std::atomic<uint32_t> g_dlScanMisses;
 extern std::atomic<uint32_t> g_dlScanDigests;
@@ -674,6 +679,22 @@ void AdvanceRetrace(CpuContext* ctx, Clock::time_point retraceStamp, bool servic
                       drawArrays, static_cast<unsigned long long>((storage - lastStorage) / 1024u / deltaFrames),
                       drawPipeline, drawTextures, drawBind, drawUniform);
         SwitchBootLogExternal(dl);
+        // What the decoder was actually asked to do, so a guess about volume
+        // can be checked against a count.
+        static uint64_t lastRegs[3] = {0, 0, 0};
+        static uint64_t lastProcCalls = 0, lastProcBytes = 0;
+        char regs[200];
+        std::snprintf(regs, sizeof(regs),
+                      "[gxregs] per frame: bp=%llu cp=%llu xf=%llu | process calls=%llu bytes=%lluKB",
+                      static_cast<unsigned long long>((g_auroraRegWrites[0] - lastRegs[0]) / deltaFrames),
+                      static_cast<unsigned long long>((g_auroraRegWrites[1] - lastRegs[1]) / deltaFrames),
+                      static_cast<unsigned long long>((g_auroraRegWrites[2] - lastRegs[2]) / deltaFrames),
+                      static_cast<unsigned long long>((g_auroraProcessCalls - lastProcCalls) / deltaFrames),
+                      static_cast<unsigned long long>((g_auroraProcessBytes - lastProcBytes) / 1024u / deltaFrames));
+        lastRegs[0] = g_auroraRegWrites[0]; lastRegs[1] = g_auroraRegWrites[1];
+        lastRegs[2] = g_auroraRegWrites[2];
+        lastProcCalls = g_auroraProcessCalls; lastProcBytes = g_auroraProcessBytes;
+        SwitchBootLogExternal(regs);
         static uint64_t lastSyncWaitNs = 0;
         static uint32_t lastSyncCount = 0;
         char syncLine[160];
