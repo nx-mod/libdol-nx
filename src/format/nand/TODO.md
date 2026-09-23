@@ -2,11 +2,12 @@
 
 ## Titles
 
-- [ ] Install a title: write a WAD's ticket, TMD and contents where the NAND
-      keeps them, including the shared-content map `/shared1/content.map`
-- [ ] Remove one, and say what it was using
-- [ ] List what is installed, with each title's version and kind, for a launcher
-      to show ([docs/titles.md](../../../docs/titles.md))
+- [x] Install a title: a WAD's ticket, TMD and contents written where the NAND
+      keeps them, shared contents included
+- [x] Remove one, leaving what other titles share
+- [x] List what is installed, with each title's version and what it carries
+- [ ] Say what a removed title *was* using, so a launcher can offer to clean up
+      shared contents nothing needs any more
 - [ ] Decrypt a content in the library, given a key the caller holds: the format
       and both IVs are here, the cipher is not. `tools/wiinx-wad` does it today
       on a PC

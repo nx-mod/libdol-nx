@@ -44,6 +44,7 @@ add_library(wiinx_format STATIC
     src/format/nand/sysconf.cpp
     src/format/nand/title.cpp
     src/format/nand/wad.cpp
+    src/format/nand/store.cpp
     src/format/media/thp.cpp
     src/format/archive/yaz0.cpp
     src/format/archive/u8.cpp

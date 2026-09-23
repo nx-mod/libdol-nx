@@ -3,8 +3,8 @@
 #
 #   tools/wiinx-translate <game folder> [--threads N]
 #
-# The folder is a game project (wiinx-new-game made it) with its disc
-# extracted. Runs libdol-nx's translator over its recomp.yml in four steps:
+# The folder is a game project - one wiinx-new-game made from a disc, or one
+# built around a title's own executable. Runs libdol-nx's translator over its recomp.yml in four steps:
 #
 #   1. translate-recursive   every function reachable from the entry points
 #   2. emit-base-manifest    the table of translated functions
@@ -34,7 +34,19 @@ done
 dir=$(cd "$game" 2>/dev/null && pwd) || { echo "no such folder: $game" >&2; exit 1; }
 project="$dir/recomp.yml"
 [ -f "$project" ] || { echo "no game project at $dir (no recomp.yml)" >&2; exit 1; }
-[ -d "$dir/disc" ] || { echo "$dir has no extracted disc: run wiinx-new-game, or wiinx-extract-disc" >&2; exit 1; }
+# What the project translates is whatever its recomp.yml points at. A disc game
+# keeps that under disc/; a title installed from a WAD has no disc at all, and
+# its executable is the content its loader expands.
+executable=$(sed -n 's/^ *path: *\(.*main\.dol\) *$/\1/p' "$dir/recomp.yml" | head -1)
+if [ -z "$executable" ]; then
+    executable=$(sed -n '/^ *dol:/,/sha256/s/^ *path: *\(.*\) *$/\1/p' "$dir/recomp.yml" | head -1)
+fi
+if [ -z "$executable" ] || [ ! -f "$dir/$executable" ]; then
+    echo "$dir: recomp.yml names no executable that is there." >&2
+    echo "  A disc game wants wiinx-new-game or wiinx-extract-disc." >&2
+    echo "  A title from a WAD wants wiinx-wad, and its payload as inputs.dol." >&2
+    exit 1
+fi
 
 # The natives translated calls bind to, as the project names them.
 registration=$(sed -n 's/^[[:space:]]*native_registration_root:[[:space:]]*//p' "$project" | head -1)
