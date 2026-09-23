@@ -15,6 +15,10 @@ inline constexpr const LibVersion& kThp_2007_08 = builds::kRvlThp_2007_08_08;  /
 // wherever they are.
 inline constexpr LibVersion kMtx_Any{"rvl.mtx@any", "rvl.mtx", "any build"};
 
+// The C library the game's compiler linked. Its semantics are the standard's,
+// so a native serves every game whatever compiler wrote it.
+inline constexpr LibVersion kMsl_Any{"msl@any", "msl", "any build"};
+
 // Every sdk native, for wiinx::add_natives().
 std::span<const Native> natives() noexcept;
 
