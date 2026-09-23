@@ -16,6 +16,7 @@ set(WIINX_CHECKS
     archive_u8_check    # U8 archives, and the shapes to refuse
     archive_cx_check    # LZ77 and LZ11, and the streams to refuse
     nand_store_check    # installing a title, listing it, removing it
+    media_banner_check  # what a title calls itself, and its picture
 )
 
 foreach(check IN LISTS WIINX_CHECKS)
@@ -36,3 +37,4 @@ add_test(NAME disc COMMAND disc_check)
 add_test(NAME archive_u8 COMMAND archive_u8_check)
 add_test(NAME archive_cx COMMAND archive_cx_check)
 add_test(NAME nand_store COMMAND nand_store_check)
+add_test(NAME media_banner COMMAND media_banner_check)

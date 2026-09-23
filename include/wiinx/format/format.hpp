@@ -21,5 +21,6 @@
 #include "wiinx/format/disc/container.hpp"
 #include "wiinx/format/disc/image.hpp"
 #include "wiinx/format/disc/rvz.hpp"
+#include "wiinx/format/media/banner.hpp"
 #include "wiinx/format/media/thp.hpp"
 #include "wiinx/format/nand/nand.hpp"
