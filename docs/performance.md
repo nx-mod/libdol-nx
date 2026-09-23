@@ -83,12 +83,28 @@ calls** - 1,492 a frame, about 8.5 us each. Two things follow:
   and state loaders looked like the hot spots - they are the code emitting and
   calling these lists.
 
-The scan of a list is already cached (`DlScanCache`: digests keyed by write
-tracking, CP writes replayed, flattening kept), so what remains is Aurora
-parsing the list's bytes again on every call and re-submitting its draws. The
-work that would move it is caching the *decoded* result - replaying a list's
-draws without re-parsing - keyed on the same layout state the scan cache
-already uses.
+Where those 12.6 ms go, with the scan counters and section timers in place:
+
+| | per frame |
+|---|---|
+| inside Aurora's decoder (`process`: parse + submit draws) | 9.2 ms |
+| replaying the list's CP register writes | 2.1 ms |
+| the scan on a cache miss, flattening, index bounds | ~1 ms |
+| publishing vertex state afterwards | 0.2 ms |
+
+**Caching a display list does not work, and the cache cannot be fixed.**
+Measured in a race: 723 hits against 864 misses a frame. Keying the cache on
+the list's content rather than its address - so a list rebuilt into a different
+scratch buffer each frame would still be recognised - changed nothing: 952
+misses, and no digest collisions. The lists a game builds for its animated
+models differ in their own bytes every frame, matrix indices among them, so
+there is nothing for a cache to recognise. That attempt was reverted; only its
+counters were kept.
+
+What is left is Aurora's decoder itself, and the draws it submits: of the
+9.2 ms, about 3 ms was measured as draw submission (pipeline 1.0 ms, textures
+0.7 ms, vertex arrays 0.5 ms, bind 0.3 ms, uniforms 0.4 ms) when those timers
+were on, leaving roughly 6 ms parsing bytes that have to be parsed.
 
 ## Where a frame goes (threaded off, menus)
 

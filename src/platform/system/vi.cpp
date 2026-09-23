@@ -56,6 +56,9 @@ std::atomic<uint32_t> g_schedIdleEntries{0};      // times the scheduler found n
 std::atomic<uint64_t> g_schedIdleUs{0};           // and how long it spun there
 std::atomic<uint32_t> g_gxDrawDoneCalls{0};       // guest waits for the GP to drain
 std::atomic<uint64_t> g_gxDrawDoneUs{0};
+extern std::atomic<uint32_t> g_dlScanHits;
+extern std::atomic<uint32_t> g_dlScanMisses;
+extern std::atomic<uint32_t> g_dlScanDigests;
 extern std::atomic<uint32_t> g_gxFifoCalls;
 extern std::atomic<uint64_t> g_gxFifoTicks;
 extern std::atomic<uint64_t> g_gxFifoSectionTicks[6];
@@ -652,10 +655,21 @@ void AdvanceRetrace(CpuContext* ctx, Clock::time_point retraceStamp, bool servic
         const unsigned long long drawUniform = perFrameUs(g_auroraDrawTicks[5], lastDraw[5]);
         const uint32_t drawCount = g_auroraDrawCount;
         const uint64_t storage = g_auroraStorageBytes;
+        // Per frame, like everything else on this line.
+        static uint32_t lastScanHits = 0, lastScanMisses = 0, lastScanDigests = 0;
+        const uint32_t hitsNow = g_dlScanHits.load(std::memory_order_relaxed);
+        const uint32_t missesNow = g_dlScanMisses.load(std::memory_order_relaxed);
+        const uint32_t digestsNow = g_dlScanDigests.load(std::memory_order_relaxed);
+        const uint32_t scanHits = (hitsNow - lastScanHits) / deltaFrames;
+        const uint32_t scanMisses = (missesNow - lastScanMisses) / deltaFrames;
+        const uint32_t scanDigests = (digestsNow - lastScanDigests) / deltaFrames;
+        lastScanHits = hitsNow; lastScanMisses = missesNow; lastScanDigests = digestsNow;
+
         char dl[256];
         std::snprintf(dl, sizeof(dl),
-                      "[gxdl] per frame: aurora=%lluus sync=%lluus apply=%lluus | draws=%u total=%lluus "
+                      "[gxdl] per frame: scan hit=%u miss=%u digest=%u | aurora=%lluus sync=%lluus apply=%lluus | draws=%u total=%lluus "
                       "arrays=%lluus (%lluKB) pipeline=%lluus textures=%lluus bind=%lluus uniform=%lluus",
+                      scanHits, scanMisses, scanDigests,
                       dlAurora, dlSync, dlApply, (drawCount - lastDrawCount) / deltaFrames, drawTotal,
                       drawArrays, static_cast<unsigned long long>((storage - lastStorage) / 1024u / deltaFrames),
                       drawPipeline, drawTextures, drawBind, drawUniform);
