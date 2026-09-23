@@ -98,6 +98,25 @@ def sign(scan, dol, entries):
     return signed
 
 
+def write_symbols(signed, out=SYMBOLS):
+    """Add these signatures to the set, keeping what is already there."""
+    existing = {}
+    if os.path.exists(out):
+        with gzip.open(out, "rt") as handle:
+            existing = json.load(handle)["functions"]
+    for key, items in signed.items():
+        known = existing.setdefault(key, [])
+        for item in items:
+            # The same code under the same name from two games is one fact.
+            if not any(k["body"] == item["body"] and k["name"] == item["name"] for k in known):
+                known.append(item)
+    with gzip.open(out, "wt") as handle:
+        json.dump({"about": "Function names by code, signed from games whose symbols are known."
+                            " Hashes, never code.", "functions": existing}, handle)
+    print(f"wrote {out}: {sum(len(v) for v in existing.values())} signatures, "
+          f"{os.path.getsize(out) / 1048576:.1f} MB")
+
+
 def main(argv):
     if len(argv) < 2:
         print(__doc__.strip())
@@ -113,21 +132,7 @@ def main(argv):
     print(f"signed:                     {total}")
 
     if "--write" in argv:
-        existing = {}
-        if os.path.exists(out):
-            with gzip.open(out, "rt") as handle:
-                existing = json.load(handle)["functions"]
-        for key, items in signed.items():
-            known = existing.setdefault(key, [])
-            for item in items:
-                # The same code under the same name from two games is one fact.
-                if not any(k["body"] == item["body"] and k["name"] == item["name"] for k in known):
-                    known.append(item)
-        with gzip.open(out, "wt") as handle:
-            json.dump({"about": "Function names by code, signed from games whose symbols are known."
-                                " Hashes, never code.", "functions": existing}, handle)
-        print(f"wrote {out}: {sum(len(v) for v in existing.values())} signatures, "
-              f"{os.path.getsize(out) / 1048576:.1f} MB")
+        write_symbols(signed, out)
     return 0
 
 

@@ -217,16 +217,22 @@ carries *names*: `data/symbols.json.gz` holds one signature per named function
 from every game whose symbol map anyone has, and `wiinx-name` gives those names
 to a game nobody has mapped.
 
-The maps come from two places. Some are reconstructed by decompilation projects;
-others shipped on the disc, because a few GameCube games were pressed with the
-compiler's own link map still in their filesystem.
+The names come from three places. Some maps are reconstructed by decompilation
+projects; some shipped on the disc, because a few GameCube games were pressed
+with the compiler's own link map still in their filesystem; and a few games
+shipped an ELF with its symbol table intact, the disc's DOL being only a loader.
+`wiinx-sign-map` reads the first two, `wiinx-sign-elf` the third.
 
 What it is worth, measured:
 
 | From | Into | Named |
 |---|---|---|
 | Mario Kart: Double Dash!! (`debugInfoS.MAP`, on the disc) | Super Mario Sunshine | 336 |
-| Mario Kart Wii | New Super Mario Bros. Wii | 2,282 |
+| the whole set | New Super Mario Bros. Wii | 2,266 |
+| the whole set | a WiiWare game's payload (Crystal Defenders) | 2,526 |
+
+Every game measured here is one the set does not contain: a game already in it
+would be naming itself.
 
 A name is a hypothesis, not a fact: a short function can match another game's
 code by coincidence. Natives are never bound this way - they bind by verified

@@ -1,0 +1,126 @@
+#!/usr/bin/env python3
+"""Sign the functions in an executable that carries its own symbols.
+
+    tools/wiinx-sign-elf <file.elf> [--write] [--out FILE]
+
+A handful of GameCube games were pressed with an ELF still in their filesystem,
+symbol table and all - the disc's DOL is only a loader, and the ELF is the game.
+That table names thousands of functions, and signing them puts those names
+within reach of every other game that links the same code.
+
+Same destination as wiinx-sign-map: `data/symbols.json.gz`, which is hashes and
+names and never code.
+"""
+import os
+import struct
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+def load(name, alias):
+    """Run one of the other tools as a module, so its machinery can be reused."""
+    source = open(os.path.join(HERE, name)).read()
+    module = type(sys)(alias)
+    module.__dict__["__file__"] = os.path.join(HERE, name)
+    exec(compile(source.replace("def main(argv):", "def _unused(argv):"), name, "exec"),
+         module.__dict__)
+    return module
+
+
+class Elf:
+    """An ELF, presented the way the signing machinery reads a DOL.
+
+    GameCube and Wii executables are 32-bit big-endian PowerPC, so this reads
+    that and nothing else.
+    """
+
+    def __init__(self, path):
+        with open(path, "rb") as handle:
+            self.data = handle.read()
+        if self.data[:4] != b"\x7fELF" or self.data[4] != 1 or self.data[5] != 2:
+            raise SystemExit(f"{path}: not a 32-bit big-endian ELF")
+
+        (self.machine,) = struct.unpack_from(">H", self.data, 0x12)
+        if self.machine != 20:  # EM_PPC
+            raise SystemExit(f"{path}: not PowerPC (machine {self.machine})")
+
+        shoff, = struct.unpack_from(">I", self.data, 0x20)
+        shentsize, shnum, shstrndx = struct.unpack_from(">HHH", self.data, 0x2E)
+
+        self.sections = []
+        for index in range(shnum):
+            at = shoff + index * shentsize
+            name, kind, flags, addr, offset, size, link, info, align, entsize = \
+                struct.unpack_from(">IIIIIIIIII", self.data, at)
+            self.sections.append({"name": name, "type": kind, "flags": flags, "addr": addr,
+                                  "offset": offset, "size": size, "link": link,
+                                  "entsize": entsize})
+
+        names = self.sections[shstrndx]
+        for section in self.sections:
+            start = names["offset"] + section["name"]
+            end = self.data.index(b"\0", start)
+            section["title"] = self.data[start:end].decode("ascii", "replace")
+
+    def text(self):
+        """(address, bytes) for every section the processor executes."""
+        for section in self.sections:
+            if section["flags"] & 0x4 and section["type"] == 1 and section["size"]:  # EXECINSTR
+                start = section["offset"]
+                yield section["addr"], self.data[start:start + section["size"]]
+
+    def read(self, address, length):
+        for start, blob in self.text():
+            if start <= address and address + length <= start + len(blob):
+                return blob[address - start:address - start + length]
+        return None
+
+    def functions(self):
+        """[(address, name)] for every function the symbol table names."""
+        symbols = next((s for s in self.sections if s["title"] == ".symtab"), None)
+        if symbols is None:
+            raise SystemExit("this ELF has no symbol table")
+        strings = self.sections[symbols["link"]]
+
+        ranges = [(start, start + len(blob)) for start, blob in self.text()]
+        found = []
+        count = symbols["size"] // (symbols["entsize"] or 16)
+        for index in range(count):
+            at = symbols["offset"] + index * symbols["entsize"]
+            name, value, size, info, other, shndx = struct.unpack_from(">IIIBBH", self.data, at)
+            if info & 0xF != 2:          # STT_FUNC
+                continue
+            if not any(start <= value < end for start, end in ranges):
+                continue
+            begin = strings["offset"] + name
+            end = self.data.index(b"\0", begin)
+            text = self.data[begin:end].decode("ascii", "replace")
+            if text:
+                found.append((value, text))
+        return sorted(set(found))
+
+
+def main(argv):
+    if not argv or argv[0] in ("-h", "--help"):
+        print(__doc__.strip())
+        return 2
+
+    signer = load("wiinx-sign-map", "wiinx_sign_map")
+    scan = signer.load_scan()
+
+    elf = Elf(argv[0])
+    entries = elf.functions()
+    print(f"functions the symbol table names: {len(entries)}")
+
+    signed = signer.sign(scan, elf, entries)
+    print(f"signed:                           {sum(len(v) for v in signed.values())}")
+
+    if "--write" in argv:
+        out = argv[argv.index("--out") + 1] if "--out" in argv else signer.SYMBOLS
+        signer.write_symbols(signed, out)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))
