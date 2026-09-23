@@ -170,16 +170,22 @@ What that bought, from one game's 560 registrations:
 |---|---|---|
 | Mario Kart Wii (signed from) | 2007-08 | 350 |
 | Wii Sports rev 1 (signed from) | 2006-07 | 312 |
+| New Super Mario Bros. Wii (signed from) | 2009 | 311 |
 | Punch-Out!! | 2008 | 277 |
-| New Super Mario Bros. Wii | 2009 | 97 |
+
+Punch-Out!! is the one game here with no symbol map of its own, so it only ever
+receives; its count rises whenever another game is signed from.
 
 They are matched by code and have not been run. A wrong binding is worse than
 none, which is why the uniqueness and self-checks above exist, and why a native
 that does not match is simply left to the game's own code.
 
-The count falls off with distance from the games signed so far: New Super Mario
-Bros. Wii's 2009 SDK shares least with a 2006-08 one. Signing from a third game
-is what moves it, and needs that game's symbols.
+Where a game's symbols come from, when the game has no decompilation of its
+own: New Super Mario Bros. Wii's are a published symbol map
+(github.com/RootCubed/NSMBW-Maps), one file per version, and the one for this
+disc named every address the scan had already bound by code - 97 of 97, from a
+project with no connection to this one. That is the strongest check these
+signatures have had.
 
 ## The console's own natives
 
