@@ -9,6 +9,7 @@ need.
 | [Signatures and scanning](signatures.md) | binding a game, or a native is not found in a game |
 | [Writing a native](natives.md) | adding a native, or a new build of one |
 | [Game hooks](game-hooks.md) | a game needs something of its own from the runtime |
+| [Performance](performance.md) | what a frame costs on hardware, and the settings that have been measured |
 | [Tools](../tools/README.md) | what each tool in `tools/` does |
 
 Each part of the library also has a README next to its code, with notes kept
