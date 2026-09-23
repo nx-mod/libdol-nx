@@ -23,3 +23,16 @@ listing what is installed.
   rather than trusting a length it read.
 - **No game data.** Formats are described here; the files themselves belong to
   whoever owns the disc.
+
+## Where these formats are written down
+
+Nothing here was guessed at. Each module's file header says what its format is
+and where that came from, and the sources fall into three kinds:
+
+- **the code that reads them**, in CC0 decompilations - `doldecomp/ogws` for
+  nw4r, `doldecomp/mkdd` and `zeldaret/tp` for the SDK. Authoritative, because
+  it is the original's own logic.
+- **the format's own documentation** - Dolphin's `docs/WiaAndRvz.md` for RVZ,
+  YAGCD and wiibrew for the hardware and the NAND.
+- **the files themselves**, which is what settles a disagreement: every reader
+  here has been run against real dumps, and three RVZ bugs were found that way.
