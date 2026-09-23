@@ -24,7 +24,12 @@ CpuContext* context(wiinx::Cpu* cpu) { return reinterpret_cast<CpuContext*>(cpu)
 
 void WiinxInstallHost() {
     wiinx::Host host;
-    host.memory = MKW_FLAT_GUEST_BASE;
+    // Through the runtime's own resolution, not by adding to a base: parts of
+    // the guest's address space are not in the flat mapping, and a native that
+    // computed its own pointer faulted on the first pane that lived in one.
+    host.pointer = [](wiinx::GuestAddr addr, wiinx::u32 size) -> wiinx::u8* {
+        return Memory::Contains(addr, size) ? Memory::GetPointer(addr, size) : nullptr;
+    };
     host.valid = [](wiinx::GuestAddr addr, wiinx::u32 size) { return Memory::Contains(addr, size); };
     host.gpr = [](wiinx::Cpu* cpu, int index) { return static_cast<wiinx::u32>(context(cpu)->gpr[index]); };
     host.set_gpr = [](wiinx::Cpu* cpu, int index, wiinx::u32 value) { context(cpu)->gpr[index] = value; };

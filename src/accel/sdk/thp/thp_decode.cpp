@@ -26,6 +26,7 @@
 // algorithm with the same constants, AAN-scaled quantisation tables and a
 // 1024-bias / 8 output step, so the pixels agree with the original's.
 #include "wiinx/accel/sdk.hpp"
+#include "wiinx/core/guest.hpp"
 #include "wiinx/core/host.hpp"
 
 #include <algorithm>
@@ -475,7 +476,11 @@ int32_t Decode(uint32_t file, uint32_t tileY, uint32_t tileU, uint32_t tileV, ui
     const size_t readable = ReadableFrom(file);
     if (readable == 0) return kThpBadSyntax;
 
-    Decoder decoder(h.memory + file, readable);
+    u8* const fileBytes = at(file, static_cast<u32>(readable));
+    if (fileBytes == nullptr) {
+        return kThpNoOutput;
+    }
+    Decoder decoder(fileBytes, readable);
     const int32_t header = decoder.ParseHeaders();
     if (header != kThpOk) return header;
 
@@ -485,7 +490,13 @@ int32_t Decode(uint32_t file, uint32_t tileY, uint32_t tileU, uint32_t tileV, ui
         return kThpNoOutput;
     }
 
-    const int32_t result = decoder.Decode(h.memory + tileY, h.memory + tileU, h.memory + tileV);
+    u8* const luma = at(tileY, lumaBytes);
+    u8* const chromaU = at(tileU, lumaBytes / 4);
+    u8* const chromaV = at(tileV, lumaBytes / 4);
+    if (luma == nullptr || chromaU == nullptr || chromaV == nullptr) {
+        return kThpNoOutput;
+    }
+    const int32_t result = decoder.Decode(luma, chromaU, chromaV);
 
     // The planes are GX textures, and the renderer only re-reads a texture when
     // told its memory changed. The SDK decoder writes each strip with

@@ -30,10 +30,38 @@ struct Mtx34 {
     f32 m[3][4];
 };
 
+// How much guest memory a value occupies: a matrix is twelve floats, and
+// anything else is its own size.
+template <class T>
+constexpr u32 sizeof_guest() noexcept {
+    if constexpr (std::is_same_v<T, Mtx34>) {
+        return 12 * static_cast<u32>(sizeof(f32));
+    } else {
+        return static_cast<u32>(sizeof(T));
+    }
+}
+
 // Loads and stores of guest memory. Mtx34 is read element-wise.
+// Where `size` bytes of guest memory are, through whichever way the host
+// offers. A native that reads without checking gets what it deserves, so the
+// callers below go through Guest<>'s checked helpers or check first.
+inline u8* at(GuestAddr addr, u32 size) noexcept {
+    const Host& h = host();
+    if (h.pointer != nullptr) {
+        return h.pointer(addr, size);
+    }
+    return h.memory != nullptr ? h.memory + addr : nullptr;
+}
+
 template <class T>
 T load(GuestAddr addr) noexcept {
-    const u8* p = host().memory + addr;
+    const u8* p = at(addr, sizeof_guest<T>());
+    if (p == nullptr) {
+        // Not readable: give a zero rather than fault. A native that cares
+        // checks first; this keeps a bad guest pointer from taking the process
+        // down, which is what the runtime's own accessors did.
+        return T{};
+    }
     if constexpr (std::is_same_v<T, Mtx34>) {
         Mtx34 out;
         for (int r = 0; r < 3; ++r)
@@ -47,7 +75,10 @@ T load(GuestAddr addr) noexcept {
 
 template <class T>
 void store(GuestAddr addr, const T& value) noexcept {
-    u8* p = host().memory + addr;
+    u8* p = at(addr, sizeof_guest<T>());
+    if (p == nullptr) {
+        return;
+    }
     if constexpr (std::is_same_v<T, Mtx34>) {
         for (int r = 0; r < 3; ++r)
             for (int c = 0; c < 4; ++c)

@@ -14,8 +14,14 @@ namespace wiinx {
 struct Cpu;
 
 struct Host {
-    // Guest memory as one flat host mapping: guest address A lives at
-    // memory + A. Every alias of a physical byte resolves the same way.
+    // Where a run of guest memory really is, or nullptr when it is not
+    // readable. A runtime may keep parts of the guest's address space outside
+    // any flat mapping - aliases, sparse regions, memory a game never
+    // configured - so natives ask rather than compute: a pointer worked out by
+    // adding to a base is right until it is not, and then it faults.
+    u8* (*pointer)(GuestAddr addr, u32 size) = nullptr;
+    // A flat mapping, when the runtime has one and it covers every address:
+    // used only when `pointer` is absent (the library's own tests set this).
     u8* memory = nullptr;
     // Whether [addr, addr + size) is real guest memory natives may touch.
     bool (*valid)(GuestAddr addr, u32 size) = nullptr;
