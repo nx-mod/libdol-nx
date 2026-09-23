@@ -8,7 +8,8 @@ installed).
 |---|---|
 | `wiinx-scan` | lists a DOL's library builds; finds natives by signature; finds where a game's functions start, in its own code (`functions`); finds where its copy of the Wii's OS keeps the scheduler's globals (`os-globals`); signs functions; records builds and generates `include/wiinx/core/builds.hpp`. See [docs/signatures.md](../docs/signatures.md) and [docs/builds.md](../docs/builds.md) |
 | `wiinx-extract` | pulls `main.dol`, or any file with `--file <path>`, out of a Wii `.iso` without extracting the disc: decrypts only the clusters it needs |
-| `wiinx-extract-disc` | the whole disc (ISO/WBFS/RVZ/GCZ/CISO), through Dolphin's `dolphin-tool`, with a free-space check |
+| `wiinx-extract-disc` | the whole disc into a game project's `disc/`, through this library's own reader; Dolphin's `dolphin-tool` only as a fallback |
+| `wiinx-disc` | the reader itself (built from `tools/src/`): `info`, `list`, `dol`, `file`, `extract`. Reads raw images, CISO, WBFS, RVZ and WIA, GameCube and Wii |
 | `wiinx-inspect-dol` | a DOL's entry point, sections, BSS and small-data bases; `--yaml` for a project file |
 | `wiinx-wad` | looks inside a WAD - which title it is, what it wants, what it carries - and unpacks one, decrypting each content and writing the executable as `main.dol`. Reads both kinds, installable and boot2 |
 | `wiinx-unpack-u8` | lists or extracts a U8 archive (how channels pack their files), flagging compression inside |

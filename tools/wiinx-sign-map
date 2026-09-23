@@ -33,11 +33,37 @@ def load_scan():
     return module
 
 
+# Two kinds of map are read. The plain one is "<address> <name>" a line. The
+# other is what the compiler itself wrote and several GameCube discs shipped:
+# a section at a time, with each symbol's place in the file, its size, its
+# address in memory, its alignment, its name, and where it came from.
+#
+#   00000054 00015c 80003154  4 __start 	Dolphin.a __start.c
+PLAIN = re.compile(r"^([0-9a-fA-F]{8})\s+(\S.*)$")
+LAYOUT = re.compile(r"^([0-9a-fA-F]{8}) ([0-9a-fA-F]{6}) ([0-9a-fA-F]{8})\s+(\d+) (\S+)")
+SECTION = re.compile(r"^(\S+) section layout$")
+
+
 def symbol_map(path):
     entries = []
-    line = re.compile(r"^([0-9a-fA-F]{8})\s+(\S.*)$")
+    # Only code sections: a map names everything, and a signature over a table
+    # of data would match anything.
+    code = True
     for raw in open(path, errors="ignore"):
-        match = line.match(raw.strip())
+        stripped = raw.strip()
+
+        section = SECTION.match(stripped)
+        if section:
+            code = section.group(1) in (".init", ".text")
+            continue
+
+        layout = LAYOUT.match(stripped)
+        if layout:
+            if code:
+                entries.append((int(layout.group(3), 16), layout.group(5)))
+            continue
+
+        match = PLAIN.match(stripped)
         if match:
             entries.append((int(match.group(1), 16), match.group(2).strip()))
     return sorted(set(entries))

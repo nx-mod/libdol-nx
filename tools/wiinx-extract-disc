@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Extract a Wii disc image into a game's disc/ folder.
+# Extract a disc image into a game's disc/ folder.
 #
 #   tools/wiinx-extract-disc <image> <game-folder>
 #
-# <image> is your own dump: .iso, .wbfs, .rvz, .gcz or .ciso.
+# <image> is your own dump: .iso, .gcm, .wbfs, .ciso, .rvz or .wia.
 # <game-folder> is the project folder; the disc lands in <game-folder>/disc/
 # as files/ and sys/, with sys/main.dol the code the translator reads.
 #
-# Uses Dolphin's dolphin-tool, so the disc's encryption, the WBFS/RVZ container
-# and the partition layout are all handled by code that already knows them.
-# Install it with Dolphin (package dolphin-emu / dolphin-emu-tools).
+# Uses this library's own reader (tools/src/wiinx_disc.cpp), so nothing else has
+# to be installed. If that has not been built, it falls back to Dolphin's
+# dolphin-tool, which handles the same formats and a few more.
 set -euo pipefail
 
 if [ $# -lt 2 ]; then
@@ -20,54 +20,35 @@ fi
 image=$1
 game_dir=$2
 disc_dir="$game_dir/disc"
+here=$(cd "$(dirname "$0")" && pwd)
 
-command -v dolphin-tool >/dev/null || {
-    echo "dolphin-tool not found: install Dolphin (dolphin-emu-tools)" >&2
-    exit 1
-}
 [ -f "$image" ] || { echo "no such image: $image" >&2; exit 1; }
 
-echo ">> $image"
-dolphin-tool header -i "$image"
-
-if [ -f "$disc_dir/sys/main.dol" ]; then
-    echo ">> $disc_dir is already extracted"
-    exit 0
-fi
-if [ -e "$disc_dir" ]; then
-    echo ">> $disc_dir exists but holds no sys/main.dol; remove it to re-extract" >&2
-    exit 1
-fi
-
-# Space check: the extracted disc is about the size of an uncompressed image.
-needed_mb=$(( $(stat -c %s "$image") / 1048576 + 512 ))
-free_mb=$(df -Pm "$game_dir" | awk 'NR==2 {print $4}')
-if [ "$free_mb" -lt "$needed_mb" ]; then
-    echo ">> need about ${needed_mb} MiB free, have ${free_mb} MiB" >&2
-    exit 1
-fi
+# The reader, wherever this checkout built it.
+reader=""
+for candidate in "$here/../build/wiinx-disc" "$here/../build-host/wiinx-disc" \
+                 "$(command -v wiinx-disc || true)"; do
+    if [ -n "$candidate" ] && [ -x "$candidate" ]; then
+        reader=$candidate
+        break
+    fi
+done
 
 mkdir -p "$disc_dir"
-# -g: the game (DATA) partition only, which is what the runtime serves.
-dolphin-tool extract -g -i "$image" -o "$disc_dir"
 
-if [ ! -f "$disc_dir/sys/main.dol" ]; then
-    # Some dolphin-tool builds put the partition in a folder named after it
-    # (DATA/) even when asked for the game partition alone, and others write
-    # files/ and sys/ straight out. Flatten the one that has the game in it, so
-    # every game's disc/ has the same shape and recomp.yml can name one path.
-    partition=$(find "$disc_dir" -mindepth 2 -maxdepth 2 -type d -name sys \
-        -printf '%h\n' 2>/dev/null | head -1)
-    if [ -n "$partition" ] && [ -f "$partition/sys/main.dol" ]; then
-        echo ">> flattening $(basename "$partition")/ into disc/"
-        mv "$partition"/* "$disc_dir"/
-        rmdir "$partition" 2>/dev/null || true
-    fi
+if [ -n "$reader" ]; then
+    echo ">> $image"
+    "$reader" extract "$image" "$disc_dir"
+    exit 0
 fi
 
-if [ ! -f "$disc_dir/sys/main.dol" ]; then
-    echo ">> extraction finished but $disc_dir/sys/main.dol is missing" >&2
+echo "wiinx-disc is not built; falling back to dolphin-tool." >&2
+echo "  cmake -S . -B build && cmake --build build --target wiinx-disc" >&2
+
+command -v dolphin-tool >/dev/null || {
+    echo "dolphin-tool not found either: install Dolphin (dolphin-emu-tools)" >&2
     exit 1
-fi
-echo ">> extracted to $disc_dir"
-du -sh "$disc_dir"
+}
+
+echo ">> $image"
+dolphin-tool extract -i "$image" -o "$disc_dir"

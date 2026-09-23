@@ -21,6 +21,8 @@
       them, since FAT32 stops at 4 GB
 - [ ] NKit: recognised today. Reading it means rebuilding what it removed
 - [ ] The apploader, for a GameCube disc's boot path
+- [ ] Extract straight into a game project, so `wiinx-build` needs nothing
+      installed at all
 - [ ] Verify a partition against its hashes, for a dump that may be damaged
 - [ ] A check against a real dump, on a machine that has one
 

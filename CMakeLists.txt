@@ -128,8 +128,8 @@ endif()
 # ---------------------------------------------------------------------------
 option(WIINX_TOOLS "Build the host tools" ${PROJECT_IS_TOP_LEVEL})
 if(WIINX_TOOLS AND NOT CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
-    add_executable(wiinx-inspect-image tools/src/wiinx_inspect_image.cpp)
-    target_link_libraries(wiinx-inspect-image PRIVATE wiinx::format)
+    add_executable(wiinx-disc tools/src/wiinx_disc.cpp)
+    target_link_libraries(wiinx-disc PRIVATE wiinx::format)
 
     # Zstandard, for the chunks RVZ and WIA are compressed with. Without it the
     # tool still reads everything that is stored plainly.
@@ -138,9 +138,9 @@ if(WIINX_TOOLS AND NOT CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
         pkg_check_modules(ZSTD QUIET libzstd)
     endif()
     if(ZSTD_FOUND)
-        target_compile_definitions(wiinx-inspect-image PRIVATE WIINX_HAVE_ZSTD)
-        target_include_directories(wiinx-inspect-image PRIVATE ${ZSTD_INCLUDE_DIRS})
-        target_link_libraries(wiinx-inspect-image PRIVATE ${ZSTD_LIBRARIES})
+        target_compile_definitions(wiinx-disc PRIVATE WIINX_HAVE_ZSTD)
+        target_include_directories(wiinx-disc PRIVATE ${ZSTD_INCLUDE_DIRS})
+        target_link_libraries(wiinx-disc PRIVATE ${ZSTD_LIBRARIES})
     endif()
 endif()
 
