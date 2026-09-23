@@ -1,15 +1,14 @@
-// Yaz0 decompression, as EGG::Decomp does it.
+// EGG::Decomp::decodeSZS, natively.
 //
-// Every EAD game keeps its archives compressed this way and expands them
-// through this one routine, so it runs for every course, menu and model a game
-// loads. Native, it is a byte loop over host memory instead of a guest one.
-//
-// Reference: the format as described by EGG::Decomp in Kinoko
-// (https://github.com/vabold/Kinoko, MIT), and the overrun reported in
-// szsHaxx (https://github.com/vabold/szsHaxx).
+// Every EAD game keeps its archives compressed and expands them through this
+// one routine, so it runs for every course, menu and model a game loads. The
+// expansion itself is in format/archive; this resolves the guest's buffers and
+// runs it against them.
 #include "wiinx/accel/egg.hpp"
 
+#include "wiinx/core/guest.hpp"
 #include "wiinx/core/host.hpp"
+#include "wiinx/format/archive/yaz0.hpp"
 
 namespace wiinx::egg::decomp {
 namespace {
@@ -20,125 +19,65 @@ void report(const char* line) noexcept {
     }
 }
 
+// A compressed archive does not say how long it is, so find how much guest
+// memory is readable from its start. The bound is generous: no archive a game
+// loads in one call approaches it.
+u32 readable_from(GuestAddr address) noexcept {
+    const Host& h = host();
+    if (h.valid == nullptr) {
+        return 0;
+    }
+    u32 good = 0;
+    u32 probe = 64u * 1024u;
+    constexpr u32 kLimit = 32u * 1024u * 1024u;
+    while (probe <= kLimit && h.valid(address, probe)) {
+        good = probe;
+        probe *= 2;
+    }
+    return good;
+}
+
 }  // namespace
 
 u32 decode_szs(GuestAddr src, GuestAddr dst) noexcept {
-    // The header is "Yaz0", then the expanded size. Read it before anything
-    // else: everything below is bounded by it.
-    const u8* header = host().pointer != nullptr ? host().pointer(src, 16) : nullptr;
+    const Host& h = host();
+
+    // The header says how large the result is, and everything below is bounded
+    // by it.
+    const u8* const header = h.pointer != nullptr ? h.pointer(src, archive::kYaz0HeaderSize) : nullptr;
     if (header == nullptr) {
         report("egg: decodeSZS: unreadable source");
         return 0;
     }
-    const u32 expanded = from_be<u32>(header + 4);
+    const u32 expanded = archive::Yaz0ExpandedSize(header, archive::kYaz0HeaderSize);
+    if (expanded == 0) {
+        report("egg: decodeSZS: not a Yaz0 stream");
+        return 0;
+    }
 
-    u8* out = host().pointer != nullptr ? host().pointer(dst, expanded) : nullptr;
+    u8* const out = at(dst, expanded);
     if (out == nullptr) {
         report("egg: decodeSZS: destination does not fit");
         return 0;
     }
 
-    // The stream is a group of eight codes at a time, each one either a byte to
-    // copy or a back-reference into what has been written already.
-    u32 read = 16;
-    u32 written = 0;
-    u32 mask = 0;
-    u32 flags = 0;
-
-    // The compressed stream is read in order and its length is not in the
-    // header, so it is resolved a window at a time: one address lookup per
-    // 64 KiB rather than one per byte, and a short window at the end of a
-    // region where a whole one would not be readable.
-    constexpr u32 kWindow = 0x10000;
-    const u8* window = nullptr;
-    u32 window_start = 0;
-    u32 window_end = 0;
-
-    const auto source_byte = [&](u32 offset) -> int {
-        const u32 address = src + offset;
-        if (address < window_start || address >= window_end) {
-            u32 size = kWindow;
-            const u8* mapped = nullptr;
-            while (size != 0 && (mapped = host().pointer(address, size)) == nullptr) {
-                size /= 2;
-            }
-            if (mapped == nullptr) {
-                return -1;
-            }
-            window = mapped;
-            window_start = address;
-            window_end = address + size;
-        }
-        return window[address - window_start];
-    };
-
-    while (written < expanded) {
-        if (mask == 0) {
-            const int next = source_byte(read++);
-            if (next < 0) {
-                report("egg: decodeSZS: stream ends inside a group");
-                return 0;
-            }
-            flags = static_cast<u32>(next);
-            mask = 0x80;
-        }
-
-        if ((flags & mask) != 0) {
-            const int literal = source_byte(read++);
-            if (literal < 0) {
-                report("egg: decodeSZS: stream ends inside a literal");
-                return 0;
-            }
-            out[written++] = static_cast<u8>(literal);
-        } else {
-            const int high = source_byte(read);
-            const int low = source_byte(read + 1);
-            if (high < 0 || low < 0) {
-                report("egg: decodeSZS: stream ends inside a reference");
-                return 0;
-            }
-            read += 2;
-
-            const u32 reference = (static_cast<u32>(high) << 8) | static_cast<u32>(low);
-            const u32 distance = (reference & 0xFFF) + 1;
-            if (distance > written) {
-                // Reaching back before the output would read whatever the guest
-                // left in front of the buffer.
-                report("egg: decodeSZS: back-reference before the output");
-                return 0;
-            }
-
-            u32 count = reference >> 12;
-            if (count == 0) {
-                const int extra = source_byte(read++);
-                if (extra < 0) {
-                    report("egg: decodeSZS: stream ends inside a long run");
-                    return 0;
-                }
-                count = static_cast<u32>(extra) + 18;
-            } else {
-                count += 2;
-            }
-            if (written + count > expanded) {
-                report("egg: decodeSZS: run overruns the expanded size");
-                return 0;
-            }
-
-            // The runs overlap by design - a distance of one repeats a byte -
-            // so this copies forward, one byte at a time.
-            u32 from = written - distance;
-            for (u32 index = 0; index < count; index++) {
-                out[written++] = out[from++];
-            }
-        }
-
-        mask >>= 1;
+    const u32 readable = readable_from(src);
+    const u8* const in = readable != 0 ? h.pointer(src, readable) : nullptr;
+    if (in == nullptr) {
+        report("egg: decodeSZS: source does not fit");
+        return 0;
     }
 
-    if (const auto notify = host().notify_write) {
-        notify(dst, expanded);
+    const u32 written = archive::Yaz0Decode(in, readable, out, expanded);
+    if (written == 0) {
+        report("egg: decodeSZS: malformed stream");
+        return 0;
     }
-    return expanded;
+
+    if (const auto notify = h.notify_write) {
+        notify(dst, written);
+    }
+    return written;
 }
 
 }  // namespace wiinx::egg::decomp

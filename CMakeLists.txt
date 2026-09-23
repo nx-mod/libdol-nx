@@ -45,6 +45,7 @@ add_library(wiinx_format STATIC
     src/format/nand/title.cpp
     src/format/nand/wad.cpp
     src/format/media/thp.cpp
+    src/format/archive/yaz0.cpp
 )
 wiinx_section(wiinx_format)
 add_library(wiinx::format ALIAS wiinx_format)
@@ -75,7 +76,7 @@ add_library(wiinx_egg STATIC
     src/accel/egg/egg.cpp
     src/accel/egg/decomp.cpp
 )
-target_link_libraries(wiinx_egg PUBLIC wiinx_core)
+target_link_libraries(wiinx_egg PUBLIC wiinx_core wiinx_format)
 wiinx_section(wiinx_egg)
 add_library(wiinx::egg ALIAS wiinx_egg)
 
