@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+"""What the library covers of a game's SDK, and what it does not.
+
+    tools/wiinx-coverage <game folder> [--profile FILE] [--markdown]
+
+Reads the game's symbol map, groups its functions into the libraries they came
+from, and says how much of each libwii-nx has taken over: natively, by a
+binding, or not at all. With a network log from a run (--profile), the share
+each library took of the main thread is shown beside it, so the gaps are
+ordered by what they cost rather than by how many functions they have.
+
+This is the picture the work needs: until now every target was found by
+noticing it in a profile.
+"""
+import json
+import os
+import re
+import sys
+from collections import defaultdict
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+
+# How a function's name says which library it belongs to. First match wins, so
+# the specific patterns come before the general ones.
+LIBRARIES = [
+    ("nw4r.lyt", re.compile(r"^(nw4r::lyt|.*__Q\d+4nw4r3lyt)")),
+    ("nw4r.g3d", re.compile(r"^(nw4r::g3d|.*__Q\d+4nw4r3g3d)")),
+    ("nw4r.snd", re.compile(r"^(nw4r::snd|.*__Q\d+4nw4r3snd)")),
+    ("nw4r.ef", re.compile(r"^(nw4r::ef|.*__Q\d+4nw4r2ef)")),
+    ("nw4r.math", re.compile(r"^(nw4r::math|.*__Q\d+4nw4r4math)")),
+    ("nw4r.ut", re.compile(r"^(nw4r::ut|.*__Q\d+4nw4r2ut)")),
+    ("egg", re.compile(r"^(EGG::|.*__Q\d+3EGG)")),
+    ("rvl.mtx", re.compile(r"^(MTX::)?(PS|C_)?MTX|^PSMTX")),
+    ("rvl.gx", re.compile(r"^(GX::|GX[A-Z_]|__GX)")),
+    ("rvl.os", re.compile(r"^(OS::|OS[A-Z_]|__OS)")),
+    ("rvl.dvd", re.compile(r"^(DVD::|DVD[A-Z_]|__DVD)")),
+    ("rvl.ax", re.compile(r"^(AX[A-Z_]|__AX)")),
+    ("rvl.dsp", re.compile(r"^(DSP[A-Z_]|__DSP)")),
+    ("rvl.vi", re.compile(r"^(VI[A-Z_]|__VI)")),
+    ("rvl.wpad", re.compile(r"^(WPAD|KPAD)")),
+    ("rvl.nand", re.compile(r"^(NAND|ISFS)")),
+    ("rvl.thp", re.compile(r"^THP")),
+    ("msl", re.compile(r"^(mem(cpy|set|move|cmp)|str(len|cmp|cpy|ncpy|cat)|sprintf|snprintf|"
+                       r"malloc|free|qsort|atoi|strtol)$")),
+]
+
+
+def library_of(name):
+    for library, pattern in LIBRARIES:
+        if pattern.match(name):
+            return library
+    return None
+
+
+def symbol_map(game):
+    path = os.path.join(game, "MAP.txt")
+    if not os.path.exists(path):
+        return []
+    entries, line = [], re.compile(r"^([0-9a-fA-F]{8})\s+(\S.*)$")
+    for raw in open(path, errors="ignore"):
+        found = line.match(raw.strip())
+        if found:
+            entries.append((int(found.group(1), 16), found.group(2).strip()))
+    return entries
+
+
+def replaced_addresses(game):
+    """Every guest address this game's build replaces with a native."""
+    taken = set()
+    pattern = re.compile(r"PPC_NATIVE_OVERRIDE[A-Z_]*\(\s*([0-9A-Fa-f]{8})")
+    for root in (os.path.join(HERE, "..", "src"), os.path.join(game, "native")):
+        for base, _, names in os.walk(root):
+            for name in names:
+                if name.endswith((".cpp", ".h", ".inc")):
+                    with open(os.path.join(base, name), errors="ignore") as handle:
+                        taken.update(int(a, 16) for a in pattern.findall(handle.read()))
+    return taken
+
+
+def profile_shares(path):
+    """{guest address: share of samples}, from a run's network log."""
+    shares = defaultdict(float)
+    counts = defaultdict(int)
+    line = re.compile(r"\[prof\] (?:game|native) #\d+ (0x[0-9A-F]{8}) ([\d.]+)%")
+    with open(path, errors="ignore") as handle:
+        for raw in handle:
+            found = line.search(raw)
+            if found:
+                shares[int(found.group(1), 16)] += float(found.group(2))
+                counts[int(found.group(1), 16)] += 1
+    return {address: shares[address] / counts[address] for address in shares}
+
+
+def main(argv):
+    if not argv:
+        print(__doc__.strip())
+        return 2
+    game = os.path.abspath(argv[0])
+    entries = symbol_map(game)
+    if not entries:
+        print(f"{game} has no MAP.txt, so there is nothing to compare against")
+        return 1
+    taken = replaced_addresses(game)
+    shares = profile_shares(argv[argv.index("--profile") + 1]) if "--profile" in argv else {}
+
+    total = defaultdict(int)
+    native = defaultdict(int)
+    cost = defaultdict(float)
+    for address, name in entries:
+        library = library_of(name)
+        if library is None:
+            continue
+        total[library] += 1
+        if address in taken:
+            native[library] += 1
+        cost[library] += shares.get(address, 0.0)
+
+    rows = sorted(total, key=lambda lib: (-cost[lib], -(total[lib] - native[lib])))
+    if "--markdown" in argv:
+        print("| library | functions | native | measured share |")
+        print("|---|---|---|---|")
+        for lib in rows:
+            share = f"{cost[lib]:.1f}%" if cost[lib] else "-"
+            print(f"| `{lib}` | {total[lib]} | {native[lib]} | {share} |")
+    else:
+        print(f"{'library':12} {'functions':>10} {'native':>8} {'share':>8}")
+        for lib in rows:
+            share = f"{cost[lib]:.1f}%" if cost[lib] else "-"
+            print(f"{lib:12} {total[lib]:>10} {native[lib]:>8} {share:>8}")
+    print(f"\n{sum(native.values())} of {sum(total.values())} library functions replaced")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))
