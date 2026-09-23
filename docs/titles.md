@@ -42,7 +42,14 @@ A WAD carries everything: certificates, ticket, TMD and contents. Installing is
 writing them where the NAND keeps them - `format/nand`'s paths - and nothing
 more, because the console verifies at launch rather than at install.
 
-Both kinds of WAD are read today. What is not written yet is the writing: see
+Both kinds of WAD are read today, and `tools/wiinx-wad` is how you look at one:
+
+```sh
+tools/wiinx-wad Channel.wad                 # which title it is, and what it carries
+tools/wiinx-wad Channel.wad unpacked/       # decrypted, with the executable as main.dol
+```
+
+What is not written yet is the writing - installing a title into a NAND: see
 [src/format/nand/TODO.md](../src/format/nand/TODO.md).
 
 ## Where the titles come from

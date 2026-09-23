@@ -10,6 +10,7 @@ installed).
 | `wiinx-extract` | pulls `main.dol`, or any file with `--file <path>`, out of a Wii `.iso` without extracting the disc: decrypts only the clusters it needs |
 | `wiinx-extract-disc` | the whole disc (ISO/WBFS/RVZ/GCZ/CISO), through Dolphin's `dolphin-tool`, with a free-space check |
 | `wiinx-inspect-dol` | a DOL's entry point, sections, BSS and small-data bases; `--yaml` for a project file |
+| `wiinx-wad` | looks inside a WAD - which title it is, what it wants, what it carries - and unpacks one, decrypting each content and writing the executable as `main.dol`. Reads both kinds, installable and boot2 |
 | `wiinx-unpack-u8` | lists or extracts a U8 archive (how channels pack their files), flagging compression inside |
 | `wiinx-fetch-title` | downloads one Wii system title from Nintendo's update servers and unpacks its executable |
 | `wiinx-fetch-nand` | a reference set of system titles into `nand/` (not tracked), from a menu or by flag |

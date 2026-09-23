@@ -1,0 +1,178 @@
+#!/usr/bin/env python3
+"""Look inside a WAD, or unpack one.
+
+    tools/wiinx-wad <file.wad>                  what is in it
+    tools/wiinx-wad <file.wad> <output-folder>  unpack it, decrypted
+
+A WAD is a title packed as one file: the certificates that signed it, the
+ticket, the TMD, and then every content the TMD lists. Channels, WiiWare and
+Virtual Console games all travel this way, and so does boot2 - the two kinds are
+told apart by a tag in the header, "Is" for an installable title and "ib" for a
+boot image.
+
+Unpacking decrypts each content with the title's own key and writes the one that
+looks like an executable as main.dol, which is what the rest of the toolkit
+expects from a disc as well. Nothing Nintendo owns ends up in this repository:
+the output folder is yours and is not tracked.
+"""
+
+import os
+import struct
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from wiicrypto import COMMON_KEY, aes_cbc_decrypt  # noqa: E402
+from wiinand import looks_like_dol, dol_score  # noqa: E402
+
+SIGNATURE = 0x140          # an RSA-2048 signature and its padding
+ALIGN = 0x40
+
+KINDS = {0x4973: "installable title", 0x6962: "boot2 image"}
+
+# What the high word of a title id says the title is.
+TITLE_KINDS = {
+    0x00000001: "system title",
+    0x00010000: "disc save",
+    0x00010001: "channel or WiiWare",
+    0x00010002: "system channel",
+    0x00010004: "game channel",
+    0x00010005: "downloadable content",
+    0x00010008: "hidden channel",
+}
+
+
+def align(value):
+    return (value + ALIGN - 1) & ~(ALIGN - 1)
+
+
+def read_header(data):
+    if len(data) < 0x20 or struct.unpack(">I", data[:4])[0] != 0x20:
+        raise SystemExit("not a WAD: the header does not start with its own size")
+    kind, _version = struct.unpack(">HH", data[4:8])
+    certs, crl, ticket, tmd, contents, footer = struct.unpack(">IIIIII", data[8:0x20])
+    return kind, certs, crl, ticket, tmd, contents, footer
+
+
+def issuer(blob):
+    """The signer's name, which says whether a blob is a ticket or a TMD."""
+    return blob[SIGNATURE:SIGNATURE + 0x40].split(b"\0")[0].decode("ascii", "replace")
+
+
+def sections(data):
+    """The ticket and the TMD, whichever order this WAD keeps them in."""
+    kind, certs, crl, ticket_size, tmd_size, _contents, _footer = read_header(data)
+    at = align(0x20) + align(certs) + align(crl)
+
+    first = data[at:at + ticket_size]
+    second = data[align(at + ticket_size):align(at + ticket_size) + tmd_size]
+    if "-XS" in issuer(first):
+        ticket, tmd = first, second
+        end = align(align(at + ticket_size) + tmd_size)
+    else:
+        # boot2 keeps its TMD first, and the sizes belong to the sections as
+        # laid out rather than to the order the header implies.
+        tmd = data[at:at + tmd_size]
+        ticket = data[align(at + tmd_size):align(at + tmd_size) + ticket_size]
+        end = align(align(at + tmd_size) + ticket_size)
+    return kind, ticket, tmd, end
+
+
+def title_key(ticket):
+    """The ticket's key, unwrapped with the common key it names."""
+    wrapped = ticket[SIGNATURE + 0x7F:SIGNATURE + 0x8F]
+    title_id = ticket[SIGNATURE + 0x9C:SIGNATURE + 0xA4]
+    index = ticket[SIGNATURE + 0xB1]
+    if index != 0:
+        raise SystemExit(f"this title wants common key {index}, which this tool does not carry")
+    return aes_cbc_decrypt(COMMON_KEY, title_id + b"\0" * 8, wrapped)
+
+
+def contents(tmd):
+    """[(index, content id, type, size, sha1)] in the order the TMD lists them."""
+    count = struct.unpack(">H", tmd[SIGNATURE + 0x9E:SIGNATURE + 0xA0])[0]
+    records = []
+    for i in range(count):
+        at = SIGNATURE + 0xA4 + i * 0x24
+        cid, index, kind, size = struct.unpack(">IHHQ", tmd[at:at + 0x10])
+        records.append((index, cid, kind, size, tmd[at + 0x10:at + 0x24]))
+    return records
+
+
+def describe(data):
+    kind, ticket, tmd, _end = sections(data)
+    title_id = struct.unpack(">Q", tmd[SIGNATURE + 0x4C:SIGNATURE + 0x54])[0]
+    version = struct.unpack(">H", tmd[SIGNATURE + 0x9C:SIGNATURE + 0x9E])[0]
+    ios = struct.unpack(">Q", tmd[SIGNATURE + 0x44:SIGNATURE + 0x4C])[0]
+    high, low = title_id >> 32, title_id & 0xFFFFFFFF
+    code = low.to_bytes(4, "big")
+    code = code.decode("ascii") if all(0x20 <= b < 0x7F for b in code) else ""
+
+    print(f"{KINDS.get(kind, hex(kind))}")
+    print(f"  title      {high:08x}/{low:08x}" + (f"  ({code})" if code else ""))
+    print(f"  kind       {TITLE_KINDS.get(high, 'unknown')}")
+    print(f"  version    {version}")
+    print(f"  wants      IOS{ios & 0xFFFFFFFF}")
+    print(f"  ticket     {issuer(ticket)}")
+    print(f"  tmd        {issuer(tmd)}")
+    print("  contents")
+    for index, cid, ctype, size, _sha in contents(tmd):
+        shared = " (shared)" if ctype & 0x8000 or ctype == 0x4001 else ""
+        print(f"    {index:>3}  {cid:08x}  {size:>10,} bytes{shared}")
+    return kind, ticket, tmd
+
+
+def unpack(data, folder):
+    kind, ticket, tmd, at = sections(data)
+    key = title_key(ticket)
+    os.makedirs(folder, exist_ok=True)
+
+    executable = None
+    best = -1
+    for index, cid, _ctype, size, _sha in contents(tmd):
+        stored = (size + 15) & ~15
+        blob = data[at:at + stored]
+        at = align(at + stored)
+        if len(blob) < stored:
+            raise SystemExit(f"content {index} runs past the end of the file")
+
+        iv = struct.pack(">H", index) + b"\0" * 14
+        plain = aes_cbc_decrypt(key, iv, blob)[:size]
+
+        path = os.path.join(folder, f"{cid:08x}.app")
+        with open(path, "wb") as out:
+            out.write(plain)
+        print(f"  {os.path.basename(path)}  {size:,} bytes")
+
+        if looks_like_dol(plain):
+            score = dol_score(plain)
+            if score > best:
+                best, executable = score, plain
+
+    if executable is not None:
+        path = os.path.join(folder, "main.dol")
+        with open(path, "wb") as out:
+            out.write(executable)
+        print(f"  main.dol  {len(executable):,} bytes")
+    else:
+        print("  no content looks like an executable: it may be inside a U8 archive")
+        print("  (try tools/wiinx-unpack-u8 on the largest one)")
+
+
+def main(argv):
+    if not argv or argv[0] in ("-h", "--help"):
+        print(__doc__.strip())
+        return 2
+
+    with open(argv[0], "rb") as handle:
+        data = handle.read()
+
+    print(f">> {argv[0]}  ({len(data):,} bytes)")
+    describe(data)
+    if len(argv) > 1:
+        print(f">> unpacking into {argv[1]}")
+        unpack(data, argv[1])
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

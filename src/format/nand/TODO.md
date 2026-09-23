@@ -7,8 +7,9 @@
 - [ ] Remove one, and say what it was using
 - [ ] List what is installed, with each title's version and kind, for a launcher
       to show ([docs/titles.md](../../../docs/titles.md))
-- [ ] Decrypt a content, given a key the caller holds: the format and both IVs
-      are here, the cipher is not
+- [ ] Decrypt a content in the library, given a key the caller holds: the format
+      and both IVs are here, the cipher is not. `tools/wiinx-wad` does it today
+      on a PC
 - [ ] Verify a signature. Today the type and issuer are reported and trust is
       the caller's; a launcher will want the real answer
 
