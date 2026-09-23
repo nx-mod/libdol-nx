@@ -342,7 +342,14 @@ function(mkw_configure_product target)
     # A game may ship its own pipelines, pre-built, so its first launch needs
     # no compile: that is the game's (Mario Kart Wii's is its own), not the
     # toolkit's. Without one, pipelines compile on first use and are cached.
+    # A game keeps its own beside its project, in cache/, where it is not
+    # committed: it is built by playing the game, not by anyone's source.
+    if(NOT MKW_INITIAL_PIPELINE_CACHE
+       AND EXISTS "${MKW_GAME_WORKSPACE_DIR}/cache/initial_pipeline_cache.db")
+        set(MKW_INITIAL_PIPELINE_CACHE "${MKW_GAME_WORKSPACE_DIR}/cache/initial_pipeline_cache.db")
+    endif()
     if(MKW_INITIAL_PIPELINE_CACHE AND EXISTS "${MKW_INITIAL_PIPELINE_CACHE}")
+        message(STATUS "libwii-nx: shipping pipelines from ${MKW_INITIAL_PIPELINE_CACHE}")
         add_custom_command(TARGET ${target} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${MKW_INITIAL_PIPELINE_CACHE}"
             "$<TARGET_FILE_DIR:${target}>/initial_pipeline_cache.db")

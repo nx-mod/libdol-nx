@@ -134,6 +134,9 @@ cat > "$game_dir/.gitignore" <<'EOF'
 /generated/
 /build/
 /functions.map
+# Pipelines this game built by being played: the build ships them if they are
+# here, and they are never committed.
+/cache/
 EOF
 
 cat > "$game_dir/README.md" <<EOF
