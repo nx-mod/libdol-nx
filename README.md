@@ -21,7 +21,7 @@ Two consoles, one library, because they are one machine: the CPU core is the
 same, the graphics pipeline is the same, the sound hardware is the same, and of
 the libraries Nintendo shipped in the two SDKs, sixteen appear in both under the
 same names. What differs is peripherals and system software, and that lives in
-[libdol-nx](https://github.com/nx-mod/libwii-nx) and
+[libwii-nx](https://github.com/nx-mod/libwii-nx) and
 [libgc-nx](https://github.com/nx-mod/libgc-nx).
 
 ## Design

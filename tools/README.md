@@ -24,6 +24,7 @@ installed).
 | `wiinx-manual-adds` | what a game still needs by hand, and `--template` to start one |
 | `wiinx-make-bindings` | resolved addresses as the C++ table a game's build links |
 | `wiinx-profile-report` | a device log's profile, with the game's function names |
+| `wiinx-check-console` | compiles a console library's sources against this one, with devkitA64 and nothing else: what catches a broken include before someone spends an hour building a game |
 | `wiinx-check-layers` | that the layers only depend downward (app → accel → platform → cpu → core) |
 | `wiinx-build` | disc (or game folder) to `.nro`: scan, translate, build, package |
 

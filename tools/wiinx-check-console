@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# Check that a console library still compiles against this one.
+#
+#   tools/wiinx-check-console [path to libwii-nx or libgc-nx]
+#
+# The console libraries are compiled into a runtime build rather than linked,
+# so nothing catches a broken include until someone builds a game - which takes
+# an hour and a game to do. This compiles each of their sources on its own,
+# with the headers a runtime build gives them, and says which ones no longer
+# fit. It needs devkitA64 and nothing else: no Aurora, no game, no linking.
+#
+# A file that includes a game's own generated SDK headers (dolphin/pad.h and
+# the like) cannot be checked this way and is reported as skipped, since those
+# exist only inside a game's build.
+set -euo pipefail
+
+here=$(cd "$(dirname "$0")" && pwd)
+root=$(cd "$here/.." && pwd)
+console=${1:-$root/../libwii-nx}
+
+[ -d "$console/src" ] || { echo "no console library at $console" >&2; exit 2; }
+[ -n "${DEVKITPRO:-}" ] || { echo "DEVKITPRO is not set" >&2; exit 2; }
+
+cxx="$DEVKITPRO/devkitA64/bin/aarch64-none-elf-g++"
+[ -x "$cxx" ] || { echo "devkitA64 not found at $cxx" >&2; exit 2; }
+
+includes=(
+    -I "$root/src/cpu/include" -I "$root/src/platform/include" -I "$root/src/platform"
+    -I "$root/src/app/include" -I "$root/include"
+    -I "$root/third_party" -I "$root/third_party/toml11"
+    -I "$root/third_party/libco" -I "$root/third_party/pugixml"
+    -I "$DEVKITPRO/libnx/include" -I "$DEVKITPRO/portlibs/switch/include"
+)
+for dir in "$console"/src/*/; do
+    includes+=(-I "$dir")
+done
+
+echo ">> $(basename "$console") against $(basename "$root")"
+ok=0 failed=0 skipped=0
+for source in "$console"/src/*/*.cpp; do
+    name=$(basename "$source")
+    if output=$(nice -n 19 "$cxx" -std=gnu++20 -D__SWITCH__ -DMKW_PLATFORM_SWITCH=1 \
+                    -fsyntax-only "${includes[@]}" "$source" 2>&1); then
+        ok=$((ok + 1))
+        continue
+    fi
+    # A game's own generated headers are not here, and cannot be.
+    if grep -q "fatal error: dolphin/\|fatal error: revolution/" <<<"$output"; then
+        skipped=$((skipped + 1))
+        echo "   skipped  $name (needs a game's generated SDK headers)"
+        continue
+    fi
+    failed=$((failed + 1))
+    echo "   FAILED   $name"
+    grep -E "error:" <<<"$output" | head -3 | sed 's/^/     /'
+done
+
+echo "   $ok compiled, $skipped skipped, $failed failed"
+[ "$failed" -eq 0 ]
