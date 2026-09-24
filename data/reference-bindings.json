@@ -1,0 +1,2882 @@
+{
+  "0x80006348": {
+    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "library": "libdol-nx",
+    "native": "__init_hardware_80006348"
+  },
+  "0x80015500": {
+    "file": "libdol-nx/src/platform/os/c_stdio.cpp",
+    "library": "libdol-nx",
+    "native": "ConsoleWrite_HLE_80015500"
+  },
+  "0x8002001C": {
+    "file": "libdol-nx/src/platform/os/trk.cpp",
+    "library": "libdol-nx",
+    "native": "Stub_8002001C"
+  },
+  "0x80044B30": {
+    "file": "libdol-nx/src/platform/gx/gx_vertex.cpp",
+    "library": "libdol-nx",
+    "native": "GX__End_80044b30"
+  },
+  "0x80048C30": {
+    "file": "libdol-nx/src/platform/gx/gx_vertex.cpp",
+    "library": "libdol-nx",
+    "native": "GX__End_80048c30"
+  },
+  "0x80078EF0": {
+    "file": "libdol-nx/src/accel/nw4r/lyt/pane_bind.cpp",
+    "library": "libdol-nx",
+    "native": "LytPaneCalculateMtx_HLE"
+  },
+  "0x800847C0": {
+    "file": "libdol-nx/src/platform/gx/gx_dl.cpp",
+    "library": "libdol-nx",
+    "native": "nw4r__lyt__detail__DrawQuad_800847c0"
+  },
+  "0x80084D20": {
+    "file": "libdol-nx/src/platform/gx/gx_dl.cpp",
+    "library": "libdol-nx",
+    "native": "nw4r__lyt__detail__DrawQuad_80084d20"
+  },
+  "0x800A35E0": {
+    "file": "libdol-nx/src/platform/audio/audio.cpp",
+    "library": "libdol-nx",
+    "native": "SoundPlayerSetVolume_800a35e0"
+  },
+  "0x800BD860": {
+    "file": "libdol-nx/src/platform/os/os_alarm.cpp",
+    "library": "libdol-nx",
+    "native": "RFLiIsWorking_HLE_800bd860"
+  },
+  "0x80123F88": {
+    "file": "libdol-nx/src/platform/audio/audio.cpp",
+    "library": "libdol-nx",
+    "native": "AIRegisterDMACallback_80123f88"
+  },
+  "0x80123FCC": {
+    "file": "libdol-nx/src/platform/audio/audio.cpp",
+    "library": "libdol-nx",
+    "native": "AIInitDMA_80123fcc"
+  },
+  "0x80124048": {
+    "file": "libdol-nx/src/platform/audio/audio.cpp",
+    "library": "libdol-nx",
+    "native": "AIStartDMA_80124048"
+  },
+  "0x8012405C": {
+    "file": "libdol-nx/src/platform/audio/audio.cpp",
+    "library": "libdol-nx",
+    "native": "AIGetDMABytesLeft_8012405c"
+  },
+  "0x8012406C": {
+    "file": "libdol-nx/src/platform/audio/audio.cpp",
+    "library": "libdol-nx",
+    "native": "AIGetDMAStartAddr_8012406c"
+  },
+  "0x80124084": {
+    "file": "libdol-nx/src/platform/audio/audio.cpp",
+    "library": "libdol-nx",
+    "native": "AIGetDMALength_80124084"
+  },
+  "0x80124094": {
+    "file": "libdol-nx/src/platform/audio/audio.cpp",
+    "library": "libdol-nx",
+    "native": "AICheckInit_80124094"
+  },
+  "0x8012409C": {
+    "file": "libdol-nx/src/platform/audio/audio.cpp",
+    "library": "libdol-nx",
+    "native": "AIGetDSPSampleRate_8012409c"
+  },
+  "0x801240B0": {
+    "file": "libdol-nx/src/platform/audio/audio.cpp",
+    "library": "libdol-nx",
+    "native": "AIInit_801240b0"
+  },
+  "0x801269BC": {
+    "file": "libdol-nx/src/platform/audio/audio.cpp",
+    "library": "libdol-nx",
+    "native": "__AXOutInitDSP_801269bc"
+  },
+  "0x8012E574": {
+    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "library": "libdol-nx",
+    "native": "PPCMfhid0_8012e574"
+  },
+  "0x8012E57C": {
+    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "library": "libdol-nx",
+    "native": "PPCMthid0_8012e57c"
+  },
+  "0x8012E594": {
+    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "library": "libdol-nx",
+    "native": "PPCMtdec_8012e594"
+  },
+  "0x8012E59C": {
+    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "library": "libdol-nx",
+    "native": "PPCSync_8012e59c"
+  },
+  "0x8012E5A4": {
+    "file": "libdol-nx/src/platform/os/os_reset.cpp",
+    "library": "libdol-nx",
+    "native": "PPCHalt_8012E5A4"
+  },
+  "0x8012E5B8": {
+    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "library": "libdol-nx",
+    "native": "PPCMtmmcr0_8012e5b8"
+  },
+  "0x8012E5C0": {
+    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "library": "libdol-nx",
+    "native": "PPCMtmmcr1_8012e5c0"
+  },
+  "0x8012E5C8": {
+    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "library": "libdol-nx",
+    "native": "PPCMtpmc1_8012e5c8"
+  },
+  "0x8012E5D0": {
+    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "library": "libdol-nx",
+    "native": "PPCMtpmc2_8012e5d0"
+  },
+  "0x8012E5D8": {
+    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "library": "libdol-nx",
+    "native": "PPCMtpmc3_8012e5d8"
+  },
+  "0x8012E5E0": {
+    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "library": "libdol-nx",
+    "native": "PPCMtpmc4_8012e5e0"
+  },
+  "0x8012E638": {
+    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "library": "libdol-nx",
+    "native": "PPCMthid2_8012e638"
+  },
+  "0x8012E640": {
+    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "library": "libdol-nx",
+    "native": "PPCMfwpar_8012e640"
+  },
+  "0x8012E64C": {
+    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "library": "libdol-nx",
+    "native": "PPCMtwpar_8012e64c"
+  },
+  "0x8012E654": {
+    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "library": "libdol-nx",
+    "native": "PPCDisableSpeculation_8012e654"
+  },
+  "0x8012E684": {
+    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "library": "libdol-nx",
+    "native": "PPCMthid4_8012e684"
+  },
+  "0x801301B4": {
+    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "library": "libdol-nx",
+    "native": "GKI_delay_HLE_801301b4"
+  },
+  "0x8013A300": {
+    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "library": "libdol-nx",
+    "native": "BTM_IsDeviceUp_HLE_8013a300"
+  },
+  "0x8015BC80": {
+    "file": "libwii-nx/src/nand/nand_api.cpp",
+    "library": "libwii-nx",
+    "native": "contentFastOpenNAND_HLE"
+  },
+  "0x8015BCF8": {
+    "file": "libwii-nx/src/nand/nand_api.cpp",
+    "library": "libwii-nx",
+    "native": "contentReadNAND_HLE"
+  },
+  "0x8015D3FC": {
+    "file": "libdol-nx/src/platform/audio/audio.cpp",
+    "library": "libdol-nx",
+    "native": "DSPCheckMailToDSP_8015d3fc"
+  },
+  "0x8015D40C": {
+    "file": "libdol-nx/src/platform/audio/audio.cpp",
+    "library": "libdol-nx",
+    "native": "DSPCheckMailFromDSP_8015d40c"
+  },
+  "0x8015D41C": {
+    "file": "libdol-nx/src/platform/audio/audio.cpp",
+    "library": "libdol-nx",
+    "native": "DSPReadMailFromDSP_8015d41c"
+  },
+  "0x8015D430": {
+    "file": "libdol-nx/src/platform/audio/audio.cpp",
+    "library": "libdol-nx",
+    "native": "DSPSendMailToDSP_8015d430"
+  },
+  "0x8015D444": {
+    "file": "libdol-nx/src/platform/audio/audio.cpp",
+    "library": "libdol-nx",
+    "native": "DSPInit_8015d444"
+  },
+  "0x8015D504": {
+    "file": "libdol-nx/src/platform/audio/audio.cpp",
+    "library": "libdol-nx",
+    "native": "DSPCheckInit_8015d504"
+  },
+  "0x8015D50C": {
+    "file": "libdol-nx/src/platform/audio/audio.cpp",
+    "library": "libdol-nx",
+    "native": "DSPAddTask_8015d50c"
+  },
+  "0x8015D57C": {
+    "file": "libdol-nx/src/platform/audio/audio.cpp",
+    "library": "libdol-nx",
+    "native": "DSPAssertTask_8015d57c"
+  },
+  "0x8015DC60": {
+    "file": "libdol-nx/src/platform/audio/audio.cpp",
+    "library": "libdol-nx",
+    "native": "__DSP_boot_task_8015dc60"
+  },
+  "0x8015E74C": {
+    "file": "libdol-nx/src/platform/fs/dvd.cpp",
+    "library": "libdol-nx",
+    "native": "DVD__ReadAsyncPrio_HLE_8015e74c"
+  },
+  "0x8015E834": {
+    "file": "libdol-nx/src/platform/fs/dvd.cpp",
+    "library": "libdol-nx",
+    "native": "DVDReadPrio_8015E834"
+  },
+  "0x8015EA1C": {
+    "file": "libdol-nx/src/platform/fs/dvd.cpp",
+    "library": "libdol-nx",
+    "native": "DVDInit_8015EA1C"
+  },
+  "0x801628CC": {
+    "file": "libdol-nx/src/platform/fs/dvd.cpp",
+    "library": "libdol-nx",
+    "native": "DVD__ReadAbsAsyncPrio_HLE_801628cc"
+  },
+  "0x801643FC": {
+    "file": "libdol-nx/src/platform/fs/dvd.cpp",
+    "library": "libdol-nx",
+    "native": "DVDCheckDevice_801643FC"
+  },
+  "0x80164848": {
+    "file": "libdol-nx/src/platform/fs/dvd.cpp",
+    "library": "libdol-nx",
+    "native": "DVDLowInit_80164848"
+  },
+  "0x80164AAC": {
+    "file": "libdol-nx/src/platform/fs/dvd.cpp",
+    "library": "libdol-nx",
+    "native": "DVDLowReadDiskID_80164AAC"
+  },
+  "0x80165708": {
+    "file": "libdol-nx/src/platform/fs/dvd.cpp",
+    "library": "libdol-nx",
+    "native": "DVDLowUnencryptedRead_80165708"
+  },
+  "0x80165A30": {
+    "file": "libdol-nx/src/platform/fs/dvd.cpp",
+    "library": "libdol-nx",
+    "native": "DVDLowInquiry_80165A30"
+  },
+  "0x80166330": {
+    "file": "libdol-nx/src/platform/fs/dvd.cpp",
+    "library": "libdol-nx",
+    "native": "DVDLowRead_80166330"
+  },
+  "0x80166964": {
+    "file": "libdol-nx/src/platform/fs/dvd.cpp",
+    "library": "libdol-nx",
+    "native": "DVDLowClearCoverInterrupt_80166964"
+  },
+  "0x801671D0": {
+    "file": "libwii-nx/src/ios/esp.cpp",
+    "library": "libwii-nx",
+    "native": "ESP_InitLib_stub"
+  },
+  "0x80167224": {
+    "file": "libwii-nx/src/ios/esp.cpp",
+    "library": "libwii-nx",
+    "native": "ESP_CloseLib_stub"
+  },
+  "0x80167904": {
+    "file": "libwii-nx/src/ios/esp.cpp",
+    "library": "libwii-nx",
+    "native": "ESP_GetDataDir_stub"
+  },
+  "0x8016799C": {
+    "file": "libwii-nx/src/ios/esp.cpp",
+    "library": "libwii-nx",
+    "native": "ESP_GetTitleId_stub"
+  },
+  "0x80167E78": {
+    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "library": "libdol-nx",
+    "native": "SetExiInterruptMask_80167e78"
+  },
+  "0x80167F68": {
+    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "library": "libdol-nx",
+    "native": "EXIImm_80167f68"
+  },
+  "0x80168288": {
+    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "library": "libdol-nx",
+    "native": "EXIDma_80168288"
+  },
+  "0x80168380": {
+    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "library": "libdol-nx",
+    "native": "EXISync_80168380"
+  },
+  "0x801689D0": {
+    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "library": "libdol-nx",
+    "native": "EXISelect_801689d0"
+  },
+  "0x80168B00": {
+    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "library": "libdol-nx",
+    "native": "EXIDeselect_80168b00"
+  },
+  "0x80168FA0": {
+    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "library": "libdol-nx",
+    "native": "EXIInit_80168fa0"
+  },
+  "0x80169260": {
+    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "library": "libdol-nx",
+    "native": "EXIUnlock_80169260"
+  },
+  "0x8016B49C": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016b49c"
+  },
+  "0x8016B590": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016b590"
+  },
+  "0x8016B5B4": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016b5b4"
+  },
+  "0x8016B720": {
+    "file": "libdol-nx/src/platform/gx/gx_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "__GX__InitRevisionBits_8016b720"
+  },
+  "0x8016B850": {
+    "file": "libdol-nx/src/platform/gx/gx_init.cpp",
+    "library": "libdol-nx",
+    "native": "GX__Init_8016b850"
+  },
+  "0x8016C668": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016c668"
+  },
+  "0x8016C94C": {
+    "file": "libdol-nx/src/platform/gx/gx_init.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetCPUFifo_8016c94c"
+  },
+  "0x8016CB2C": {
+    "file": "libdol-nx/src/platform/gx/gx_init.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetGPFifo_8016cb2c"
+  },
+  "0x8016CDBC": {
+    "file": "libdol-nx/src/platform/gx/gx_init.cpp",
+    "library": "libdol-nx",
+    "native": "__GX__SaveFifo_8016cdbc"
+  },
+  "0x8016CF10": {
+    "file": "libdol-nx/src/platform/gx/gx_init.cpp",
+    "library": "libdol-nx",
+    "native": "GX__GetCPUFifo_8016cf10"
+  },
+  "0x8016D054": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d054"
+  },
+  "0x8016D098": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d098"
+  },
+  "0x8016D138": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d138"
+  },
+  "0x8016D1FC": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d1fc"
+  },
+  "0x8016D3A4": {
+    "file": "libdol-nx/src/platform/gx/gx_vertex.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetVtxDesc_8016d3a4"
+  },
+  "0x8016D3C0": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d3c0"
+  },
+  "0x8016D3C4": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d3c4"
+  },
+  "0x8016D3D8": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d3d8"
+  },
+  "0x8016D3EC": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d3ec"
+  },
+  "0x8016D400": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d400"
+  },
+  "0x8016D414": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d414"
+  },
+  "0x8016D428": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d428"
+  },
+  "0x8016D43C": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d43c"
+  },
+  "0x8016D450": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d450"
+  },
+  "0x8016D464": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d464"
+  },
+  "0x8016D478": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d478"
+  },
+  "0x8016D48C": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d48c"
+  },
+  "0x8016D4C0": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d4c0"
+  },
+  "0x8016D4F4": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d4f4"
+  },
+  "0x8016D508": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d508"
+  },
+  "0x8016D51C": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d51c"
+  },
+  "0x8016D530": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d530"
+  },
+  "0x8016D544": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d544"
+  },
+  "0x8016D558": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d558"
+  },
+  "0x8016D56C": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d56c"
+  },
+  "0x8016D580": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d580"
+  },
+  "0x8016D594": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d594"
+  },
+  "0x8016D5A8": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d5a8"
+  },
+  "0x8016D5B8": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d5b8"
+  },
+  "0x8016D608": {
+    "file": "libdol-nx/src/platform/gx/gx_vertex.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetVtxDescv_8016d608"
+  },
+  "0x8016D814": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d814"
+  },
+  "0x8016D8C4": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016d8c4"
+  },
+  "0x8016D9F0": {
+    "file": "libdol-nx/src/platform/gx/gx_vertex.cpp",
+    "library": "libdol-nx",
+    "native": "GX__GetVtxDesc_8016d9f0"
+  },
+  "0x8016DA0C": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016da0c"
+  },
+  "0x8016DA10": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016da10"
+  },
+  "0x8016DA20": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016da20"
+  },
+  "0x8016DA30": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016da30"
+  },
+  "0x8016DA40": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016da40"
+  },
+  "0x8016DA50": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016da50"
+  },
+  "0x8016DA60": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016da60"
+  },
+  "0x8016DA70": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016da70"
+  },
+  "0x8016DA80": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016da80"
+  },
+  "0x8016DA90": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016da90"
+  },
+  "0x8016DAA0": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016daa0"
+  },
+  "0x8016DAB0": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016dab0"
+  },
+  "0x8016DAD4": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016dad4"
+  },
+  "0x8016DAF8": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016daf8"
+  },
+  "0x8016DB08": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016db08"
+  },
+  "0x8016DB18": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016db18"
+  },
+  "0x8016DB28": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016db28"
+  },
+  "0x8016DB38": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016db38"
+  },
+  "0x8016DB48": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016db48"
+  },
+  "0x8016DB58": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016db58"
+  },
+  "0x8016DB68": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016db68"
+  },
+  "0x8016DB78": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016db78"
+  },
+  "0x8016DB88": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016db88"
+  },
+  "0x8016DB98": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016db98"
+  },
+  "0x8016DBA4": {
+    "file": "libdol-nx/src/platform/gx/gx_vertex.cpp",
+    "library": "libdol-nx",
+    "native": "GX__GetVtxDescv_8016dba4"
+  },
+  "0x8016DC34": {
+    "file": "libdol-nx/src/platform/gx/gx_vertex.cpp",
+    "library": "libdol-nx",
+    "native": "GX__ClearVtxDesc_8016dc34"
+  },
+  "0x8016DC68": {
+    "file": "libdol-nx/src/platform/gx/gx_vertex.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetVtxAttrFmt_8016dc68"
+  },
+  "0x8016DC94": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016dc94"
+  },
+  "0x8016DC98": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016dc98"
+  },
+  "0x8016DCB0": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016dcb0"
+  },
+  "0x8016DCEC": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016dcec"
+  },
+  "0x8016DD00": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016dd00"
+  },
+  "0x8016DD14": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016dd14"
+  },
+  "0x8016DD2C": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016dd2c"
+  },
+  "0x8016DD44": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016dd44"
+  },
+  "0x8016DD5C": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016dd5c"
+  },
+  "0x8016DD74": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016dd74"
+  },
+  "0x8016DD94": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016dd94"
+  },
+  "0x8016DDAC": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016ddac"
+  },
+  "0x8016DDC4": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016ddc4"
+  },
+  "0x8016DDD8": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016ddd8"
+  },
+  "0x8016DE08": {
+    "file": "libdol-nx/src/platform/gx/gx_vertex.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetVtxAttrFmtv_8016de08"
+  },
+  "0x8016DE48": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016de48"
+  },
+  "0x8016DE4C": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016de4c"
+  },
+  "0x8016DE64": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016de64"
+  },
+  "0x8016DEA0": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016dea0"
+  },
+  "0x8016DEB4": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016deb4"
+  },
+  "0x8016DEC8": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016dec8"
+  },
+  "0x8016DEE0": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016dee0"
+  },
+  "0x8016DEF8": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016def8"
+  },
+  "0x8016DF10": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016df10"
+  },
+  "0x8016DF28": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016df28"
+  },
+  "0x8016DF48": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016df48"
+  },
+  "0x8016DF60": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016df60"
+  },
+  "0x8016DF78": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016df78"
+  },
+  "0x8016DF8C": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016df8c"
+  },
+  "0x8016DFCC": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016dfcc"
+  },
+  "0x8016E04C": {
+    "file": "libdol-nx/src/platform/gx/gx_vertex.cpp",
+    "library": "libdol-nx",
+    "native": "GX__GetVtxAttrFmt_8016e04c"
+  },
+  "0x8016E078": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e078"
+  },
+  "0x8016E07C": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e07c"
+  },
+  "0x8016E0A4": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e0a4"
+  },
+  "0x8016E118": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e118"
+  },
+  "0x8016E13C": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e13c"
+  },
+  "0x8016E160": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e160"
+  },
+  "0x8016E188": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e188"
+  },
+  "0x8016E1B0": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e1b0"
+  },
+  "0x8016E1C4": {
+    "file": "libdol-nx/src/platform/gx/gx_vertex.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetArray_8016e1c4"
+  },
+  "0x8016E1D8": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e1d8"
+  },
+  "0x8016E200": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e200"
+  },
+  "0x8016E228": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e228"
+  },
+  "0x8016E250": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e250"
+  },
+  "0x8016E278": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e278"
+  },
+  "0x8016E2A0": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e2a0"
+  },
+  "0x8016E2B8": {
+    "file": "libdol-nx/src/platform/gx/gx_vertex.cpp",
+    "library": "libdol-nx",
+    "native": "GX__GetVtxAttrFmtv_8016e2b8"
+  },
+  "0x8016E32C": {
+    "file": "libdol-nx/src/platform/gx/gx_vertex.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetArray_8016e32c"
+  },
+  "0x8016E37C": {
+    "file": "libdol-nx/src/platform/gx/gx_vertex.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetTexCoordGen2_8016e37c"
+  },
+  "0x8016E3A4": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e3a4"
+  },
+  "0x8016E3A8": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e3a8"
+  },
+  "0x8016E3B4": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e3b4"
+  },
+  "0x8016E3C0": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e3c0"
+  },
+  "0x8016E3CC": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e3cc"
+  },
+  "0x8016E3D8": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e3d8"
+  },
+  "0x8016E3E0": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e3e0"
+  },
+  "0x8016E3E8": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e3e8"
+  },
+  "0x8016E3F0": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e3f0"
+  },
+  "0x8016E3F8": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e3f8"
+  },
+  "0x8016E400": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e400"
+  },
+  "0x8016E408": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e408"
+  },
+  "0x8016E410": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e410"
+  },
+  "0x8016E418": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e418"
+  },
+  "0x8016E420": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e420"
+  },
+  "0x8016E424": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e424"
+  },
+  "0x8016E514": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e514"
+  },
+  "0x8016E518": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e518"
+  },
+  "0x8016E528": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e528"
+  },
+  "0x8016E538": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e538"
+  },
+  "0x8016E548": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e548"
+  },
+  "0x8016E558": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e558"
+  },
+  "0x8016E568": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e568"
+  },
+  "0x8016E578": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e578"
+  },
+  "0x8016E588": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e588"
+  },
+  "0x8016E5A4": {
+    "file": "libdol-nx/src/platform/gx/gx_vertex.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetNumTexGens_8016e5a4"
+  },
+  "0x8016E654": {
+    "file": "libdol-nx/src/platform/gx/gx_init.cpp",
+    "library": "libdol-nx",
+    "native": "GX__Flush_8016e654"
+  },
+  "0x8016E6B0": {
+    "file": "libdol-nx/src/platform/gx/gx_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "GX__ResetWriteGatherPipe_8016e6b0"
+  },
+  "0x8016E6E4": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e6e4"
+  },
+  "0x8016E848": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016e848"
+  },
+  "0x8016E9FC": {
+    "file": "libdol-nx/src/platform/gx/gx_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetDrawSync_8016e9fc"
+  },
+  "0x8016EAB0": {
+    "file": "libdol-nx/src/platform/gx/gx_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "GX__DrawDone_8016eab0"
+  },
+  "0x8016EB70": {
+    "file": "libdol-nx/src/platform/gx/gx_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "GX__PixModeSync_8016eb70"
+  },
+  "0x8016EB94": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016eb94"
+  },
+  "0x8016EBA4": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016eba4"
+  },
+  "0x8016EBBC": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016ebbc"
+  },
+  "0x8016EBD0": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016ebd0"
+  },
+  "0x8016EC2C": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016ec2c"
+  },
+  "0x8016EC40": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016ec40"
+  },
+  "0x8016EC58": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016ec58"
+  },
+  "0x8016EC6C": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016ec6c"
+  },
+  "0x8016ED94": {
+    "file": "libdol-nx/src/platform/gx/gx_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "GX__FinishInterruptHandler_8016ed94"
+  },
+  "0x8016EE14": {
+    "file": "libdol-nx/src/platform/gx/gx_init.cpp",
+    "library": "libdol-nx",
+    "native": "__GX__PEInit_8016ee14"
+  },
+  "0x8016EE78": {
+    "file": "libdol-nx/src/platform/gx/gx_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetDirtyState_8016ee78"
+  },
+  "0x8016F0F0": {
+    "file": "libdol-nx/src/platform/gx/gx_vertex.cpp",
+    "library": "libdol-nx",
+    "native": "GX__Begin_8016f0f0"
+  },
+  "0x8016F23C": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016f23c"
+  },
+  "0x8016F314": {
+    "file": "libdol-nx/src/platform/gx/gx_vertex.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetLineWidth_8016f314"
+  },
+  "0x8016F348": {
+    "file": "libdol-nx/src/platform/gx/gx_vertex.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetPointSize_8016f348"
+  },
+  "0x8016F37C": {
+    "file": "libdol-nx/src/platform/gx/gx_vertex.cpp",
+    "library": "libdol-nx",
+    "native": "GX__EnableTexOffsets_8016f37c"
+  },
+  "0x8016F3B8": {
+    "file": "libdol-nx/src/platform/gx/gx_pixel.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetCullMode_8016f3b8"
+  },
+  "0x8016F3E0": {
+    "file": "libdol-nx/src/platform/gx/gx_pixel.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetCoPlanar_8016f3e0"
+  },
+  "0x8016F414": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8016f414"
+  },
+  "0x8016F438": {
+    "file": "libdol-nx/src/platform/gx/gx_copy.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetDispCopySrc_8016f438"
+  },
+  "0x8016F478": {
+    "file": "libdol-nx/src/platform/gx/gx_copy.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetTexCopySrc_8016f478"
+  },
+  "0x8016F4B8": {
+    "file": "libdol-nx/src/platform/gx/gx_copy.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetDispCopyDst_8016f4b8"
+  },
+  "0x8016F4DC": {
+    "file": "libdol-nx/src/platform/gx/gx_copy.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetTexCopyDst_8016f4dc"
+  },
+  "0x8016F5F8": {
+    "file": "libdol-nx/src/platform/gx/gx_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetDispCopyFrame2Field_8016f5f8"
+  },
+  "0x8016F618": {
+    "file": "libdol-nx/src/platform/gx/gx_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetCopyClamp_8016f618"
+  },
+  "0x8016FA40": {
+    "file": "libdol-nx/src/platform/gx/gx_copy.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetCopyFilter_8016fa40"
+  },
+  "0x8016FC24": {
+    "file": "libdol-nx/src/platform/gx/gx_copy.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetDispCopyGamma_8016fc24"
+  },
+  "0x8016FC38": {
+    "file": "libdol-nx/src/platform/gx/gx_copy.cpp",
+    "library": "libdol-nx",
+    "native": "GX__CopyDisp_8016fc38"
+  },
+  "0x8016FD74": {
+    "file": "libdol-nx/src/platform/gx/gx_copy.cpp",
+    "library": "libdol-nx",
+    "native": "GX__CopyTex_8016fd74"
+  },
+  "0x8016FECC": {
+    "file": "libdol-nx/src/platform/gx/gx_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "GX__ClearBoundingBox_8016fecc"
+  },
+  "0x80170320": {
+    "file": "libdol-nx/src/platform/gx/gx_lighting.cpp",
+    "library": "libdol-nx",
+    "native": "GX__LoadLightObjImm_80170320"
+  },
+  "0x8017039C": {
+    "file": "libdol-nx/src/platform/gx/gx_lighting.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetChanAmbColor_8017039c"
+  },
+  "0x80170474": {
+    "file": "libdol-nx/src/platform/gx/gx_lighting.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetChanMatColor_80170474"
+  },
+  "0x8017054C": {
+    "file": "libdol-nx/src/platform/gx/gx_lighting.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetNumChans_8017054c"
+  },
+  "0x80170570": {
+    "file": "libdol-nx/src/platform/gx/gx_lighting.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetChanCtrl_80170570"
+  },
+  "0x801707F8": {
+    "file": "libdol-nx/src/platform/gx/gx_texture.cpp",
+    "library": "libdol-nx",
+    "native": "GX__InitTexObj_801707f8"
+  },
+  "0x80170938": {
+    "file": "libdol-nx/src/platform/gx/gx_texture.cpp",
+    "library": "libdol-nx",
+    "native": "GX__InitTexObj_switch_80170938"
+  },
+  "0x8017093C": {
+    "file": "libdol-nx/src/platform/gx/gx_texture.cpp",
+    "library": "libdol-nx",
+    "native": "GX__InitTexObj_caseD_0_8017093c"
+  },
+  "0x80170950": {
+    "file": "libdol-nx/src/platform/gx/gx_texture.cpp",
+    "library": "libdol-nx",
+    "native": "GX__InitTexObj_caseD_1_80170950"
+  },
+  "0x80170964": {
+    "file": "libdol-nx/src/platform/gx/gx_texture.cpp",
+    "library": "libdol-nx",
+    "native": "GX__InitTexObj_caseD_3_80170964"
+  },
+  "0x80170978": {
+    "file": "libdol-nx/src/platform/gx/gx_texture.cpp",
+    "library": "libdol-nx",
+    "native": "GX__InitTexObj_caseD_6_80170978"
+  },
+  "0x8017098C": {
+    "file": "libdol-nx/src/platform/gx/gx_texture.cpp",
+    "library": "libdol-nx",
+    "native": "GX__InitTexObj_caseD_e_8017098c"
+  },
+  "0x801709A0": {
+    "file": "libdol-nx/src/platform/gx/gx_texture.cpp",
+    "library": "libdol-nx",
+    "native": "GX__InitTexObj_caseD_7_801709a0"
+  },
+  "0x80170A04": {
+    "file": "libdol-nx/src/platform/gx/gx_texture.cpp",
+    "library": "libdol-nx",
+    "native": "GX__InitTexObjCI_80170a04"
+  },
+  "0x80170A4C": {
+    "file": "libdol-nx/src/platform/gx/gx_texture.cpp",
+    "library": "libdol-nx",
+    "native": "GX__InitTexObjLOD_80170a4c"
+  },
+  "0x80170B50": {
+    "file": "libdol-nx/src/platform/gx/gx_texture.cpp",
+    "library": "libdol-nx",
+    "native": "GX__InitTexObjWrapMode_80170b50"
+  },
+  "0x80170B64": {
+    "file": "libdol-nx/src/platform/gx/gx_texture.cpp",
+    "library": "libdol-nx",
+    "native": "GX__InitTexObjTlut_80170b64"
+  },
+  "0x80170B6C": {
+    "file": "libdol-nx/src/platform/gx/gx_texture.cpp",
+    "library": "libdol-nx",
+    "native": "GX__InitTexObjFilter_80170b6c"
+  },
+  "0x80170B94": {
+    "file": "libdol-nx/src/platform/gx/gx_texture.cpp",
+    "library": "libdol-nx",
+    "native": "GX__InitTexObjLODBias_80170b94"
+  },
+  "0x80170BE8": {
+    "file": "libdol-nx/src/platform/gx/gx_texture.cpp",
+    "library": "libdol-nx",
+    "native": "GX__InitTexObjUserData_80170be8"
+  },
+  "0x80170BF8": {
+    "file": "libdol-nx/src/platform/gx/gx_texture.cpp",
+    "library": "libdol-nx",
+    "native": "GX__GetTexObjAll_80170bf8"
+  },
+  "0x80170CBC": {
+    "file": "libdol-nx/src/platform/gx/gx_texture.cpp",
+    "library": "libdol-nx",
+    "native": "GX__GetTexObjLODAll_80170cbc"
+  },
+  "0x80170DC8": {
+    "file": "libdol-nx/src/platform/gx/gx_texture.cpp",
+    "library": "libdol-nx",
+    "native": "GX__LoadTexObjPreLoaded_80170dc8"
+  },
+  "0x80170F2C": {
+    "file": "libdol-nx/src/platform/gx/gx_texture.cpp",
+    "library": "libdol-nx",
+    "native": "GX__LoadTexObj_80170f2c"
+  },
+  "0x80170F80": {
+    "file": "libdol-nx/src/platform/gx/gx_texture.cpp",
+    "library": "libdol-nx",
+    "native": "GX__InitTlutObj_80170f80"
+  },
+  "0x80170FA8": {
+    "file": "libdol-nx/src/platform/gx/gx_texture.cpp",
+    "library": "libdol-nx",
+    "native": "GX__LoadTlut_80170fa8"
+  },
+  "0x80171110": {
+    "file": "libdol-nx/src/platform/gx/gx_texture.cpp",
+    "library": "libdol-nx",
+    "native": "GX__InvalidateTexAll_80171110"
+  },
+  "0x80171180": {
+    "file": "libdol-nx/src/platform/gx/gx_texture.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetTexCoordScaleManually_80171180"
+  },
+  "0x801711FC": {
+    "file": "libdol-nx/src/platform/gx/gx_texture.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetTexCoordBias_801711fc"
+  },
+  "0x801712F0": {
+    "file": "libdol-nx/src/platform/gx/gx_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "__GX__SetSUTexRegs_801712f0"
+  },
+  "0x80171458": {
+    "file": "libdol-nx/src/platform/gx/gx_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "__GX__SetTmemConfig_80171458"
+  },
+  "0x801717AC": {
+    "file": "libdol-nx/src/platform/gx/gx_indirect.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetTevIndirect_801717ac"
+  },
+  "0x80171814": {
+    "file": "libdol-nx/src/platform/gx/gx_indirect.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetIndTexMtx_80171814"
+  },
+  "0x80171968": {
+    "file": "libdol-nx/src/platform/gx/gx_indirect.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetIndTexCoordScale_80171968"
+  },
+  "0x80171A6C": {
+    "file": "libdol-nx/src/platform/gx/gx_indirect.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetIndTexOrder_80171a6c"
+  },
+  "0x80171B38": {
+    "file": "libdol-nx/src/platform/gx/gx_indirect.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetNumIndStages_80171b38"
+  },
+  "0x80171B58": {
+    "file": "libdol-nx/src/platform/gx/gx_indirect.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetTevDirect_80171b58"
+  },
+  "0x80171BA0": {
+    "file": "libdol-nx/src/platform/gx/gx_indirect.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetTevIndWarp_80171ba0"
+  },
+  "0x80171C28": {
+    "file": "libdol-nx/src/platform/gx/gx_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "__GX__FlushTextureState_80171c28"
+  },
+  "0x80171C4C": {
+    "file": "libdol-nx/src/platform/gx/gx_tev.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetTevOp_80171c4c"
+  },
+  "0x80171CE0": {
+    "file": "libdol-nx/src/platform/gx/gx_tev.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetTevColorIn_80171ce0"
+  },
+  "0x80171D20": {
+    "file": "libdol-nx/src/platform/gx/gx_tev.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetTevAlphaIn_80171d20"
+  },
+  "0x80171D60": {
+    "file": "libdol-nx/src/platform/gx/gx_tev.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetTevColorOp_80171d60"
+  },
+  "0x80171DB8": {
+    "file": "libdol-nx/src/platform/gx/gx_tev.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetTevAlphaOp_80171db8"
+  },
+  "0x80171E10": {
+    "file": "libdol-nx/src/platform/gx/gx_tev.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetTevColor_80171e10"
+  },
+  "0x80171E70": {
+    "file": "libdol-nx/src/platform/gx/gx_tev.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetTevColorS10_80171e70"
+  },
+  "0x80171ED4": {
+    "file": "libdol-nx/src/platform/gx/gx_tev.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetTevKColor_80171ed4"
+  },
+  "0x80171F30": {
+    "file": "libdol-nx/src/platform/gx/gx_tev.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetTevKColorSel_80171f30"
+  },
+  "0x80171F80": {
+    "file": "libdol-nx/src/platform/gx/gx_tev.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetTevKAlphaSel_80171f80"
+  },
+  "0x80171FD0": {
+    "file": "libdol-nx/src/platform/gx/gx_tev.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetTevSwapMode_80171fd0"
+  },
+  "0x8017200C": {
+    "file": "libdol-nx/src/platform/gx/gx_tev.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetTevSwapModeTable_8017200c"
+  },
+  "0x80172088": {
+    "file": "libdol-nx/src/platform/gx/gx_pixel.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetAlphaCompare_80172088"
+  },
+  "0x801720C0": {
+    "file": "libdol-nx/src/platform/gx/gx_pixel.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetZTexture_801720c0"
+  },
+  "0x8017214C": {
+    "file": "libdol-nx/src/platform/gx/gx_tev.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetTevOrder_8017214c"
+  },
+  "0x801722A8": {
+    "file": "libdol-nx/src/platform/gx/gx_tev.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetNumTevStages_801722a8"
+  },
+  "0x801722CC": {
+    "file": "libdol-nx/src/platform/gx/gx_pixel.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetFog_801722cc"
+  },
+  "0x801724F8": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_801724f8"
+  },
+  "0x8017277C": {
+    "file": "libdol-nx/src/platform/gx/gx_pixel.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetBlendMode_8017277c"
+  },
+  "0x801727CC": {
+    "file": "libdol-nx/src/platform/gx/gx_pixel.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetColorUpdate_801727cc"
+  },
+  "0x801727F8": {
+    "file": "libdol-nx/src/platform/gx/gx_pixel.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetAlphaUpdate_801727f8"
+  },
+  "0x80172824": {
+    "file": "libdol-nx/src/platform/gx/gx_pixel.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetZMode_80172824"
+  },
+  "0x80172858": {
+    "file": "libdol-nx/src/platform/gx/gx_pixel.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetZCompLoc_80172858"
+  },
+  "0x80172888": {
+    "file": "libdol-nx/src/platform/gx/gx_pixel.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetPixelFmt_80172888"
+  },
+  "0x80172930": {
+    "file": "libdol-nx/src/platform/gx/gx_pixel.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetDither_80172930"
+  },
+  "0x8017295C": {
+    "file": "libdol-nx/src/platform/gx/gx_pixel.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetDstAlpha_8017295c"
+  },
+  "0x80172A30": {
+    "file": "libdol-nx/src/platform/gx/gx_vertex.cpp",
+    "library": "libdol-nx",
+    "native": "GX__DrawSphere_80172a30"
+  },
+  "0x80172E00": {
+    "file": "libdol-nx/src/platform/gx/gx_init.cpp",
+    "library": "libdol-nx",
+    "native": "GX__BeginDisplayList_80172e00"
+  },
+  "0x80172EB4": {
+    "file": "libdol-nx/src/platform/gx/gx_init.cpp",
+    "library": "libdol-nx",
+    "native": "GX__EndDisplayList_80172eb4"
+  },
+  "0x80172F64": {
+    "file": "libdol-nx/src/platform/gx/gx_dl.cpp",
+    "library": "libdol-nx",
+    "native": "GX__CallDisplayList_80172f64"
+  },
+  "0x80172FD8": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80172fd8"
+  },
+  "0x8017301C": {
+    "file": "libdol-nx/src/platform/gx/gx_transform.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetProjection_8017301c"
+  },
+  "0x80173080": {
+    "file": "libdol-nx/src/platform/gx/gx_transform.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetProjectionv_80173080"
+  },
+  "0x801730CC": {
+    "file": "libdol-nx/src/platform/gx/gx_transform.cpp",
+    "library": "libdol-nx",
+    "native": "GX__GetProjectionv_801730cc"
+  },
+  "0x8017310C": {
+    "file": "libdol-nx/src/platform/gx/gx_transform.cpp",
+    "library": "libdol-nx",
+    "native": "GX__LoadPosMtxImm_8017310c"
+  },
+  "0x8017315C": {
+    "file": "libdol-nx/src/platform/gx/gx_transform.cpp",
+    "library": "libdol-nx",
+    "native": "GX__LoadPosMtxIndx_8017315c"
+  },
+  "0x80173188": {
+    "file": "libdol-nx/src/platform/gx/gx_transform.cpp",
+    "library": "libdol-nx",
+    "native": "GX__LoadNrmMtxImm_80173188"
+  },
+  "0x801731E0": {
+    "file": "libdol-nx/src/platform/gx/gx_transform.cpp",
+    "library": "libdol-nx",
+    "native": "GX__LoadNrmMtxIndx3x3_801731e0"
+  },
+  "0x80173214": {
+    "file": "libdol-nx/src/platform/gx/gx_transform.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetCurrentMtx_80173214"
+  },
+  "0x80173234": {
+    "file": "libdol-nx/src/platform/gx/gx_transform.cpp",
+    "library": "libdol-nx",
+    "native": "GX__LoadTexMtxImm_80173234"
+  },
+  "0x801732E8": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_801732e8"
+  },
+  "0x80173378": {
+    "file": "libdol-nx/src/platform/gx/gx_transform.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetViewportJitter_80173378"
+  },
+  "0x801733B4": {
+    "file": "libdol-nx/src/platform/gx/gx_transform.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetViewport_801733b4"
+  },
+  "0x801733E0": {
+    "file": "libdol-nx/src/platform/gx/gx_transform.cpp",
+    "library": "libdol-nx",
+    "native": "GX__GetViewportv_801733e0"
+  },
+  "0x80173400": {
+    "file": "libdol-nx/src/platform/gx/gx_transform.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetZScaleOffset_80173400"
+  },
+  "0x80173430": {
+    "file": "libdol-nx/src/platform/gx/gx_transform.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetScissor_80173430"
+  },
+  "0x801734E0": {
+    "file": "libdol-nx/src/platform/gx/gx_transform.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetScissorBoxOffset_801734e0"
+  },
+  "0x8017351C": {
+    "file": "libdol-nx/src/platform/gx/gx_pixel.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetClipMode_8017351c"
+  },
+  "0x80173544": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173544"
+  },
+  "0x801735CC": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_801735cc"
+  },
+  "0x801736F4": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_801736f4"
+  },
+  "0x801736F8": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_801736f8"
+  },
+  "0x80173718": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173718"
+  },
+  "0x80173738": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173738"
+  },
+  "0x80173758": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173758"
+  },
+  "0x80173778": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173778"
+  },
+  "0x80173798": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173798"
+  },
+  "0x801737B8": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_801737b8"
+  },
+  "0x801737D8": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_801737d8"
+  },
+  "0x801737F8": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_801737f8"
+  },
+  "0x80173818": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173818"
+  },
+  "0x80173838": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173838"
+  },
+  "0x80173858": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173858"
+  },
+  "0x80173878": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173878"
+  },
+  "0x80173894": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173894"
+  },
+  "0x801738B0": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_801738b0"
+  },
+  "0x801738CC": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_801738cc"
+  },
+  "0x801738E8": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_801738e8"
+  },
+  "0x80173904": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173904"
+  },
+  "0x80173920": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173920"
+  },
+  "0x8017393C": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_8017393c"
+  },
+  "0x80173958": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173958"
+  },
+  "0x80173974": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173974"
+  },
+  "0x80173990": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173990"
+  },
+  "0x801739AC": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_801739ac"
+  },
+  "0x801739C8": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_801739c8"
+  },
+  "0x801739E4": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_801739e4"
+  },
+  "0x80173A00": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173a00"
+  },
+  "0x80173A1C": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173a1c"
+  },
+  "0x80173A38": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173a38"
+  },
+  "0x80173A54": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173a54"
+  },
+  "0x80173A70": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173a70"
+  },
+  "0x80173A8C": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173a8c"
+  },
+  "0x80173AA8": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173aa8"
+  },
+  "0x80173AC4": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173ac4"
+  },
+  "0x80173AE0": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173ae0"
+  },
+  "0x80173AF8": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173af8"
+  },
+  "0x80173B18": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173b18"
+  },
+  "0x80173B1C": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173b1c"
+  },
+  "0x80173B38": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173b38"
+  },
+  "0x80173B54": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173b54"
+  },
+  "0x80173B70": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173b70"
+  },
+  "0x80173B8C": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173b8c"
+  },
+  "0x80173BA8": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173ba8"
+  },
+  "0x80173BC4": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173bc4"
+  },
+  "0x80173BE0": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173be0"
+  },
+  "0x80173BFC": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173bfc"
+  },
+  "0x80173C18": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173c18"
+  },
+  "0x80173C34": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173c34"
+  },
+  "0x80173C64": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173c64"
+  },
+  "0x80173C94": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173c94"
+  },
+  "0x80173CC4": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173cc4"
+  },
+  "0x80173CF4": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173cf4"
+  },
+  "0x80173D24": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173d24"
+  },
+  "0x80173D54": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173d54"
+  },
+  "0x80173D84": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173d84"
+  },
+  "0x80173DB0": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173db0"
+  },
+  "0x80173DC0": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173dc0"
+  },
+  "0x80173DD0": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173dd0"
+  },
+  "0x80173DE0": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173de0"
+  },
+  "0x80173DEC": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173dec"
+  },
+  "0x80173DF8": {
+    "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
+    "library": "libdol-nx",
+    "native": "gx_stub_80173df8"
+  },
+  "0x80193010": {
+    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "library": "libdol-nx",
+    "native": "IPCReadReg_80193010"
+  },
+  "0x80193020": {
+    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "library": "libdol-nx",
+    "native": "IPCWriteReg_80193020"
+  },
+  "0x80193478": {
+    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "library": "libdol-nx",
+    "native": "IPCCltInit_80193478"
+  },
+  "0x801937E0": {
+    "file": "libwii-nx/src/ios/ios.cpp",
+    "library": "libwii-nx",
+    "native": "IOS_OpenAsync_HLE"
+  },
+  "0x801938F8": {
+    "file": "libwii-nx/src/nand/nand_isfs.cpp",
+    "library": "libwii-nx",
+    "native": "NAND_IOS_Open_HLE"
+  },
+  "0x80193A18": {
+    "file": "libwii-nx/src/ios/ios.cpp",
+    "library": "libwii-nx",
+    "native": "IOS_CloseAsync_HLE"
+  },
+  "0x80193AD8": {
+    "file": "libwii-nx/src/nand/nand_isfs.cpp",
+    "library": "libwii-nx",
+    "native": "NAND_IOS_Close_HLE"
+  },
+  "0x80193B80": {
+    "file": "libwii-nx/src/ios/ios.cpp",
+    "library": "libwii-nx",
+    "native": "IOS_ReadAsync_HLE"
+  },
+  "0x80193C80": {
+    "file": "libwii-nx/src/nand/nand_isfs.cpp",
+    "library": "libwii-nx",
+    "native": "NAND_IOS_Read_HLE"
+  },
+  "0x80193D88": {
+    "file": "libwii-nx/src/ios/ios.cpp",
+    "library": "libwii-nx",
+    "native": "IOS_WriteAsync_HLE"
+  },
+  "0x80193E88": {
+    "file": "libwii-nx/src/nand/nand_isfs.cpp",
+    "library": "libwii-nx",
+    "native": "NAND_IOS_Write_HLE"
+  },
+  "0x80193F90": {
+    "file": "libwii-nx/src/ios/ios.cpp",
+    "library": "libwii-nx",
+    "native": "IOS_SeekAsync_HLE"
+  },
+  "0x80194070": {
+    "file": "libwii-nx/src/nand/nand_isfs.cpp",
+    "library": "libwii-nx",
+    "native": "NAND_IOS_Seek_HLE"
+  },
+  "0x80194158": {
+    "file": "libwii-nx/src/ios/ios.cpp",
+    "library": "libwii-nx",
+    "native": "IOS_IoctlAsync_80194158"
+  },
+  "0x80194290": {
+    "file": "libwii-nx/src/nand/nand_isfs.cpp",
+    "library": "libwii-nx",
+    "native": "NAND_IOS_Ioctl_Entry_HLE"
+  },
+  "0x801944FC": {
+    "file": "libwii-nx/src/ios/ios.cpp",
+    "library": "libwii-nx",
+    "native": "IOS_IoctlvAsync_HLE"
+  },
+  "0x801945E0": {
+    "file": "libwii-nx/src/nand/nand_isfs.cpp",
+    "library": "libwii-nx",
+    "native": "NAND_IOS_Ioctlv_Entry_HLE"
+  },
+  "0x80197380": {
+    "file": "libwii-nx/src/input/kpad.cpp",
+    "library": "libwii-nx",
+    "native": "KPAD__Read_HLE"
+  },
+  "0x8019812C": {
+    "file": "libwii-nx/src/input/kpad.cpp",
+    "library": "libwii-nx",
+    "native": "KPAD__GetUnifiedWpadStatus_HLE"
+  },
+  "0x8019B43C": {
+    "file": "libwii-nx/src/nand/nand_api.cpp",
+    "library": "libwii-nx",
+    "native": "NANDCreate_HLE"
+  },
+  "0x8019B524": {
+    "file": "libwii-nx/src/nand/nand_async.cpp",
+    "library": "libwii-nx",
+    "native": "NANDPrivateCreateAsync_HLE"
+  },
+  "0x8019B59C": {
+    "file": "libwii-nx/src/nand/nand_api.cpp",
+    "library": "libwii-nx",
+    "native": "NANDDelete_HLE"
+  },
+  "0x8019B6E4": {
+    "file": "libwii-nx/src/nand/nand_async.cpp",
+    "library": "libwii-nx",
+    "native": "NANDPrivateDeleteAsync_HLE"
+  },
+  "0x8019B7A4": {
+    "file": "libwii-nx/src/nand/nand_api.cpp",
+    "library": "libwii-nx",
+    "native": "NANDRead_HLE"
+  },
+  "0x8019B80C": {
+    "file": "libwii-nx/src/nand/nand_async.cpp",
+    "library": "libwii-nx",
+    "native": "NANDReadAsync_HLE"
+  },
+  "0x8019B884": {
+    "file": "libwii-nx/src/nand/nand_api.cpp",
+    "library": "libwii-nx",
+    "native": "NANDWrite_HLE"
+  },
+  "0x8019B8EC": {
+    "file": "libwii-nx/src/nand/nand_async.cpp",
+    "library": "libwii-nx",
+    "native": "NANDWriteAsync_HLE"
+  },
+  "0x8019B964": {
+    "file": "libwii-nx/src/nand/nand_api.cpp",
+    "library": "libwii-nx",
+    "native": "NANDSeek_HLE"
+  },
+  "0x8019BA04": {
+    "file": "libwii-nx/src/nand/nand_async.cpp",
+    "library": "libwii-nx",
+    "native": "NANDSeekAsync_HLE"
+  },
+  "0x8019BBE0": {
+    "file": "libwii-nx/src/nand/nand_api.cpp",
+    "library": "libwii-nx",
+    "native": "NANDCreateDir_HLE"
+  },
+  "0x8019BCC8": {
+    "file": "libwii-nx/src/nand/nand_async.cpp",
+    "library": "libwii-nx",
+    "native": "NANDPrivateCreateDirAsync_HLE"
+  },
+  "0x8019BEE8": {
+    "file": "libwii-nx/src/nand/nand_api.cpp",
+    "library": "libwii-nx",
+    "native": "NANDMove_HLE"
+  },
+  "0x8019BF4C": {
+    "file": "libwii-nx/src/nand/nand_api.cpp",
+    "library": "libwii-nx",
+    "native": "NANDGetLength_HLE"
+  },
+  "0x8019C048": {
+    "file": "libwii-nx/src/nand/nand_async.cpp",
+    "library": "libwii-nx",
+    "native": "NANDGetLengthAsync_HLE"
+  },
+  "0x8019C380": {
+    "file": "libwii-nx/src/nand/nand_api.cpp",
+    "library": "libwii-nx",
+    "native": "NANDGetStatus_HLE"
+  },
+  "0x8019C448": {
+    "file": "libwii-nx/src/nand/nand_async.cpp",
+    "library": "libwii-nx",
+    "native": "NANDPrivateGetStatusAsync_HLE"
+  },
+  "0x8019C800": {
+    "file": "libwii-nx/src/nand/nand_api.cpp",
+    "library": "libwii-nx",
+    "native": "NANDOpen_HLE"
+  },
+  "0x8019C918": {
+    "file": "libwii-nx/src/nand/nand_async.cpp",
+    "library": "libwii-nx",
+    "native": "NANDOpenAsync_HLE"
+  },
+  "0x8019C990": {
+    "file": "libwii-nx/src/nand/nand_async.cpp",
+    "library": "libwii-nx",
+    "native": "NANDPrivateOpenAsync_HLE"
+  },
+  "0x8019CA80": {
+    "file": "libwii-nx/src/nand/nand_api.cpp",
+    "library": "libwii-nx",
+    "native": "NANDClose_HLE"
+  },
+  "0x8019CAEC": {
+    "file": "libwii-nx/src/nand/nand_async.cpp",
+    "library": "libwii-nx",
+    "native": "NANDCloseAsync_HLE"
+  },
+  "0x8019CB74": {
+    "file": "libwii-nx/src/nand/nand_async.cpp",
+    "library": "libwii-nx",
+    "native": "NANDSafeOpen_HLE"
+  },
+  "0x8019CF28": {
+    "file": "libwii-nx/src/nand/nand_async.cpp",
+    "library": "libwii-nx",
+    "native": "NANDSafeClose_HLE"
+  },
+  "0x8019D104": {
+    "file": "libwii-nx/src/nand/nand_async.cpp",
+    "library": "libwii-nx",
+    "native": "NANDPrivateSafeOpenAsync_HLE"
+  },
+  "0x8019D720": {
+    "file": "libwii-nx/src/nand/nand_async.cpp",
+    "library": "libwii-nx",
+    "native": "NANDSafeCloseAsync_HLE"
+  },
+  "0x8019E18C": {
+    "file": "libwii-nx/src/nand/nand_api.cpp",
+    "library": "libwii-nx",
+    "native": "NANDInit_HLE"
+  },
+  "0x8019E390": {
+    "file": "libwii-nx/src/nand/nand_api.cpp",
+    "library": "libwii-nx",
+    "native": "NANDGetCurrentDir_HLE"
+  },
+  "0x8019E770": {
+    "file": "libwii-nx/src/nand/nand_api.cpp",
+    "library": "libwii-nx",
+    "native": "NANDGetType_HLE"
+  },
+  "0x8019E7B4": {
+    "file": "libwii-nx/src/nand/nand_async.cpp",
+    "library": "libwii-nx",
+    "native": "NANDPrivateGetTypeAsync_HLE"
+  },
+  "0x8019EAD0": {
+    "file": "libwii-nx/src/nand/nand_api.cpp",
+    "library": "libwii-nx",
+    "native": "NANDCheck_HLE"
+  },
+  "0x8019F33C": {
+    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "library": "libdol-nx",
+    "native": "OS__GetConsoleType_8019f33c"
+  },
+  "0x801A00E0": {
+    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "library": "libdol-nx",
+    "native": "OS__ExceptionInit_801a00e0"
+  },
+  "0x801A04A0": {
+    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "library": "libdol-nx",
+    "native": "OS____PSInit_801a04a0"
+  },
+  "0x801A0870": {
+    "file": "libdol-nx/src/platform/os/os_alarm.cpp",
+    "library": "libdol-nx",
+    "native": "OSSetAlarm_HLE_801a0870"
+  },
+  "0x801A08E0": {
+    "file": "libdol-nx/src/platform/os/os_alarm.cpp",
+    "library": "libdol-nx",
+    "native": "OS__SetPeriodicAlarm_801a08e0"
+  },
+  "0x801A1138": {
+    "file": "libdol-nx/src/platform/audio/audio.cpp",
+    "library": "libdol-nx",
+    "native": "AIClockInit_801A1138"
+  },
+  "0x801A1358": {
+    "file": "libdol-nx/src/platform/audio/audio.cpp",
+    "library": "libdol-nx",
+    "native": "OSInitAudioSystem_801A1358"
+  },
+  "0x801A1520": {
+    "file": "libdol-nx/src/platform/audio/audio.cpp",
+    "library": "libdol-nx",
+    "native": "OSStopAudioSystem_801A1520"
+  },
+  "0x801A15EC": {
+    "file": "libdol-nx/src/platform/os/os_cache.cpp",
+    "library": "libdol-nx",
+    "native": "Cache_Maintenance_Stub"
+  },
+  "0x801A1600": {
+    "file": "libdol-nx/src/platform/os/os_cache.cpp",
+    "library": "libdol-nx",
+    "native": "DCInvalidateRange_801a1600"
+  },
+  "0x801A162C": {
+    "file": "libdol-nx/src/platform/os/os_cache.cpp",
+    "library": "libdol-nx",
+    "native": "DCFlushRange_801a162c"
+  },
+  "0x801A165C": {
+    "file": "libdol-nx/src/platform/os/os_cache.cpp",
+    "library": "libdol-nx",
+    "native": "DCStoreRange_801a165c"
+  },
+  "0x801A168C": {
+    "file": "libdol-nx/src/platform/os/os_cache.cpp",
+    "library": "libdol-nx",
+    "native": "DCFlushRangeNoSync_801a168c"
+  },
+  "0x801A16B8": {
+    "file": "libdol-nx/src/platform/os/os_cache.cpp",
+    "library": "libdol-nx",
+    "native": "DCStoreRangeNoSync_801a16b8"
+  },
+  "0x801A16E4": {
+    "file": "libdol-nx/src/platform/os/os_cache.cpp",
+    "library": "libdol-nx",
+    "native": "DCZeroRange_HLE_801a16e4"
+  },
+  "0x801A1710": {
+    "file": "libdol-nx/src/platform/os/os_cache.cpp",
+    "library": "libdol-nx",
+    "native": "Cache_Maintenance_Stub"
+  },
+  "0x801A1744": {
+    "file": "libdol-nx/src/platform/os/os_cache.cpp",
+    "library": "libdol-nx",
+    "native": "Cache_Maintenance_Stub"
+  },
+  "0x801A1754": {
+    "file": "libdol-nx/src/platform/os/os_cache.cpp",
+    "library": "libdol-nx",
+    "native": "Cache_Maintenance_Stub"
+  },
+  "0x801A1768": {
+    "file": "libdol-nx/src/platform/os/os_cache.cpp",
+    "library": "libdol-nx",
+    "native": "Cache_Maintenance_Stub"
+  },
+  "0x801A1834": {
+    "file": "libdol-nx/src/platform/os/os_cache.cpp",
+    "library": "libdol-nx",
+    "native": "Cache_Maintenance_Stub"
+  },
+  "0x801A186C": {
+    "file": "libdol-nx/src/platform/os/os_cache.cpp",
+    "library": "libdol-nx",
+    "native": "Cache_Maintenance_Stub"
+  },
+  "0x801A1894": {
+    "file": "libdol-nx/src/platform/os/os_cache.cpp",
+    "library": "libdol-nx",
+    "native": "LCLoadBlocks_HLE_801a1894"
+  },
+  "0x801A18B8": {
+    "file": "libdol-nx/src/platform/os/os_cache.cpp",
+    "library": "libdol-nx",
+    "native": "LCStoreBlocks_HLE_801a18b8"
+  },
+  "0x801A18DC": {
+    "file": "libdol-nx/src/platform/os/os_cache.cpp",
+    "library": "libdol-nx",
+    "native": "LCStoreData_HLE_801a18dc"
+  },
+  "0x801A197C": {
+    "file": "libdol-nx/src/platform/os/os_cache.cpp",
+    "library": "libdol-nx",
+    "native": "LCQueueLength_HLE_801a197c"
+  },
+  "0x801A1988": {
+    "file": "libdol-nx/src/platform/os/os_cache.cpp",
+    "library": "libdol-nx",
+    "native": "LCQueueWait_HLE_801a1988"
+  },
+  "0x801A1AE4": {
+    "file": "libdol-nx/src/platform/os/os_cache.cpp",
+    "library": "libdol-nx",
+    "native": "Cache_Maintenance_Stub"
+  },
+  "0x801A1E70": {
+    "file": "libdol-nx/src/platform/os/os_context.cpp",
+    "library": "libdol-nx",
+    "native": "OS__SetCurrentContext_801a1e70"
+  },
+  "0x801A1F58": {
+    "file": "libdol-nx/src/platform/os/os_context.cpp",
+    "library": "libdol-nx",
+    "native": "OS__LoadContext_801a1f58"
+  },
+  "0x801A2098": {
+    "file": "libdol-nx/src/platform/os/os_context.cpp",
+    "library": "libdol-nx",
+    "native": "OS__ClearContext_801a2098"
+  },
+  "0x801A25D0": {
+    "file": "libdol-nx/src/platform/os/os_report.cpp",
+    "library": "libdol-nx",
+    "native": "OS__Report_801a25d0"
+  },
+  "0x801A2660": {
+    "file": "libdol-nx/src/platform/os/os_reset.cpp",
+    "library": "libdol-nx",
+    "native": "OS__Panic_801A2660_Cpu"
+  },
+  "0x801A65AC": {
+    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "library": "libdol-nx",
+    "native": "OS__DisableInterrupts_801a65ac"
+  },
+  "0x801A65C0": {
+    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "library": "libdol-nx",
+    "native": "OS__EnableInterrupts_801a65c0"
+  },
+  "0x801A65D4": {
+    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "library": "libdol-nx",
+    "native": "OS__RestoreInterrupts_801a65d4"
+  },
+  "0x801A65F8": {
+    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "library": "libdol-nx",
+    "native": "__OSSetInterruptHandler_801a65f8_hle"
+  },
+  "0x801A661C": {
+    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "library": "libdol-nx",
+    "native": "OS____InterruptInit_801a661c"
+  },
+  "0x801A66E0": {
+    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "library": "libdol-nx",
+    "native": "SetInterruptMask_801a66e0"
+  },
+  "0x801A693C": {
+    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "library": "libdol-nx",
+    "native": "OS____MaskInterrupts_801a693c"
+  },
+  "0x801A69BC": {
+    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "library": "libdol-nx",
+    "native": "__OSUnmaskInterrupts_801a69bc_hle"
+  },
+  "0x801A72FC": {
+    "file": "libdol-nx/src/platform/os/os_message.cpp",
+    "library": "libdol-nx",
+    "native": "OS__InitMessageQueue_HLE_801a72fc"
+  },
+  "0x801A735C": {
+    "file": "libdol-nx/src/platform/os/os_message.cpp",
+    "library": "libdol-nx",
+    "native": "OS__SendMessage_HLE_801a735c"
+  },
+  "0x801A7424": {
+    "file": "libdol-nx/src/platform/os/os_message.cpp",
+    "library": "libdol-nx",
+    "native": "OS__ReceiveMessage_HLE_801a7424"
+  },
+  "0x801A7500": {
+    "file": "libdol-nx/src/platform/os/os_message.cpp",
+    "library": "libdol-nx",
+    "native": "OS__JamMessage_HLE_801a7500"
+  },
+  "0x801A7DFC": {
+    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "library": "libdol-nx",
+    "native": "OS____InitMemoryProtection_801a7dfc"
+  },
+  "0x801A7EE4": {
+    "file": "libdol-nx/src/platform/os/os_scheduler.cpp",
+    "library": "libdol-nx",
+    "native": "OSLockMutex_HLE_801a7ee4"
+  },
+  "0x801A7FC0": {
+    "file": "libdol-nx/src/platform/os/os_scheduler.cpp",
+    "library": "libdol-nx",
+    "native": "OSUnlockMutex_HLE_801a7fc0"
+  },
+  "0x801A8A50": {
+    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "library": "libdol-nx",
+    "native": "OSGetResetCode_801a8a50"
+  },
+  "0x801A8A80": {
+    "file": "libdol-nx/src/platform/os/os_reset.cpp",
+    "library": "libdol-nx",
+    "native": "OSResetSystem"
+  },
+  "0x801A98B0": {
+    "file": "libdol-nx/src/platform/os/os_context.cpp",
+    "library": "libdol-nx",
+    "native": "OS__GetCurrentThread_801a98b0_hle"
+  },
+  "0x801A9C08": {
+    "file": "libdol-nx/src/platform/os/os_scheduler.cpp",
+    "library": "libdol-nx",
+    "native": "SelectThread_801a9c08"
+  },
+  "0x801A9E84": {
+    "file": "libdol-nx/src/platform/os/os_thread.cpp",
+    "library": "libdol-nx",
+    "native": "OSCreateThread_HLE_801a9e84"
+  },
+  "0x801AA0F0": {
+    "file": "libdol-nx/src/platform/os/os_thread.cpp",
+    "library": "libdol-nx",
+    "native": "OSExitThread_HLE_801aa0f0"
+  },
+  "0x801AA1D4": {
+    "file": "libdol-nx/src/platform/os/os_thread.cpp",
+    "library": "libdol-nx",
+    "native": "OSCancelThread_HLE_801aa1d4"
+  },
+  "0x801AA3AC": {
+    "file": "libdol-nx/src/platform/os/os_thread.cpp",
+    "library": "libdol-nx",
+    "native": "OSJoinThread_HLE_801aa3ac"
+  },
+  "0x801AA4EC": {
+    "file": "libdol-nx/src/platform/os/os_thread.cpp",
+    "library": "libdol-nx",
+    "native": "OSDetachThread_HLE_801aa4ec"
+  },
+  "0x801AA58C": {
+    "file": "libdol-nx/src/platform/os/os_thread.cpp",
+    "library": "libdol-nx",
+    "native": "OSResumeThread_HLE_801aa58c"
+  },
+  "0x801AA6A8": {
+    "file": "libdol-nx/src/platform/os/os_thread.cpp",
+    "library": "libdol-nx",
+    "native": "OSSuspendThread_HLE_801aa6a8"
+  },
+  "0x801AA9B8": {
+    "file": "libdol-nx/src/platform/os/os_sleep.cpp",
+    "library": "libdol-nx",
+    "native": "OSSleepThread_HLE_801aa9b8"
+  },
+  "0x801AAAA4": {
+    "file": "libdol-nx/src/platform/os/os_scheduler.cpp",
+    "library": "libdol-nx",
+    "native": "OSWakeupThread_HLE_801aaaa4"
+  },
+  "0x801AACA8": {
+    "file": "libdol-nx/src/platform/os/os_sleep.cpp",
+    "library": "libdol-nx",
+    "native": "OS__SleepTicks_HLE_801aaca8"
+  },
+  "0x801AAD5C": {
+    "file": "libdol-nx/src/platform/os/os_time.cpp",
+    "library": "libdol-nx",
+    "native": "OS__GetTime_HLE"
+  },
+  "0x801AAD7C": {
+    "file": "libdol-nx/src/platform/os/os_time.cpp",
+    "library": "libdol-nx",
+    "native": "OS____GetSystemTime_801aad7c"
+  },
+  "0x801AB75C": {
+    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "library": "libdol-nx",
+    "native": "OSSetPowerCallback_801ab75c"
+  },
+  "0x801AB848": {
+    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "library": "libdol-nx",
+    "native": "__OSInitSTM_HLE_801ab848"
+  },
+  "0x801AD1D4": {
+    "file": "libwii-nx/src/system/sc.cpp",
+    "library": "libwii-nx",
+    "native": "OS__CheckInstall"
+  },
+  "0x801AE4A0": {
+    "file": "libwii-nx/src/system/sc.cpp",
+    "library": "libwii-nx",
+    "native": "OS__IsTitleInstalled"
+  },
+  "0x801AE58C": {
+    "file": "libdol-nx/src/platform/os/os_reset.cpp",
+    "library": "libdol-nx",
+    "native": "Exit_801AE58C"
+  },
+  "0x801AF0DC": {
+    "file": "libdol-nx/src/platform/input/pad.cpp",
+    "library": "libdol-nx",
+    "native": "PAD__Reset_HLE"
+  },
+  "0x801AF1E4": {
+    "file": "libdol-nx/src/platform/input/pad.cpp",
+    "library": "libdol-nx",
+    "native": "PAD__Recalibrate_HLE"
+  },
+  "0x801AF2F0": {
+    "file": "libdol-nx/src/platform/input/pad.cpp",
+    "library": "libdol-nx",
+    "native": "PAD__Init_HLE"
+  },
+  "0x801AF44C": {
+    "file": "libdol-nx/src/platform/input/pad.cpp",
+    "library": "libdol-nx",
+    "native": "PAD__Read_HLE"
+  },
+  "0x801AF908": {
+    "file": "libdol-nx/src/platform/input/pad.cpp",
+    "library": "libdol-nx",
+    "native": "PAD__ControlMotor_HLE"
+  },
+  "0x801B0220": {
+    "file": "libwii-nx/src/system/sc.cpp",
+    "library": "libwii-nx",
+    "native": "SCCheckStatus_HLE"
+  },
+  "0x801B1BE4": {
+    "file": "libwii-nx/src/system/sc.cpp",
+    "library": "libwii-nx",
+    "native": "SCGetAspectRatio_HLE"
+  },
+  "0x801B1CAC": {
+    "file": "libwii-nx/src/system/sc.cpp",
+    "library": "libwii-nx",
+    "native": "SCGetEuRgb60Mode_HLE"
+  },
+  "0x801B23A0": {
+    "file": "libwii-nx/src/system/sc.cpp",
+    "library": "libwii-nx",
+    "native": "SCGetProductArea_HLE"
+  },
+  "0x801B2424": {
+    "file": "libwii-nx/src/system/sc.cpp",
+    "library": "libwii-nx",
+    "native": "SCGetProductCode_HLE"
+  },
+  "0x801B2460": {
+    "file": "libwii-nx/src/system/sc.cpp",
+    "library": "libwii-nx",
+    "native": "SCGetProductSN_HLE"
+  },
+  "0x801B24C8": {
+    "file": "libwii-nx/src/system/sc.cpp",
+    "library": "libwii-nx",
+    "native": "SCGetProductGameRegion_HLE"
+  },
+  "0x801B2DE0": {
+    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "library": "libdol-nx",
+    "native": "SIInit_801b2de0"
+  },
+  "0x801B3ACC": {
+    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "library": "libdol-nx",
+    "native": "HLE_SISetSamplingRate_801b3acc"
+  },
+  "0x801B3BAC": {
+    "file": "libdol-nx/src/accel/sdk/thp/thp_bind.cpp",
+    "library": "libdol-nx",
+    "native": "THPVideoDecode_HLE"
+  },
+  "0x801B90F4": {
+    "file": "libdol-nx/src/platform/system/vi.cpp",
+    "library": "libdol-nx",
+    "native": "VISetPreRetraceCallback_HLE_801b90f4"
+  },
+  "0x801B9138": {
+    "file": "libdol-nx/src/platform/system/vi.cpp",
+    "library": "libdol-nx",
+    "native": "VISetPostRetraceCallback_HLE_801b9138"
+  },
+  "0x801B9294": {
+    "file": "libdol-nx/src/platform/system/vi.cpp",
+    "library": "libdol-nx",
+    "native": "__VIInit_HLE_801b9294"
+  },
+  "0x801B94A4": {
+    "file": "libdol-nx/src/platform/system/vi.cpp",
+    "library": "libdol-nx",
+    "native": "VIInit_HLE_801b94a4"
+  },
+  "0x801B9934": {
+    "file": "libdol-nx/src/platform/system/vi.cpp",
+    "library": "libdol-nx",
+    "native": "VIInit_caseD_0_HLE_801b9934"
+  },
+  "0x801B993C": {
+    "file": "libdol-nx/src/platform/system/vi.cpp",
+    "library": "libdol-nx",
+    "native": "VIInit_caseD_1_HLE_801b993c"
+  },
+  "0x801B9944": {
+    "file": "libdol-nx/src/platform/system/vi.cpp",
+    "library": "libdol-nx",
+    "native": "VIInit_caseD_2_HLE_801b9944"
+  },
+  "0x801B99EC": {
+    "file": "libdol-nx/src/platform/system/vi.cpp",
+    "library": "libdol-nx",
+    "native": "VIWaitForRetrace_HLE_801b99ec"
+  },
+  "0x801B9F6C": {
+    "file": "libdol-nx/src/platform/system/vi.cpp",
+    "library": "libdol-nx",
+    "native": "VIConfigure_HLE_801b9f6c"
+  },
+  "0x801BA9A4": {
+    "file": "libdol-nx/src/platform/system/vi.cpp",
+    "library": "libdol-nx",
+    "native": "VIFlush_HLE_801ba9a4"
+  },
+  "0x801BAAB8": {
+    "file": "libdol-nx/src/platform/system/vi.cpp",
+    "library": "libdol-nx",
+    "native": "VISetNextFrameBuffer_HLE_801baab8"
+  },
+  "0x801BAB24": {
+    "file": "libdol-nx/src/platform/system/vi.cpp",
+    "library": "libdol-nx",
+    "native": "VIGetNextFrameBuffer_HLE_801bab24"
+  },
+  "0x801BAB2C": {
+    "file": "libdol-nx/src/platform/system/vi.cpp",
+    "library": "libdol-nx",
+    "native": "VISetBlack_HLE_801bab2c"
+  },
+  "0x801BABA4": {
+    "file": "libdol-nx/src/platform/system/vi.cpp",
+    "library": "libdol-nx",
+    "native": "VIGetRetraceCount_HLE_801baba4"
+  },
+  "0x801BABAC": {
+    "file": "libdol-nx/src/platform/system/vi.cpp",
+    "library": "libdol-nx",
+    "native": "VIGetNextField_HLE_801babac"
+  },
+  "0x801BAC48": {
+    "file": "libdol-nx/src/platform/system/vi.cpp",
+    "library": "libdol-nx",
+    "native": "VIGetCurrentLine_HLE_801bac48"
+  },
+  "0x801BAD38": {
+    "file": "libdol-nx/src/platform/system/vi.cpp",
+    "library": "libdol-nx",
+    "native": "VIGetDTVStatus_HLE_801bad38"
+  },
+  "0x801BF3B4": {
+    "file": "libwii-nx/src/input/wpad.cpp",
+    "library": "libwii-nx",
+    "native": "WPADInitSub_HLE"
+  },
+  "0x801BF5C4": {
+    "file": "libwii-nx/src/input/wpad.cpp",
+    "library": "libwii-nx",
+    "native": "WPADInit_HLE"
+  },
+  "0x801BF634": {
+    "file": "libwii-nx/src/input/wpad.cpp",
+    "library": "libwii-nx",
+    "native": "WPADStartSimpleSync_HLE"
+  },
+  "0x801BF638": {
+    "file": "libwii-nx/src/input/wpad.cpp",
+    "library": "libwii-nx",
+    "native": "WPADStartSimpleSync_HLE"
+  },
+  "0x801BF63C": {
+    "file": "libwii-nx/src/input/wpad.cpp",
+    "library": "libwii-nx",
+    "native": "WPADStopSimpleSync_HLE"
+  },
+  "0x801BF640": {
+    "file": "libwii-nx/src/input/wpad.cpp",
+    "library": "libwii-nx",
+    "native": "WPADSetSyncDeviceCallback_HLE"
+  },
+  "0x801BF64C": {
+    "file": "libwii-nx/src/input/wpad.cpp",
+    "library": "libwii-nx",
+    "native": "WPADGetStatus_HLE"
+  },
+  "0x801C0990": {
+    "file": "libwii-nx/src/input/wpad.cpp",
+    "library": "libwii-nx",
+    "native": "WPADProbe_HLE"
+  },
+  "0x801C0B54": {
+    "file": "libwii-nx/src/input/wpad.cpp",
+    "library": "libwii-nx",
+    "native": "WPADGetDataFormat_HLE"
+  },
+  "0x801C0B9C": {
+    "file": "libwii-nx/src/input/wpad.cpp",
+    "library": "libwii-nx",
+    "native": "WPADSetDataFormat_HLE"
+  },
+  "0x801C0CA4": {
+    "file": "libwii-nx/src/input/wpad.cpp",
+    "library": "libwii-nx",
+    "native": "WPADGetInfoAsync_HLE"
+  },
+  "0x801C0EC4": {
+    "file": "libwii-nx/src/input/wpad.cpp",
+    "library": "libwii-nx",
+    "native": "WPADControlMotor_HLE"
+  },
+  "0x801C0FF8": {
+    "file": "libwii-nx/src/input/wpad.cpp",
+    "library": "libwii-nx",
+    "native": "WPADControlLed_HLE"
+  },
+  "0x801C329C": {
+    "file": "libwii-nx/src/input/wpad.cpp",
+    "library": "libwii-nx",
+    "native": "WPADGetDpdSensitivity_HLE"
+  },
+  "0x801CDB84": {
+    "file": "libwii-nx/src/input/wpad.cpp",
+    "library": "libwii-nx",
+    "native": "WUDGetStatus_HLE"
+  },
+  "0x8020FF9C": {
+    "file": "libdol-nx/src/platform/gx/gx_egg.cpp",
+    "library": "libdol-nx",
+    "native": "EGG__AsyncDisplay__endRender_HLE_8020ff9c"
+  },
+  "0x80218C2C": {
+    "file": "libdol-nx/src/accel/egg/egg_bind.cpp",
+    "library": "libdol-nx",
+    "native": "EGG_Decomp_decodeSZS_80218c2c"
+  },
+  "0x8021B344": {
+    "file": "libdol-nx/src/platform/gx/gx_egg.cpp",
+    "library": "libdol-nx",
+    "native": "EGG__DrawGX__SetVtxState_HLE"
+  },
+  "0x8021B688": {
+    "file": "libdol-nx/src/platform/gx/gx_egg.cpp",
+    "library": "libdol-nx",
+    "native": "EGG__DrawGX__SetVtxState_HLE"
+  },
+  "0x8022E2BC": {
+    "file": "libdol-nx/src/platform/gx/gx_egg.cpp",
+    "library": "libdol-nx",
+    "native": "EGG__LightTexture__SetupTevFinish_HLE_8022e2bc"
+  },
+  "0x80242D7C": {
+    "file": "libdol-nx/src/platform/os/task_thread.cpp",
+    "library": "libdol-nx",
+    "native": "TaskThread_run_HLE_80242d7c"
+  }
+}

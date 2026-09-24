@@ -66,6 +66,13 @@ public static class RuntimeNativeIndexBuilder
             return new RuntimeNativeIndex([], [], []);
 
         var engineSources = NativeSourceParsing.ReadDirectory(sourceRoot).ToList();
+        // The console's own libraries are compiled into the runtime beside this
+        // one - Runtime.cmake finds them the same way - and they register
+        // natives too: IOS, the NAND and the Wii Remote are all libwii-nx's. A
+        // translator that cannot see them translates the functions they
+        // replace, and then both claim the address at run time.
+        foreach (var console in ConsoleLibraryRoots(sourceRoot))
+            engineSources.AddRange(NativeSourceParsing.ReadDirectory(console));
         // A game's own replacements live with the game, not in the engine, and
         // are just as much a reason not to translate a function.
         var gameSources = !string.IsNullOrWhiteSpace(gameNativeDirectory) && Directory.Exists(gameNativeDirectory)
@@ -96,6 +103,23 @@ public static class RuntimeNativeIndexBuilder
                 .Select(item => new RuntimeNativeEffectEntry(
                     item.Key, item.Value, effects.PreciseContracts.Contains(item.Key)))
                 .ToArray());
+    }
+
+    /// <summary>
+    /// libwii-nx and libgc-nx, beside the library these sources belong to,
+    /// which is where a runtime build looks for them.
+    /// </summary>
+    private static IEnumerable<string> ConsoleLibraryRoots(string sourceRoot)
+    {
+        var beside = Path.GetDirectoryName(Path.GetDirectoryName(sourceRoot));
+        if (beside is null)
+            yield break;
+        foreach (var library in new[] { "libwii-nx", "libgc-nx" })
+        {
+            var path = Path.Combine(beside, library, "src");
+            if (Directory.Exists(path))
+                yield return path;
+        }
     }
 
     private static IEnumerable<RuntimeNativeRegistration> ScanRegistrations(
@@ -161,9 +185,42 @@ public static class RuntimeNativeIndexBuilder
         if (bindings is null)
             return registrations;
 
-        return registrations
-            .Where(registration => bindings.ContainsKey(registration.Symbol))
-            .Select(registration => registration with { Address = bindings[registration.Symbol] })
+        var all = registrations.ToList();
+
+        // The same two shapes wiinx-make-bindings accepts, read the same way,
+        // so the table the runtime links and the index the translator works
+        // from say the same thing. Anything else and one of them replaces a
+        // function the other has translated.
+        var byReference = bindings
+            .Where(entry => entry.Key.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+            .ToDictionary(entry => GuestTargetParser.ParseHexAddress(entry.Key),
+                          entry => entry.Value);
+
+        IEnumerable<RuntimeNativeRegistration> bound;
+        if (byReference.Count != 0)
+        {
+            bound = all
+                .Where(registration => byReference.ContainsKey(registration.Address))
+                .Select(registration => registration with { Address = byReference[registration.Address] });
+        }
+        else
+        {
+            // One native often replaces several guest functions, and a name
+            // standing for more than one registration says nothing about which
+            // of them this game's address belongs to. None of them are bound,
+            // and the game's own code is translated instead.
+            var ambiguous = all
+                .GroupBy(registration => registration.Symbol, StringComparer.Ordinal)
+                .Where(group => group.Select(registration => registration.Address).Distinct().Count() > 1)
+                .Select(group => group.Key)
+                .ToHashSet(StringComparer.Ordinal);
+            bound = all
+                .Where(registration => !ambiguous.Contains(registration.Symbol)
+                                       && bindings.ContainsKey(registration.Symbol))
+                .Select(registration => registration with { Address = bindings[registration.Symbol] });
+        }
+
+        return bound
             .OrderBy(static registration => registration.Address)
             .ThenBy(static registration => registration.Symbol, StringComparer.Ordinal);
     }

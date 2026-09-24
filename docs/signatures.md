@@ -45,20 +45,24 @@ the runtime registers a native under, against the address it has in this game:
 The game's `recomp.yml` names that file (`runtime.native_bindings`), and the
 translator binds every call to it.
 
-A native is registered at the address it has in the game it was written from,
-so in any other game that address is some other function entirely - binding by
-it would replace whatever happens to sit there. Every game therefore has to say
-which it is:
+A native names the address it has in the game it was read from - its reference
+address - and in any other game that address is some other function entirely.
+`tools/wiinx-reference-bindings` collects every one of them into
+`data/reference-bindings.json`, and a game's table says where those same
+functions are in it:
 
 ```yaml
 runtime:
   native_bindings: bindings.json   # this game's own table
-  # or
-  native_bindings: registered      # this IS the game the natives came from
 ```
 
-Saying nothing is an error, not a default: the dangerous case is the one that
-has to be written down.
+The table is keyed by reference address rather than by name, because one native
+often replaces several guest functions - the six cache operations are a single
+no-op - and only the address tells those registrations apart.
+
+The game the natives were read from is not special: its table says that each
+function is at its own reference address, which is simply what is true of it.
+A game with no table binds nothing and runs its own code throughout.
 
 A native that does not match is left unbound - reported as `not found`, with
 the number of matches - and the game's translated code runs.

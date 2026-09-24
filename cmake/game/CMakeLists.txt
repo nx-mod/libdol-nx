@@ -78,25 +78,8 @@ set(AURORA_SDL3_PROVIDER "vendor" CACHE STRING "" FORCE)
 # nothing here needs SDL3.
 add_subdirectory("${WIINX_AURORA_DIR}" aurora-build EXCLUDE_FROM_ALL)
 
-# Whether the addresses the natives were written at are this game's own.
-#
-# A native is registered through the game's bindings table wherever it is, but
-# it also defines `func_<address>` so directly translated calls reach it - and
-# that name only means something in the game those addresses came from. Another
-# game has its own function at that address, translated under the same name, and
-# the two collide at link time.
-#
-# A project says which it is: `native_bindings: registered` means the addresses
-# are its own.
-file(READ "${WIINX_GAME_DIR}/recomp.yml" _wiinx_project)
-if (_wiinx_project MATCHES "native_bindings:[ \t]*registered")
-    set(_wiinx_aliases 1)
-    message(STATUS "libdol-nx: the natives' addresses are this game's own")
-else ()
-    set(_wiinx_aliases 0)
-    message(STATUS "libdol-nx: the natives bind through this game's own table")
-endif ()
-add_compile_definitions(WIINX_NATIVE_ADDRESS_ALIASES=${_wiinx_aliases})
+# Every game binds its natives through its own table (see native_bindings.h),
+# so there is nothing here to decide: no game's addresses are privileged.
 
 # Which folder on the card this game reads and writes: sdmc:/wii-nx/games/<name>.
 #

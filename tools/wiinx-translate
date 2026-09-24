@@ -103,6 +103,23 @@ step() {
 "$libwiinx/tools/wiinx-emit-bindings" "$dir" || {
     echo "could not write this game's native bindings" >&2; exit 1; }
 
+# The table the runtime looks itself up in. Every native the engine registers
+# says the address it had in the game the runtime was written against, and that
+# address belongs to some other function here. With this table a native the
+# game does not name resolves to 0 and is not registered, so the game's own
+# code is translated and run instead; without it the native registers at the
+# address it was written at, wins over the translated function there, and the
+# runtime refuses the contradiction at startup.
+#
+# Every game has one, including the game the addresses were read from, which
+# writes them as themselves. A game with no bindings.json binds nothing.
+if [ -f "$dir/bindings.json" ]; then
+    mkdir -p "$dir/native"
+    "$libwiinx/tools/wiinx-make-bindings" "$dir/bindings.json" \
+        "$dir/native/native_bindings.cpp" || {
+        echo "could not write this game's bindings table" >&2; exit 1; }
+fi
+
 out="$dir/generated"
 step translate-recursive translate-recursive "$entry" --project "$project" \
     --outdir "$out/functions" --output-metadata "$out/base_translation_output.json" \

@@ -139,11 +139,11 @@ wiinx-scan game.dol  →  bindings  →  translator  →  direct native calls
 
 `wiinx-scan` reads the library banners and matches each function's code
 signature, then writes the game's `bindings.json`: which native, of which build,
-answers each address. A game only binds what its own table names; the game the
-natives were written from says `native_bindings: registered` instead, because
-those addresses are its own. The translator bakes that in, so a bound call costs
-nothing at runtime. A function nothing matches stays the game's own translated
-code: an unknown build is slower, never wrong.
+answers each address. Every game binds only what its own table names, including
+the game the natives were read from, which writes those addresses as themselves
+(`data/reference-bindings.json`). The translator bakes that in, so a bound call
+costs nothing at runtime. A function nothing matches stays the game's own
+translated code: an unknown build is slower, never wrong.
 
 ## What a game brings of its own
 

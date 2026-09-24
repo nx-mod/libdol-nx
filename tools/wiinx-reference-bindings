@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+"""Write the master table: where every native replacement was first identified.
+
+    tools/wiinx-reference-bindings [--out data/reference-bindings.json] [--check]
+
+A native names the guest function it replaces by the address that function has
+in the game it was written from - the game whose code was read to identify it.
+That address is a fact about that one game, and it is scattered across the
+libraries in the registration macros.
+
+This collects them into one table, keyed by that address. Two things read it.
+
+  * The game those addresses belong to uses it as its bindings.json, the same
+    file every other game gets from `wiinx-scan`. No game is then special in
+    the build: each one carries a table saying where its own functions are.
+
+  * A game being scanned starts from it, because a native already identified in
+    one build of an SDK is the same code in another.
+
+--check exits non-zero if the written table is out of date, for CI.
+"""
+
+import json
+import os
+import re
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+LIBDOL = os.path.dirname(HERE)
+
+# The libraries a runtime build composes: this one, and the console libraries
+# beside it (see cmake/runtime/Runtime.cmake, which finds them the same way).
+LIBRARIES = ("libdol-nx", "libwii-nx", "libgc-nx")
+
+OVERRIDE = re.compile(
+    r"PPC_NATIVE_OVERRIDE[A-Z_]*\(\s*([0-9A-Fa-f]{8})\s*,\s*([A-Za-z_]\w*)")
+REGISTER = re.compile(
+    r"REGISTER_NATIVE_FUNCTION\(\s*0x([0-9A-Fa-f]{8})\s*,\s*([A-Za-z_]\w*)")
+
+
+def sources():
+    """Every library source a runtime build compiles, wherever it is."""
+    for library in LIBRARIES:
+        root = os.path.join(os.path.dirname(LIBDOL), library, "src")
+        if not os.path.isdir(root):
+            continue
+        for directory, _, names in os.walk(root):
+            for name in names:
+                if name.endswith((".cpp", ".h", ".hpp")):
+                    yield library, os.path.join(directory, name)
+
+
+def collect():
+    """{reference address: {native, library, file}}, and what disagrees.
+
+    Keyed by the address, not the name: one stub often replaces several guest
+    functions, and all six of the cache operations are the same no-op. A table
+    keyed by name would bind all six registrations to one address and leave the
+    other five functions to be translated and collide.
+    """
+    table, conflicts = {}, []
+    for library, path in sources():
+        text = open(path, errors="ignore").read()
+        where = f"{library}/{os.path.relpath(path, os.path.join(os.path.dirname(LIBDOL), library))}"
+        for pattern in (OVERRIDE, REGISTER):
+            for address, symbol in pattern.findall(text):
+                key = f"0x{int(address, 16):08X}"
+                if key in table and table[key]["native"] != symbol:
+                    conflicts.append(
+                        f"{key}: {table[key]['native']} in {table[key]['file']}, "
+                        f"{symbol} in {where}")
+                    continue
+                table[key] = {"native": symbol, "library": library, "file": where}
+    return table, conflicts
+
+
+def main(argv):
+    out = argv[argv.index("--out") + 1] if "--out" in argv else \
+        os.path.join(LIBDOL, "data", "reference-bindings.json")
+    table, conflicts = collect()
+    for conflict in conflicts:
+        print(f"two addresses for one native: {conflict}", file=sys.stderr)
+    if not table:
+        print("no native registrations found: have the macros changed?", file=sys.stderr)
+        return 1
+
+    written = json.dumps(table, indent=2, sort_keys=True) + "\n"
+    if "--check" in argv:
+        current = open(out).read() if os.path.exists(out) else ""
+        if current != written:
+            print(f"{out} is out of date: run tools/wiinx-reference-bindings", file=sys.stderr)
+            return 1
+        print(f"{out} is up to date: {len(table)} natives")
+        return 1 if conflicts else 0
+
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    with open(out, "w") as handle:
+        handle.write(written)
+    print(f"{len(table)} natives -> {out}")
+    return 1 if conflicts else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))
