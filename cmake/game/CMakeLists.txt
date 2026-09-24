@@ -5,6 +5,15 @@
 #   cmake -S cmake/game -B <game>/build -G Ninja \
 #         -DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/cmake/Switch.cmake \
 #         -DWIINX_GAME_DIR=<game> -DWIINX_DAWN_DIR=<dawn-nx> -DWIINX_AURORA_DIR=<aurora-nx>
+# Build the game, not everything beside it:
+#
+#   cmake --build <dir> --target <game>_nro
+#
+# A plain `cmake --build` compiles every target these third-party projects
+# define, including ones nothing here links - Aurora's desktop application
+# layer, Abseil's signal handler - and those are written for a desktop libc
+# rather than for this one. The game's own target pulls in exactly what it
+# needs.
 cmake_minimum_required(VERSION 3.22)
 
 # Release is the only configuration the runtime supports, and what its flags

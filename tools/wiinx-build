@@ -85,7 +85,10 @@ cmake -S "$libwiinx/cmake/game" -B "$game/build" -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE="$DEVKITPRO/cmake/Switch.cmake" \
     -DWIINX_GAME_DIR="$game" -DWIINX_DAWN_DIR="$(cd "$dawn" && pwd)" \
     -DWIINX_AURORA_DIR="$(cd "$aurora" && pwd)"
-nice -n 10 cmake --build "$game/build" -j "$jobs"
+# The game's own target, not everything: a plain build compiles every target
+# the third-party projects define, including ones nothing links, and some of
+# those are written for a desktop libc rather than this one.
+nice -n 10 cmake --build "$game/build" -j "$jobs" --target "$(basename "$game")_nro"
 
 nro=$(find "$game/build" -maxdepth 1 -name "*.nro" | head -1)
 [ -n "$nro" ] || { echo "no .nro was produced" >&2; exit 1; }
