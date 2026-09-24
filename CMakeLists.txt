@@ -137,6 +137,10 @@ if(WIINX_TOOLS AND NOT CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
     add_executable(wiinx-disc tools/src/wiinx_disc.cpp)
     target_link_libraries(wiinx-disc PRIVATE wiinx::format)
 
+    # What a NAND folder holds, and what a console would have written into it.
+    add_executable(wiinx-nand tools/src/wiinx_nand.cpp)
+    target_link_libraries(wiinx-nand PRIVATE wiinx::format)
+
     # Zstandard, for the chunks RVZ and WIA are compressed with. Without it the
     # tool still reads everything that is stored plainly.
     find_package(PkgConfig QUIET)
