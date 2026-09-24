@@ -45,7 +45,34 @@ bool Exists(const std::string& path) {
     return stat(path.c_str(), &info) == 0;
 }
 
-// One shelf's titles: a folder is a title when it holds an NRO named after it.
+// The NRO inside a title's folder: the one named after the folder, or failing
+// that the only one there. A build writes the first; a title put on the card by
+// hand often has the second, and there is no reason to hide it for that.
+std::string FindNro(const std::string& directory, const std::string& name) {
+    const std::string named = directory + "/" + name + "/" + name + ".nro";
+    if (Exists(named)) {
+        return named;
+    }
+    DIR* handle = opendir((directory + "/" + name).c_str());
+    if (handle == nullptr) {
+        return {};
+    }
+    std::string only;
+    std::size_t found = 0;
+    while (const dirent* item = readdir(handle)) {
+        const std::string file = item->d_name;
+        if (file.size() > 4 && file.compare(file.size() - 4, 4, ".nro") == 0) {
+            ++found;
+            only = directory + "/" + name + "/" + file;
+        }
+    }
+    closedir(handle);
+    // More than one and there is nothing to choose between them, so say nothing
+    // rather than start the wrong one.
+    return found == 1 ? only : std::string{};
+}
+
+// One shelf's titles: a folder is a title when it holds an NRO.
 void Collect(const Shelf& shelf, std::vector<Entry>& out) {
     const std::string directory = std::string(kRoot) + "/" + shelf.directory;
     DIR* handle = opendir(directory.c_str());
@@ -57,8 +84,7 @@ void Collect(const Shelf& shelf, std::vector<Entry>& out) {
             continue;
         }
         const std::string name = item->d_name;
-        const std::string nro = directory + "/" + name + "/" + name + ".nro";
-        if (Exists(nro)) {
+        if (const std::string nro = FindNro(directory, name); !nro.empty()) {
             out.push_back({name, nro, shelf.label});
         }
     }
