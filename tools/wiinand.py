@@ -104,8 +104,14 @@ def looks_like_dol(data):
 
 
 
-def download(title_id, output, keep=False, quiet=False):
-    """Download one title into `output`. Returns what was found."""
+def download(title_id, output, keep=False, quiet=False, version=None):
+    """Download one title into `output`. Returns what was found.
+
+    Without a version the servers answer with the highest one they have, which
+    is not the newest release of a title whose versions are numbered by region:
+    the System Menu's Korean build outnumbers every other, so asking for "the
+    System Menu" gets a Korean one wherever you are.
+    """
     title_id = title_id.lower().replace("-", "")
     os.makedirs(output, exist_ok=True)
 
@@ -113,12 +119,12 @@ def download(title_id, output, keep=False, quiet=False):
         if not quiet:
             print(text)
 
-    tmd = fetch(title_id, "tmd")
+    tmd = fetch(title_id, f"tmd.{version}" if version is not None else "tmd")
     ticket = fetch(title_id, "cetk")
     key = title_key(ticket)
     listing, boot_index = contents(tmd)
-    version = struct.unpack(">H", tmd[SIGNATURE + 0x9C:SIGNATURE + 0x9E])[0]
-    say(f"   version {version}, {len(listing)} contents, boot index {boot_index}")
+    got = struct.unpack(">H", tmd[SIGNATURE + 0x9C:SIGNATURE + 0x9E])[0]
+    say(f"   version {got}, {len(listing)} contents, boot index {boot_index}")
 
     if keep:
         with open(os.path.join(output, "tmd"), "wb") as handle:

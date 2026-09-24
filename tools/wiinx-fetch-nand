@@ -33,6 +33,11 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from wiinand import BASE_URL, download  # noqa: E402
 
+# The System Menu is one title whose versions are numbered by region, so the
+# servers' idea of "the latest" is whichever region numbers highest - Korea.
+# A console asks for its own. So does this.
+SYSTEM_MENU_VERSIONS = {"jp": 512, "us": 513, "eu": 514, "kr": 518}
+
 SYSTEM_MENU = [
     ("0000000100000002", "System Menu"),
     ("0000000100000100", "BC"),
@@ -137,9 +142,17 @@ def selection(argv):
 
 
 def main(argv):
-    # The value after --titles is not the folder.
+    # Which region's System Menu. Everything else is one title per region
+    # already, so this decides nothing else.
+    region = argv[argv.index("--region") + 1].lower() if "--region" in argv else "eu"
+    if region not in SYSTEM_MENU_VERSIONS:
+        print(f"unknown region {region}: one of {', '.join(SYSTEM_MENU_VERSIONS)}", file=sys.stderr)
+        return 2
+
+    # The value after --titles or --region is not the folder.
     positional = [value for position, value in enumerate(argv)
-                  if not value.startswith("-") and (position == 0 or argv[position - 1] != "--titles")]
+                  if not value.startswith("-")
+                  and (position == 0 or argv[position - 1] not in ("--titles", "--region"))]
     folder = positional[0] if positional else None
     if folder is None:
         folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "nand")
@@ -171,7 +184,10 @@ def main(argv):
             continue
         print(f"[{number}/{len(titles)}] {name} ({title_id})")
         try:
-            result = download(title_id, destination, keep=True, quiet=False)
+            wanted = SYSTEM_MENU_VERSIONS[region] if title_id == "0000000100000002" else None
+            if wanted is not None:
+                print(f"   the {region.upper()} System Menu, version {wanted}")
+            result = download(title_id, destination, keep=True, quiet=False, version=wanted)
         except Exception as error:                      # noqa: BLE001 - report and continue
             print(f"   FAILED: {error}")
             failed.append((title_id, name, str(error)))
