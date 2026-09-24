@@ -65,16 +65,27 @@ public static class RuntimeNativeIndexBuilder
         if (!Directory.Exists(sourceRoot))
             return new RuntimeNativeIndex([], [], []);
 
-        var sources = NativeSourceParsing.ReadDirectory(sourceRoot).ToList();
+        var engineSources = NativeSourceParsing.ReadDirectory(sourceRoot).ToList();
         // A game's own replacements live with the game, not in the engine, and
         // are just as much a reason not to translate a function.
-        if (!string.IsNullOrWhiteSpace(gameNativeDirectory) && Directory.Exists(gameNativeDirectory))
-            sources.AddRange(NativeSourceParsing.ReadDirectory(Path.GetFullPath(gameNativeDirectory)));
+        var gameSources = !string.IsNullOrWhiteSpace(gameNativeDirectory) && Directory.Exists(gameNativeDirectory)
+            ? NativeSourceParsing.ReadDirectory(Path.GetFullPath(gameNativeDirectory)).ToList()
+            : [];
+        var sources = engineSources.Concat(gameSources).ToList();
         var effects = RuntimeNativeGuestEffectAnalyzer.AnalyzeSources(sources);
         var abis = RuntimeNativeFunctionAbiProvider.AnalyzeVoidStubAbis(sources);
         var bindings = LoadBindings(bindingsPath);
         return new RuntimeNativeIndex(
-            Rebind(ScanRegistrations(sources), bindings).ToArray(),
+            // Only the engine's registrations are rebound: their addresses belong
+            // to the game the runtime was written against. A game's own native
+            // directory is already written for this game, so its addresses are
+            // used as they stand - rebinding would drop them, and the function
+            // would be both translated and replaced at the same address.
+            Rebind(ScanRegistrations(engineSources), bindings)
+                .Concat(ScanRegistrations(gameSources))
+                .OrderBy(static registration => registration.Address)
+                .ThenBy(static registration => registration.Symbol, StringComparer.Ordinal)
+                .ToArray(),
             abis.OrderBy(static item => item.Key)
                 .Select(static item => new RuntimeNativeAbiEntry(
                     item.Key,
