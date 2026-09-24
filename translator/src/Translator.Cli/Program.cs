@@ -485,7 +485,20 @@ int RunTranslateRecursive(string[] argsTail)
         // on a decode or lift failure they are skipped with a count instead of
         // failing the run: unlike a walked call target, nothing proves the map
         // entry is really code, and one noisy line must not block a release.
-        var speculativeSeeds = new Queue<uint>(functionMap?.Addresses ?? Array.Empty<uint>());
+        // The map, then the shape of the code itself. A well-mapped game gets
+        // almost nothing from the second - Mega Man 9's map already names 10,050
+        // of its 10,191 prologues - but a game nobody has mapped gets everything
+        // its vtables and function pointers reach, which the walk cannot see and
+        // no map is going to supply.
+        var structuralStarts = StructuralFunctionStarts.Find(dolFile.Value);
+        var seedAddresses = new List<uint>(functionMap?.Addresses ?? Array.Empty<uint>());
+        var fromMap = new HashSet<uint>(seedAddresses);
+        var structuralOnly = structuralStarts.Where(address => !fromMap.Contains(address)).ToList();
+        seedAddresses.AddRange(structuralOnly);
+        Console.WriteLine(
+            $"[translator] Function starts to try: {fromMap.Count:N0} from the map, " +
+            $"{structuralOnly.Count:N0} more from {structuralStarts.Count:N0} prologues in the code.");
+        var speculativeSeeds = new Queue<uint>(seedAddresses);
         var speculativeSkips = new List<(uint Address, string Reason)>();
         // Discovered call targets that are not in this game's image at all.
         var offImageTargets = new SortedDictionary<uint, uint>();
