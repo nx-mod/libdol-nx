@@ -15,6 +15,7 @@
 // cipher and a dump's decompressor are passed in, so nothing here carries a key
 // or depends on a compression library.
 
+#include "wiinx/format/archive/ash.hpp"
 #include "wiinx/format/archive/cx.hpp"
 #include "wiinx/format/archive/u8.hpp"
 #include "wiinx/format/archive/yaz0.hpp"

@@ -50,6 +50,7 @@ add_library(wiinx_format STATIC
     src/format/archive/yaz0.cpp
     src/format/archive/u8.cpp
     src/format/archive/cx.cpp
+    src/format/archive/ash.cpp
     src/format/disc/image.cpp
     src/format/disc/container.cpp
     src/format/disc/rvz.cpp

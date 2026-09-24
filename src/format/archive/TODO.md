@@ -6,4 +6,5 @@
 - [ ] CX: the Huffman kinds, recognised today and declined
 - [ ] A Yaz0 encoder. Only the expansion is needed to run a game; packing is for
       the tools
-- [ ] ASH, Nintendo's other compression, which the System Menu uses
+- [x] ASH, which the System Menu's fonts and layouts are in
+- [ ] An ASH compressor, for putting a modified layout back

@@ -81,3 +81,10 @@ below. No code is copied verbatim unless stated.
 - Take code only from explicitly licensed projects; treat the rest as reference.
 - libogc's threading and kernel code derives from RTEMS: anything taken from
   those parts credits RTEMS and carries its license alongside libogc's.
+
+## ASH0-tools
+
+`src/format/archive/ash.cpp` follows the format and algorithm of
+[ASH0-tools](https://github.com/NinjaCheetah/ASH0-tools) by Garhoogin and
+NinjaCheetah, MIT licensed. The implementation here is our own, written against
+this library's rule that malformed input is answered rather than crashed on.
