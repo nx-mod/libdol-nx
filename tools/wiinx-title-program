@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+"""Write the program a system title boots, as a DOL the toolkit can read.
+
+    tools/wiinx-title-program <content.app> [out.dol]
+
+A game's executable is a DOL and that is the end of it. Some system titles are
+not so direct: the System Menu's boot content is a DOL whose only code section
+is a kilobyte of BAT setup, and whose 3.7 MB "data" section is the program -
+loaded high in MEM1, entered at its first instruction, with the rest of the
+console's memory behind it.
+
+Nothing in that arrangement is hidden. The blob's first word is where the image
+ends and bss begins, the code starts at the next round address after an eight
+word header, and the whole thing is plain PowerPC. This reads that and writes an
+ordinary DOL: one text section at the address the blob is loaded at, the bss the
+header describes, and the entry point the code starts at.
+
+A content that is already a plain program is copied through unchanged, so this
+is safe to run over any title.
+"""
+
+import os
+import struct
+import sys
+
+HEADER = 0x20          # the blob's own header, before its first instruction
+
+
+def read_dol(data):
+    """The section table, as the DOL header spells it."""
+    text_offsets = struct.unpack(">7I", data[0:28])
+    data_offsets = struct.unpack(">11I", data[28:72])
+    text_addresses = struct.unpack(">7I", data[72:100])
+    data_addresses = struct.unpack(">11I", data[100:144])
+    text_sizes = struct.unpack(">7I", data[144:172])
+    data_sizes = struct.unpack(">11I", data[172:216])
+    bss_address, bss_size, entry = struct.unpack(">3I", data[216:228])
+    text = [(o, a, s) for o, a, s in zip(text_offsets, text_addresses, text_sizes) if s]
+    blobs = [(o, a, s) for o, a, s in zip(data_offsets, data_addresses, data_sizes) if s]
+    return text, blobs, bss_address, bss_size, entry
+
+
+def write_dol(path, code, address, bss_address, bss_size, entry):
+    header = bytearray(0x100)
+    struct.pack_into(">I", header, 0, 0x100)            # text0 file offset
+    struct.pack_into(">I", header, 72, address)         # text0 address
+    struct.pack_into(">I", header, 144, len(code))      # text0 size
+    struct.pack_into(">I", header, 216, bss_address)
+    struct.pack_into(">I", header, 220, bss_size)
+    struct.pack_into(">I", header, 224, entry)
+    with open(path, "wb") as out:
+        out.write(header)
+        out.write(code)
+
+
+def main(argv):
+    if not argv:
+        print(__doc__.strip())
+        return 2
+    source = argv[0]
+    output = argv[1] if len(argv) > 1 else os.path.join(os.path.dirname(source), "program.dol")
+    data = open(source, "rb").read()
+    if len(data) < 0x100:
+        print(f"{source}: too small to be a content", file=sys.stderr)
+        return 1
+
+    text, blobs, bss_address, bss_size, entry = read_dol(data)
+    code_bytes = sum(s for _, _, s in text)
+    blob_bytes = sum(s for _, _, s in blobs)
+
+    # A title that carries its program as code already needs nothing done.
+    if code_bytes > blob_bytes:
+        print(f">> {source} is already a program: {code_bytes:,} bytes of code, entry 0x{entry:08X}")
+        return 0
+
+    if len(blobs) != 1:
+        print(f"{source}: expected one blob, found {len(blobs)}", file=sys.stderr)
+        return 1
+    offset, address, size = blobs[0]
+    blob = data[offset:offset + size]
+
+    # The header says where the image stops; everything past it is bss.
+    image_end, = struct.unpack(">I", blob[0:4])
+    load = address + HEADER
+    if not address < image_end <= address + size:
+        print(f"{source}: 0x{image_end:08X} is not an end inside "
+              f"0x{address:08X}+0x{size:X}", file=sys.stderr)
+        return 1
+
+    code = blob[HEADER:image_end - address]
+    print(f">> {source}")
+    print(f"   {code_bytes:,} bytes of setup code, discarded: it maps memory and returns")
+    print(f"   program   0x{load:08X} + {len(code):,} bytes")
+    print(f"   bss       0x{image_end:08X} + {bss_size:,} bytes")
+    print(f"   entry     0x{load:08X}")
+    write_dol(output, code, load, image_end, bss_size, load)
+    print(f">> wrote {output}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))
