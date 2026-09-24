@@ -24,3 +24,8 @@ jobs:
 
       - name: Check
         run: ctest --test-dir build --output-on-failure
+
+      # The master table is generated from the registration macros, and a
+      # native added without regenerating it is a native no game can bind.
+      - name: The reference bindings are current
+        run: tools/wiinx-reference-bindings --check
