@@ -2,6 +2,11 @@
 
 One NRO that lists what is installed and starts it.
 
+This is the fallback, not the front door. The Wii Menu itself is what should
+list games and channels, with each one's own banner; this stays because it works
+with no NAND, no translated code and no graphics stack, which makes it the thing
+that still runs when none of that does.
+
 A title - a game, a WiiWare title, a system title - builds into its own NRO at
 `sdmc:/wii-nx/<kind>/<name>/<name>.nro`. Without this, reaching one means
 finding it in the homebrew menu's file list, which says nothing about what any
@@ -33,6 +38,8 @@ cmake --build build/launcher
 
 ## Still to do
 
-- Each title's own banner, which the disc or the title already carries, instead
-  of its folder name.
-- The console's own look, per front repo, rather than a list.
+Little, deliberately. It is meant to stay small enough to be trustworthy:
+the Wii Menu is where tiles, banners and the console's own look belong. What
+would earn its place here is only what helps when something else is broken -
+saying why a title cannot start, for instance, rather than only that it did
+not.
