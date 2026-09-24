@@ -608,7 +608,9 @@ def main(argv):
                 json.dump(dict(sorted(table.items())), handle, indent=1)
                 handle.write("\n")
             print(f"wrote {path}: {len(table)} bindings")
-        return 0 if not missing else 1
+        # A native this game has not got is ordinary: no game has every one.
+        # The lines above say which, and the bindings that were found stand.
+        return 0
     print(__doc__.strip())
     return 2
 

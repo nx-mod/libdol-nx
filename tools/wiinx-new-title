@@ -1,0 +1,212 @@
+#!/usr/bin/env python3
+"""Create a project from a title you own, start to finish.
+
+    tools/wiinx-new-title <file.wad> <folder>
+
+A title from a WAD takes two steps a disc game does not: the WAD is decrypted,
+and the content its loader would have expanded is expanded. After that it is an
+ordinary Wii executable, and everything below is read out of it - where its code
+starts, where its small-data bases are, which functions it has, what they are
+called, and which of them this library already replaces natively.
+
+It writes:
+
+    <folder>/
+      recomp.yml      the translator project, filled in from the executable
+      functions.map   every function found, named where the symbol set knows one
+      bindings.json   which native answers which address in this title
+      README.md       what is known, and what to run next
+      game/           what came out of your WAD - never committed
+
+Nothing it writes is typed by hand, and nothing of the title ends up anywhere
+but `game/`.
+"""
+
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+def run(tool, *arguments, quiet=False):
+    """Runs one of the other tools and gives back what it printed."""
+    command = [sys.executable, os.path.join(HERE, tool), *arguments]
+    result = subprocess.run(command, capture_output=True, text=True)
+    if result.returncode != 0:
+        sys.stderr.write(result.stdout + result.stderr)
+        raise SystemExit(f"{tool} failed")
+    if not quiet:
+        for line in result.stdout.splitlines()[-1:]:
+            print(f"   {line}")
+    return result.stdout
+
+
+def value(text, key):
+    match = re.search(rf"^\s*{key}:\s*(\S+)\s*$", text, re.MULTILINE)
+    return match.group(1) if match else None
+
+
+def merge_names(functions, names, out):
+    """The scan found where functions start; the set knows what some are called."""
+    known = {}
+    for line in open(names):
+        parts = line.split()
+        if len(parts) == 2:
+            known[parts[0].lower()] = parts[1]
+
+    lines, named = [], 0
+    for line in open(functions):
+        parts = line.split()
+        if len(parts) != 2:
+            continue
+        address = parts[0].lower()
+        if address in known:
+            lines.append(f"{address} {known[address]}")
+            named += 1
+        else:
+            lines.append(f"{address} {parts[1]}")
+    open(out, "w").write("\n".join(lines) + "\n")
+    return len(lines), named
+
+
+def main(argv):
+    if len(argv) < 2:
+        print(__doc__.strip())
+        return 2
+
+    wad, folder = argv[0], argv[1]
+    if not os.path.exists(wad):
+        raise SystemExit(f"no such WAD: {wad}")
+
+    game = os.path.join(folder, "game")
+    os.makedirs(game, exist_ok=True)
+
+    print(f">> {os.path.basename(wad)}")
+    unpacked = run("wiinx-wad", wad, game, quiet=True)
+
+    # The title's own code: what its loader expands, or the boot content when
+    # there is nothing else.
+    executable = os.path.join(game, "payload.dol")
+    if not os.path.exists(executable):
+        executable = os.path.join(game, "main.dol")
+    if not os.path.exists(executable):
+        raise SystemExit("no executable came out of that WAD")
+    print(f"   {os.path.basename(executable)}: {os.path.getsize(executable):,} bytes")
+
+    title = re.search(r"title\s+(\S+)\s*(?:\((\w{4})\))?", unpacked)
+    identifier = title.group(2) if title and title.group(2) else "unknown"
+
+    # Everything else is read out of the executable.
+    layout = run("wiinx-inspect-dol", executable, "--yaml", quiet=True)
+    entry = value(layout, "- 0x") or re.search(r"- (0x[0-9A-Fa-f]+)", layout).group(1)
+    sda = value(layout, "sda_base")
+    sda2 = value(layout, "sda2_base")
+    size = value(layout, "size")
+
+    functions = os.path.join(folder, "functions.map")
+    names = os.path.join(folder, ".names.map")
+    run("wiinx-scan", "functions", executable, "--out", functions)
+    run("wiinx-name", executable, "--out", names)
+    total, named = merge_names(functions, names, functions)
+    os.remove(names)
+    print(f"   functions: {total}, named: {named}")
+
+    bindings = os.path.join(folder, "bindings.json")
+    run("wiinx-scan", "scan", executable, "--out", bindings)
+    bound = len(json.load(open(bindings)))
+
+    builds = run("wiinx-scan", "builds", executable, quiet=True)
+    libraries = sorted({line.split("@")[0] for line in builds.splitlines() if "@" in line})
+
+    stem = os.path.basename(os.path.abspath(folder)).replace("-nx", "").replace("-", "_")
+    sha = subprocess.run(["sha256sum", executable], capture_output=True, text=True).stdout.split()[0]
+
+    open(os.path.join(folder, "recomp.yml"), "w").write(f"""schema_version: 1
+workspace_root: .
+
+# {identifier}, a title installed from a WAD rather than played off a disc.
+# Everything below was read out of its own executable.
+project:
+  id: {stem}-{identifier.lower()}
+  display_name: {stem}
+  game_id: {identifier}
+  region: {identifier[3] if len(identifier) == 4 else 'E'}
+  base_manifest_format: mkwii-recomp-base-manifest
+  base_manifest_stem: {stem}_base
+
+memory:
+  base: 0x80000000
+  size: {size}
+  sda_base: {sda}
+  sda2_base: {sda2}
+
+translation:
+  entry_points:
+    - {entry}
+  function_map:
+    path: functions.map
+  allow_unsupported_instructions: false
+
+inputs:
+  dol:
+    path: game/{os.path.basename(executable)}
+    sha256: {sha}
+
+# Where libdol-nx is, relative to this folder.
+runtime:
+  native_registration_root: ../../../libdol-nx/src
+  native_abi_directories:
+    - ../../../libdol-nx/src/platform/gx
+  native_bindings: bindings.json
+
+output:
+  root: generated
+  functions: functions
+  runtime_config: RuntimeConfig.h
+  data_initializer: data_sections_init.cpp
+  base_manifest: build/base/{stem}_base_manifest.json
+""")
+
+    open(os.path.join(folder, "README.md"), "w").write(f"""# {os.path.basename(os.path.abspath(folder))}
+
+`{identifier}`, a WiiWare or Virtual Console title, from your own copy.
+
+## Getting the executable out
+
+```sh
+../../../libdol-nx/tools/wiinx-wad "<your title>.wad" game/
+```
+
+That writes `game/main.dol` - the content the title boots, which for these is
+usually a small loader - and `game/{os.path.basename(executable)}`, which is
+what this project translates.
+
+## Building
+
+```sh
+../../../libdol-nx/tools/wiinx-build .
+```
+
+## What is known about it
+
+| | |
+|---|---|
+| entry point | `{entry}` |
+| functions found | {total}, of which {named} are named by the symbol set |
+| natives bound | {bound}, by signature |
+| libraries | {', '.join(libraries) if libraries else 'none named in its banners'} |
+
+Nothing of the title is in this folder: `game/` holds what came out of your WAD
+and is not committed.
+""")
+
+    print(f"   {folder} ready: {bound} natives bound")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

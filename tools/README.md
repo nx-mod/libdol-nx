@@ -17,6 +17,7 @@ installed).
 | `wiinx-fetch-nand` | a reference set of system titles into `nand/` (not tracked), from a menu or by flag |
 | `wiinx-sysconf` | reads and edits a Wii SYSCONF, the console's settings |
 | `wiicrypto.py`, `wiinand.py` | the Wii's AES, keys and title download, shared by the tools above |
+| `wiinx-new-title` | the same for a title you own as a WAD: unpacks it, expands the content its loader would have, and reads the project out of the executable |
 | `wiinx-new-game` | a whole game project from your own disc - an image, or one already extracted: `game.toml`, `recomp.yml` pointing back at this checkout, README, `.gitignore` |
 | `wiinx-read-boot` | what a disc says it is (ID, revision, region, title), read from its `sys/boot.bin` |
 | `wiinx-translate` | the translator's four steps over a game project, with a memory guard |
