@@ -98,6 +98,14 @@ else ()
 endif ()
 add_compile_definitions(WIINX_NATIVE_ADDRESS_ALIASES=${_wiinx_aliases})
 
+# Which folder on the card this game reads and writes: sdmc:/wii-nx/games/<name>.
+#
+# Every target has to agree. It used to be set on the executable alone, and the
+# code that actually resolves paths lives in the platform and the app - so a
+# second game wrote its logs, its saves and its shader cache into the first
+# game's folder, and switch_layout.h's default is what it used.
+add_compile_definitions(WIINX_GAME_DIR="${WIINX_GAME_NAME}")
+
 # libdol-nx: the CPU runtime, the console, the app, and this game's code.
 set(MKW_BUILD_PRODUCTS ON CACHE BOOL "" FORCE)
 set(MKW_GAME_WORKSPACE_DIR "${WIINX_GAME_DIR}" CACHE PATH "" FORCE)
@@ -113,7 +121,6 @@ if (TARGET WiiCompiled)
 
     # The folder the game is copied to on the SD card names it, so the runtime
     # finds its own config, disc, caches and logs.
-    target_compile_definitions(WiiCompiled PRIVATE WIINX_GAME_DIR="${WIINX_GAME_NAME}")
 
     nx_generate_nacp(${WIINX_GAME_NAME}.nacp
         NAME "${WIINX_GAME_NAME}" AUTHOR "nx-mod" VERSION "1.0.0")
