@@ -63,7 +63,32 @@ set(DAWN_USE_X11 OFF CACHE BOOL "" FORCE)
 set(DAWN_USE_WAYLAND OFF CACHE BOOL "" FORCE)
 set(TINT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(TINT_BUILD_CMD_TOOLS OFF CACHE BOOL "" FORCE)
-add_subdirectory("${WIINX_DAWN_DIR}" dawn-build)
+# Dawn is the same library whichever game is being built, and nothing here
+# compiles against its headers - it is linked and nothing else. Building it
+# again per game costs 4.9 GB and about an hour, so a build can point at one
+# that already exists and link that.
+#
+#   -DWIINX_DAWN_PREBUILT=<a build directory that has one>
+#
+# Left unset, it is built here as before.
+set(WIINX_DAWN_PREBUILT "" CACHE PATH "A Dawn build to link, rather than building one")
+set(_wiinx_dawn_library "${WIINX_DAWN_PREBUILT}/src/dawn/native/libwebgpu_dawn.a")
+if (WIINX_DAWN_PREBUILT AND EXISTS "${_wiinx_dawn_library}")
+    add_library(webgpu_dawn STATIC IMPORTED GLOBAL)
+    set_target_properties(webgpu_dawn PROPERTIES
+        IMPORTED_LOCATION "${_wiinx_dawn_library}"
+        INTERFACE_INCLUDE_DIRECTORIES
+            "${WIINX_DAWN_DIR}/include;${WIINX_DAWN_PREBUILT}/gen/include")
+    # Aurora asks for it under Dawn's own namespace, which a from-source build
+    # gets from Dawn's CMakeLists; nothing defines it when that never runs.
+    add_library(dawn::webgpu_dawn ALIAS webgpu_dawn)
+    message(STATUS "libdol-nx: linking the Dawn already built in ${WIINX_DAWN_PREBUILT}")
+elseif (WIINX_DAWN_PREBUILT)
+    message(FATAL_ERROR
+        "No Dawn in ${WIINX_DAWN_PREBUILT}: expected ${_wiinx_dawn_library}")
+else ()
+    add_subdirectory("${WIINX_DAWN_DIR}" dawn-build)
+endif ()
 
 # Aurora (GX on WebGPU) reuses the Dawn added above rather than fetching its
 # own; its CMake checks for the target before doing so.

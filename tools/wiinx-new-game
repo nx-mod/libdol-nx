@@ -137,6 +137,8 @@ cat > "$game_dir/.gitignore" <<'EOF'
 # Pipelines this game built by being played: the build ships them if they are
 # here, and they are never committed.
 /cache/
+# Written from bindings.json by every translation.
+/native/native_bindings.cpp
 EOF
 
 cat > "$game_dir/README.md" <<EOF
