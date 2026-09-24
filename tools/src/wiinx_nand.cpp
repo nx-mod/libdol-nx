@@ -1,7 +1,8 @@
 // What a NAND folder holds, and what it is missing.
 //
-//   wiinx-nand check <folder>   what is there, and what a console would expect
-//   wiinx-nand init  <folder>   create what is missing, and nothing else
+//   wiinx-nand check   <folder>   what is there, and what a console would expect
+//   wiinx-nand init    <folder>   create what is missing, and nothing else
+//   wiinx-nand sysconf <folder>   every setting in it, by name
 //
 // A Wii keeps everything in one tree owned by IOS. A folder assembled by
 // wiinx-fetch-nand has the titles and their tickets and nothing else, because
@@ -175,17 +176,46 @@ int Report(const fs::path& root, bool create) {
     return 0;
 }
 
+int ShowSysconf(const fs::path& root) {
+    const auto bytes = ReadFile(root / "shared2/sys/SYSCONF");
+    if (bytes.empty()) {
+        std::fprintf(stderr, "no SYSCONF in %s\n", root.c_str());
+        return 1;
+    }
+    const auto sysconf = Sysconf::Parse(bytes);
+    if (!sysconf) {
+        std::fprintf(stderr, "not a SYSCONF: %s\n", root.c_str());
+        return 1;
+    }
+    std::printf(">> %s  (%zu settings)\n", root.c_str(), sysconf->Items().size());
+    for (const auto& item : sysconf->Items()) {
+        std::printf("   %-10s ", item.name.c_str());
+        switch (item.type) {
+            case SysconfType::SmallArray:
+            case SysconfType::BigArray:
+                std::printf("%zu bytes\n", item.data.size());
+                break;
+            default:
+                std::printf("%ju\n", static_cast<std::uintmax_t>(item.Number()));
+                break;
+        }
+    }
+    return 0;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
     if (argc < 3) {
-        std::printf("wiinx-nand check <folder>   what is there, and what is missing\n"
-                    "wiinx-nand init  <folder>   create what is missing\n");
+        std::printf("wiinx-nand check   <folder>   what is there, and what is missing\n"
+                    "wiinx-nand init    <folder>   create what is missing\n"
+                    "wiinx-nand sysconf <folder>   every setting in it, by name\n");
         return 2;
     }
     const std::string command = argv[1];
     if (command == "check") return Report(argv[2], false);
     if (command == "init") return Report(argv[2], true);
+    if (command == "sysconf") return ShowSysconf(argv[2]);
     std::fprintf(stderr, "unknown command: %s\n", command.c_str());
     return 2;
 }
