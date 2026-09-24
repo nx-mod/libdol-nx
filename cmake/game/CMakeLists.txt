@@ -82,6 +82,17 @@ if (WIINX_DAWN_PREBUILT AND EXISTS "${_wiinx_dawn_library}")
     # Aurora asks for it under Dawn's own namespace, which a from-source build
     # gets from Dawn's CMakeLists; nothing defines it when that never runs.
     add_library(dawn::webgpu_dawn ALIAS webgpu_dawn)
+    # Aurora links absl::btree and absl::flat_hash_map, and takes them as given
+    # when they already exist - which they do when Dawn is built from source,
+    # because Dawn builds its own abseil. Without them Aurora fetches one and
+    # builds it, and abseil does not compile for Switch (pthread_t is not a
+    # pid_t there). They are header-only, and the little they do compile is
+    # already inside libwebgpu_dawn.a, so its headers are the whole of it.
+    foreach (_wiinx_absl btree flat_hash_map)
+        add_library(absl::${_wiinx_absl} INTERFACE IMPORTED GLOBAL)
+        set_target_properties(absl::${_wiinx_absl} PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES "${WIINX_DAWN_DIR}/third_party/abseil-cpp")
+    endforeach ()
     message(STATUS "libdol-nx: linking the Dawn already built in ${WIINX_DAWN_PREBUILT}")
 elseif (WIINX_DAWN_PREBUILT)
     message(FATAL_ERROR
