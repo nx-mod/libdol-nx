@@ -1,0 +1,48 @@
+# The library, cross-compiled for the console it targets.
+#
+# checks.yml builds the same sources for the host, where the tools and the
+# tests can run. This builds them with devkitA64 instead, which is the only
+# thing that proves the sections a game links against still compile for Switch:
+# core, format, and the SDK, nw4r and egg accelerators.
+#
+# The runtime (src/cpu, src/platform, src/app) is not built here. It needs
+# Aurora and Dawn, and a link needs a game's translated code, which never
+# leaves the machine that has the disc.
+name: switch
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: switch-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  libraries:
+    name: libraries for Switch
+    runs-on: ubuntu-24.04
+    container: devkitpro/devkita64:latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja \
+                -DCMAKE_TOOLCHAIN_FILE="$DEVKITPRO/cmake/Switch.cmake" \
+                -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build -j2
+
+      # A section that compiles to nothing would pass the build and fail a game.
+      - name: Every section produced a library
+        run: |
+          set -eu
+          for section in core format sdk nw4r egg; do
+              test -s "build/libwiinx_$section.a" || {
+                  echo "missing build/libwiinx_$section.a" >&2; exit 1; }
+              echo "ok libwiinx_$section.a"
+          done
