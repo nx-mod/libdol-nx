@@ -11,6 +11,7 @@ installed).
 | `wiinx-extract-disc` | the whole disc into a game project's `disc/`, through this library's own reader; Dolphin's `dolphin-tool` only as a fallback |
 | `wiinx-disc` | the reader itself (built from `tools/src/`): `info`, `list`, `dol`, `file`, `extract`. Reads raw images, CISO, WBFS, RVZ and WIA, GameCube and Wii |
 | `wiinx-inspect-dol` | a DOL's entry point, sections, BSS and small-data bases; `--yaml` for a project file |
+| `wiinx-install-title` | installs a title into a NAND the way a console stores one: ticket, TMD, contents decrypted, shared contents in `/shared1` with the map that names them. Takes a WAD you own or a title downloaded by `wiinx-fetch-title` |
 | `wiinx-wad` | looks inside a WAD - which title it is, what it wants, what it carries - and unpacks one, decrypting each content and writing the executable as `main.dol`. Reads both kinds, installable and boot2 |
 | `wiinx-unpack-u8` | lists or extracts a U8 archive (how channels pack their files), flagging compression inside |
 | `wiinx-fetch-title` | downloads one Wii system title from Nintendo's update servers and unpacks its executable |

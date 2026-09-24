@@ -1,0 +1,150 @@
+#!/usr/bin/env python3
+"""Install a title into a NAND, the way a console stores one.
+
+    tools/wiinx-install-title <file.wad> <nand folder>
+    tools/wiinx-install-title <downloaded title folder> <nand folder>
+
+A title arrives one of two ways: as a WAD you own, or downloaded from Nintendo
+by wiinx-fetch-title, which leaves `tmd`, `cetk` and the decrypted contents in a
+folder. Either is installed the same way.
+
+Writes the ticket, the TMD and every content decrypted, at the paths IOS keeps
+them:
+
+    /ticket/<high>/<low>.tik
+    /title/<high>/<low>/content/title.tmd
+    /title/<high>/<low>/content/<id>.app
+    /title/<high>/<low>/data/                 (empty: the title's own saves)
+    /shared1/<n>.app and /shared1/content.map (contents shared between titles)
+
+Contents are written decrypted, which is how a console keeps them: what encrypts
+a real NAND is the filesystem underneath, not the title.
+
+Nothing Nintendo owns ends up in this repository - the NAND folder is yours.
+"""
+
+import os
+import struct
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+from wiicrypto import COMMON_KEY, aes_cbc_decrypt  # noqa: E402
+
+SIGNATURE = 0x140
+ALIGN = 0x40
+SHARED_ENTRY = 28  # a SHA-1, then eight characters
+
+
+def load(name):
+    """Runs one of the other tools as a module, to reuse what it knows."""
+    source = open(os.path.join(HERE, name)).read()
+    module = type(sys)(name.replace("-", "_"))
+    module.__dict__["__file__"] = os.path.join(HERE, name)
+    exec(compile(source.replace("def main(argv):", "def _unused(argv):"), name, "exec"),
+         module.__dict__)
+    return module
+
+
+def write(path, data):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "wb") as handle:
+        handle.write(data)
+
+
+def from_download(folder, wad):
+    """A title as wiinx-fetch-title left it: tmd, cetk, and each content."""
+    tmd = open(os.path.join(folder, "tmd"), "rb").read()
+    ticket = open(os.path.join(folder, "cetk"), "rb").read()
+    key = wad.title_key(ticket)
+
+    contents = {}
+    for index, cid, ctype, size, sha1 in wad.contents(tmd):
+        path = os.path.join(folder, f"{cid:08x}.app")
+        if not os.path.exists(path):
+            raise SystemExit(f"{path} is missing: download the title again")
+        # Downloaded contents are already decrypted by wiinx-fetch-title.
+        contents[index] = open(path, "rb").read()[:size]
+    return ticket, tmd, key, contents
+
+
+def from_wad(path, wad):
+    """A title packed as one file, its contents still encrypted."""
+    data = open(path, "rb").read()
+    _kind, ticket, tmd, at = wad.sections(data)
+    key = wad.title_key(ticket)
+
+    contents = {}
+    for index, cid, ctype, size, sha1 in wad.contents(tmd):
+        stored = (size + 15) & ~15
+        blob = data[at:at + stored]
+        at = wad.align(at + stored)
+        iv = struct.pack(">H", index) + b"\0" * 14
+        contents[index] = aes_cbc_decrypt(key, iv, blob)[:size]
+    return ticket, tmd, key, contents
+
+
+def main(argv):
+    if len(argv) < 2:
+        print(__doc__.strip())
+        return 2
+
+    source, nand = argv[0], argv[1]
+    wad = load("wiinx-wad")
+
+    if os.path.isdir(source):
+        ticket, tmd, key, contents = from_download(source, wad)
+    else:
+        ticket, tmd, key, contents = from_wad(source, wad)
+
+    title_id = struct.unpack(">Q", tmd[SIGNATURE + 0x4C:SIGNATURE + 0x54])[0]
+    high, low = f"{title_id >> 32:08x}", f"{title_id & 0xFFFFFFFF:08x}"
+    title_dir = os.path.join(nand, "title", high, low)
+
+    print(f">> {os.path.basename(source.rstrip('/'))} -> {high}/{low}")
+
+    write(os.path.join(nand, "ticket", high, f"{low}.tik"), ticket)
+    write(os.path.join(title_dir, "content", "title.tmd"), tmd)
+    os.makedirs(os.path.join(title_dir, "data"), exist_ok=True)
+
+    # The shared map, as it stands: a content another title already installed is
+    # not written twice.
+    shared_map_path = os.path.join(nand, "shared1", "content.map")
+    shared = bytearray()
+    if os.path.exists(shared_map_path):
+        shared = bytearray(open(shared_map_path, "rb").read())
+
+    def shared_name(sha1):
+        for index in range(len(shared) // SHARED_ENTRY):
+            entry = shared[index * SHARED_ENTRY:(index + 1) * SHARED_ENTRY]
+            if entry[:20] == sha1:
+                return entry[20:].decode("ascii"), False
+        name = f"{len(shared) // SHARED_ENTRY:08x}"
+        shared.extend(sha1)
+        shared.extend(name.encode("ascii"))
+        return name, True
+
+    for index, cid, ctype, size, sha1 in wad.contents(tmd):
+        plain = contents[index]
+
+        if ctype & 0x8000 or ctype == 0x4001:
+            name, is_new = shared_name(sha1)
+            if is_new:
+                write(os.path.join(nand, "shared1", f"{name}.app"), plain)
+                print(f"   shared1/{name}.app  {size:,} bytes")
+            else:
+                print(f"   shared1/{name}.app  already there")
+            continue
+
+        write(os.path.join(title_dir, "content", f"{cid:08x}.app"), plain)
+        print(f"   content/{cid:08x}.app  {size:,} bytes")
+
+    if shared:
+        write(shared_map_path, bytes(shared))
+
+    print(f">> installed into {nand}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

@@ -73,8 +73,20 @@ tools/wiinx-wad Channel.wad unpacked/       # decrypted, as main.dol and payload
 `main.dol` is the content the title boots; `payload.dol` is the largest
 executable among the rest, which for WiiWare and Virtual Console is the game.
 
-What is not written yet is the writing - installing a title into a NAND: see
-[src/format/nand/TODO.md](../src/format/nand/TODO.md).
+Installing one is `tools/wiinx-install-title`, which takes either a WAD or a
+title downloaded from Nintendo and writes what a console keeps:
+
+```
+/ticket/<high>/<low>.tik
+/title/<high>/<low>/content/title.tmd and <id>.app
+/title/<high>/<low>/data/                          the title's own saves
+/shared1/<n>.app and /shared1/content.map          what it shares with others
+```
+
+Contents are written decrypted, which is how a console keeps them: what
+encrypts a real NAND is the filesystem underneath, not the title. A content two
+titles share is written once - Mega Man 9 and the Mii Channel share the Home
+Button menu's resources, and the second install writes none of them again.
 
 ## Where the titles come from
 
