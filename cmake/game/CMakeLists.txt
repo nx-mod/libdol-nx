@@ -63,7 +63,11 @@ set(AURORA_ENABLE_DVD OFF CACHE BOOL "" FORCE)
 set(AURORA_ENABLE_CARD OFF CACHE BOOL "" FORCE)
 set(AURORA_DAWN_PROVIDER "vendor" CACHE STRING "" FORCE)
 set(AURORA_SDL3_PROVIDER "vendor" CACHE STRING "" FORCE)
-add_subdirectory("${WIINX_AURORA_DIR}" aurora-build)
+# EXCLUDE_FROM_ALL, as the runtime adds it: only the targets something links
+# are built. aurora_core is the desktop application layer - a window, an event
+# loop, SDL - and a Switch build has its own, so nothing here links it and
+# nothing here needs SDL3.
+add_subdirectory("${WIINX_AURORA_DIR}" aurora-build EXCLUDE_FROM_ALL)
 
 # libdol-nx: the CPU runtime, the console, the app, and this game's code.
 set(MKW_BUILD_PRODUCTS ON CACHE BOOL "" FORCE)
