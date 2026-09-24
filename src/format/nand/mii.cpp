@@ -94,9 +94,18 @@ MiiDatabase MiiDatabase::Empty() {
 // static
 std::optional<MiiDatabase> MiiDatabase::Parse(const std::vector<std::uint8_t>& file,
                                               bool* checksumValid) {
-    if (file.size() != kMiiDatabaseSize || std::memcmp(file.data(), "RNOD", 4) != 0 ||
+    // Longer is accepted when the excess is zero: Dolphin on Android writes the
+    // database into a much larger file and pads the rest, and rejecting that on
+    // its size alone loses every Mii in it. Anything non-zero past the end is
+    // some other format wearing the same name, and is refused.
+    if (file.size() < kMiiDatabaseSize || std::memcmp(file.data(), "RNOD", 4) != 0 ||
         std::memcmp(file.data() + kMiiParadeOffset, "RNHD", 4) != 0) {
         return std::nullopt;
+    }
+    for (std::size_t index = kMiiDatabaseSize; index < file.size(); ++index) {
+        if (file[index] != 0) {
+            return std::nullopt;
+        }
     }
     if (checksumValid != nullptr) {
         const std::uint16_t stored = Read16(file.data() + kMiiCrcOffset);

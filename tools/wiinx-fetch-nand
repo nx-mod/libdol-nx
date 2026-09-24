@@ -49,25 +49,44 @@ IOS_NUMBERS = [9, 12, 13, 14, 15, 17, 21, 22, 28, 30, 31, 33, 34, 35, 36, 37, 38
                41, 43, 45, 46, 48, 53, 55, 56, 57, 58, 59, 61, 62, 70, 80]
 IOS = [(f"00000001{number:08x}", f"IOS{number}") for number in IOS_NUMBERS]
 
-# Channels are 00010002 + four ASCII letters. The last letter is the region:
-# A world, E USA, P Europe, J Japan, K Korea.
-CHANNELS = [
-    ("0001000248414341", "Mii Channel"),
-    ("0001000248414141", "Photo Channel"),
-    ("0001000248415941", "Photo Channel 1.1"),
-    ("0001000248414241", "Shopping Channel"),
-    ("0001000248414645", "Forecast Channel (USA)"),
-    ("0001000248414650", "Forecast Channel (Europe)"),
-    ("0001000248414745", "News Channel (USA)"),
-    ("0001000248414750", "News Channel (Europe)"),
-    ("0001000148414445", "Internet Channel (USA)"),
+# Channels are a title id high word and four ASCII letters. The last letter is
+# the region: A world, E USA, P Europe, J Japan, K Korea. A console has its
+# own region's, so --region picks them.
+REGION_LETTER = {"jp": "J", "us": "E", "eu": "P", "kr": "K"}
+
+# The same everywhere, so their last letter is A.
+WORLD_CHANNELS = [
+    ("00010002", "HACA", "Mii Channel"),
+    ("00010002", "HAAA", "Photo Channel"),
+    ("00010002", "HAYA", "Photo Channel 1.1"),
+    ("00010002", "HABA", "Shopping Channel"),
+]
+
+# One per region, named by the region's letter.
+REGIONAL_CHANNELS = [
+    ("00010002", "HAF", "Forecast Channel"),
+    ("00010002", "HAG", "News Channel"),
+    ("00010001", "HAD", "Internet Channel"),
 ]
 
 
-def catalog():
+def channel_id(high, code):
+    """A channel's title id: the high word, then its four letters as ASCII."""
+    return f"{high}{code.encode('ascii').hex()}"
+
+
+def channels(region):
+    letter = REGION_LETTER[region]
+    entries = [(channel_id(high, code), name) for high, code, name in WORLD_CHANNELS]
+    entries += [(channel_id(high, prefix + letter), f"{name} ({region.upper()})")
+                for high, prefix, name in REGIONAL_CHANNELS]
+    return entries
+
+
+def catalog(region="eu"):
     return ([(title_id, name, "menu") for title_id, name in SYSTEM_MENU] +
             [(title_id, name, "ios") for title_id, name in IOS] +
-            [(title_id, name, "channels") for title_id, name in CHANNELS])
+            [(title_id, name, "channels") for title_id, name in channels(region)])
 
 
 def show(entries, index):
@@ -124,12 +143,12 @@ def choose_interactively(entries, index):
     return parse_choice(answer, entries)
 
 
-def selection(argv):
+def selection(argv, region):
     chosen = []
     if "--titles" in argv:
         raw = argv[argv.index("--titles") + 1]
         return [(title.strip().lower(), title.strip(), "titles") for title in raw.split(",") if title.strip()]
-    entries = catalog()
+    entries = catalog(region)
     for flag, kind in (("--menu", "menu"), ("--ios", "ios"), ("--channels", "channels")):
         if flag in argv or "--all" in argv:
             chosen += [entry for entry in entries if entry[2] == kind]
@@ -159,13 +178,13 @@ def main(argv):
     folder = os.path.abspath(folder)
     index_path = os.path.join(folder, "index.json")
     index = json.load(open(index_path)) if os.path.exists(index_path) else {}
-    entries = catalog()
+    entries = catalog(region)
 
     if "--list" in argv:
         show(entries, index)
         return 0
 
-    titles = selection(argv)
+    titles = selection(argv, region)
     if not titles:
         titles = choose_interactively(entries, index)
     if not titles:
