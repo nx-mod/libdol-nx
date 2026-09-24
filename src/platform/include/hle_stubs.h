@@ -38,6 +38,23 @@ extern "C" void OS_HLE_EndDeferredGuestCallbacks();
 // renaming requires updating Translator.Cli/Program.cs, RuntimeNativeGuestEffectAnalyzer.cs,
 // TranslatedBuildShardEmitter.cs and RuntimeNativeFunctionAbiProvider.cs together.
 
+//
+// Each one does two things, and only the second is true of every game:
+//
+//   1. It defines `func_<address>`, so translated code that calls that address
+//      directly lands on the native. The address is the one the native was
+//      written from, so this is only meaningful in that game - in another, the
+//      same address is a different function, which the translator has trans-
+//      lated under the same name. Hence WIINX_NATIVE_ADDRESS_ALIASES, which a
+//      build turns off for every game but the one the addresses belong to.
+//   2. It registers the native, through NativeBindings::Resolve, which looks
+//      the address up in the game's own table and falls back to the one written
+//      here. That part is right for every game and is always compiled.
+#ifndef WIINX_NATIVE_ADDRESS_ALIASES
+#define WIINX_NATIVE_ADDRESS_ALIASES 1
+#endif
+
+#if WIINX_NATIVE_ADDRESS_ALIASES
 #define PPC_NATIVE_OVERRIDE(addr_hex, name, ret_type, arg_list, call_list) \
     extern "C" ret_type func_##addr_hex arg_list { return name call_list; } \
     REGISTER_NATIVE_FUNCTION(0x##addr_hex, name)
@@ -45,3 +62,10 @@ extern "C" void OS_HLE_EndDeferredGuestCallbacks();
 #define PPC_NATIVE_OVERRIDE_VOID(addr_hex, name, arg_list, call_list) \
     extern "C" void func_##addr_hex arg_list { name call_list; } \
     REGISTER_NATIVE_FUNCTION(0x##addr_hex, name)
+#else
+#define PPC_NATIVE_OVERRIDE(addr_hex, name, ret_type, arg_list, call_list) \
+    REGISTER_NATIVE_FUNCTION(0x##addr_hex, name)
+
+#define PPC_NATIVE_OVERRIDE_VOID(addr_hex, name, arg_list, call_list) \
+    REGISTER_NATIVE_FUNCTION(0x##addr_hex, name)
+#endif

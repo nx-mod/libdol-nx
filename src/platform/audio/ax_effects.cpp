@@ -8,9 +8,10 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include "guest_helper_calls.h"
 
 
-extern "C" void func_8012B830(CpuContext* ctx);
+extern "C" __attribute__((weak)) void func_8012B830(CpuContext* ctx);
 
 #if defined(__clang__)
 // PowerPC uses discrete fmuls/fadds; a fused multiply-add would change sample rounding.
@@ -346,7 +347,7 @@ extern "C" void AXFXReverbStdExpCallback_8012b830(CpuContext* ctx) {
     try {
         flags = Memory::Read32(stateAddr + ReverbStd::kFieldFlags);
     } catch (const Memory::AccessViolation&) {
-        func_8012B830(ctx);
+        WIINX_GUEST_HELPER(func_8012B830, ctx);
         return;
     }
     if (flags != 0) {
@@ -364,7 +365,7 @@ extern "C" void AXFXReverbStdExpCallback_8012b830(CpuContext* ctx) {
         built = false;
     }
     if (!built) {
-        func_8012B830(ctx);
+        WIINX_GUEST_HELPER(func_8012B830, ctx);
         return;
     }
 
