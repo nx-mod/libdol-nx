@@ -154,6 +154,11 @@
     "library": "libdol-nx",
     "native": "PPCMtpmc4_8012e5e0"
   },
+  "0x8012E630": {
+    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "library": "libdol-nx",
+    "native": "PPCMfhid2_HLE_8012e630"
+  },
   "0x8012E638": {
     "file": "libdol-nx/src/platform/os/os_init.cpp",
     "library": "libdol-nx",

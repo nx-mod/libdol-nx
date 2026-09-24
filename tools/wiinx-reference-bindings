@@ -36,6 +36,10 @@ OVERRIDE = re.compile(
     r"PPC_NATIVE_OVERRIDE[A-Z_]*\(\s*([0-9A-Fa-f]{8})\s*,\s*([A-Za-z_]\w*)")
 REGISTER = re.compile(
     r"REGISTER_NATIVE_FUNCTION\(\s*0x([0-9A-Fa-f]{8})\s*,\s*([A-Za-z_]\w*)")
+# A replacement that behaves like translated code rather than like a native is
+# bound the same way, so it belongs in the same table.
+TRANSLATED = re.compile(
+    r"REGISTER_TRANSLATED_FUNCTION\(\s*0x([0-9A-Fa-f]{8})\s*,\s*([A-Za-z_]\w*)")
 
 
 def sources():
@@ -62,7 +66,7 @@ def collect():
     for library, path in sources():
         text = open(path, errors="ignore").read()
         where = f"{library}/{os.path.relpath(path, os.path.join(os.path.dirname(LIBDOL), library))}"
-        for pattern in (OVERRIDE, REGISTER):
+        for pattern in (OVERRIDE, REGISTER, TRANSLATED):
             for address, symbol in pattern.findall(text):
                 key = f"0x{int(address, 16):08X}"
                 if key in table and table[key]["native"] != symbol:

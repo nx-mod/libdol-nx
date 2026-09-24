@@ -817,8 +817,15 @@ public:
 // Three hand-written registration macros. Generated code never registers per function; every
 // translated function reaches the registry via the bulk BulkTranslatedFunctionRecord tables
 // in the translator's *_registration TUs.
+//
+// This one registers a replacement that behaves like translated code rather
+// than like a native, and it is bound exactly as the natives are: the address
+// written at the call site is where the function lives in the game it was read
+// from, and this game's table says where it lives here. A game that does not
+// have it resolves to 0 and registers nothing, so its own code is translated
+// and runs - which is what the generated dispatch table already assumes.
 #define REGISTER_TRANSLATED_FUNCTION(address, fn) \
-    static AbiTrampoline<decltype(fn)> MKW_DETAIL_MAKE_UNIQUE(_abi_trampoline_, __COUNTER__)(address, #fn, fn, FunctionKind::BaseTranslated, false, kPpcAllNonvolatileFprMask, 0, 0, nullptr, KnownTranslatedCpuCall<address>::kMustRemainDynamicallyDispatchable)
+    static AbiTrampoline<decltype(fn)> MKW_DETAIL_MAKE_UNIQUE(_abi_trampoline_, __COUNTER__)(::NativeBindings::Resolve(address), #fn, fn, FunctionKind::BaseTranslated, false, kPpcAllNonvolatileFprMask, 0, 0, nullptr, KnownTranslatedCpuCall<address>::kMustRemainDynamicallyDispatchable)
 
 // The address written here is this function's home in the game the runtime was
 // written against. A different game supplies its own table (native_bindings.h),
