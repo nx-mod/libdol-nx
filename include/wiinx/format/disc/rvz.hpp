@@ -38,6 +38,9 @@ enum class Compression : std::uint32_t {
     Lzma = 3,
     Lzma2 = 4,
     Zstd = 5,
+    // Not one of RVZ's own: GCZ, the older format, compresses its blocks with
+    // zlib, and asks the same decompressor for them.
+    Zlib = 100,
 };
 
 struct Decompressor {

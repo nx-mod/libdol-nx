@@ -22,7 +22,7 @@ recognised by its first bytes, and the ones that need no decompressor are read:
 | `.ciso`, `.cso` | the image with its empty blocks left out | **read** |
 | `.wbfs` | the USB loaders' layout, one game to a file | **read** |
 | `.rvz`, `.wia` | Dolphin's own: the disc in compressed chunks, with its padding thrown away | **read**, with a decompressor the caller supplies |
-| `.gcz` | Dolphin's older format: zlib blocks | recognised; to write |
+| `.gcz` | Dolphin's older format: zlib blocks, nothing scrubbed | **read**, with a decompressor the caller supplies |
 | `.nkit.iso`, `.nkit.gcz` | a preservation format that rebuilds the original exactly | recognised; convert it first |
 
 A file that is recognised and not readable yet is reported by name, which is

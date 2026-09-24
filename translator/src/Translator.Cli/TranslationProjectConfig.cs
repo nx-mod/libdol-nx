@@ -397,6 +397,10 @@ internal sealed class TranslationProjectConfig
         public string? Id { get; init; }
         public string? DisplayName { get; init; }
         public string? GameId { get; init; }
+        // A title installed from a WAD or downloaded from Nintendo is named by
+        // its title id rather than a disc id. Nothing is translated differently
+        // for one; it is here so a project can say what it is.
+        public string? TitleId { get; init; }
         public string? Region { get; init; }
         public string? BaseManifestFormat { get; init; }
         public string? BaseManifestStem { get; init; }

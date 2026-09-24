@@ -20,6 +20,7 @@
 #include "wiinx/format/archive/u8.hpp"
 #include "wiinx/format/archive/yaz0.hpp"
 #include "wiinx/format/disc/container.hpp"
+#include "wiinx/format/disc/gcz.hpp"
 #include "wiinx/format/disc/image.hpp"
 #include "wiinx/format/disc/rvz.hpp"
 #include "wiinx/format/media/banner.hpp"
