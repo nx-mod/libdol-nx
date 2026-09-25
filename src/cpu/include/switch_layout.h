@@ -15,6 +15,8 @@
 //       bootstrap/             Wii system files seeded into a new NAND
 //       dsp_coef.bin           DSP coefficient ROM
 //     games/<game>/            one folder per game, named after its project (mkwii-nx)
+//     wads/<title>/            WiiWare, same shape
+//     titles/<title>/          system titles, same shape
 //       <game>.nro
 //       config.toml
 //       disc/                  the extracted disc (DATA: files/ and sys/)
@@ -33,9 +35,16 @@
 #define WIINX_GAME_DIR "mkwii-nx"
 #endif
 
+// Which shelf that folder is on: games, wads or titles. A title kept writing
+// its config, caches and logs into games/ whatever shelf its NRO was on, so the
+// Mii Channel's data and the Mii Channel were in different places.
+#ifndef WIINX_GAME_SHELF
+#define WIINX_GAME_SHELF "games"
+#endif
+
 // Compile-time path literals, for code that must not allocate (boot, crash and
 // watchdog logging).
-#define WIINX_GAME_PATH(relative) "sdmc:/wii-nx/games/" WIINX_GAME_DIR "/" relative
+#define WIINX_GAME_PATH(relative) "sdmc:/wii-nx/" WIINX_GAME_SHELF "/" WIINX_GAME_DIR "/" relative
 #define WIINX_CONFIG_PATH(relative) "sdmc:/wii-nx/config/" relative
 
 namespace SwitchLayout {
@@ -43,8 +52,8 @@ namespace SwitchLayout {
 inline constexpr const char* kRoot = "sdmc:/wii-nx";
 inline constexpr const char* kConfigDir = "sdmc:/wii-nx/config";
 inline constexpr const char* kSystemDir = "sdmc:/wii-nx/system";
-inline constexpr const char* kGamesDir = "sdmc:/wii-nx/games";
-inline constexpr const char* kGameDir = "sdmc:/wii-nx/games/" WIINX_GAME_DIR;
+inline constexpr const char* kGamesDir = "sdmc:/wii-nx/" WIINX_GAME_SHELF;
+inline constexpr const char* kGameDir = "sdmc:/wii-nx/" WIINX_GAME_SHELF "/" WIINX_GAME_DIR;
 inline constexpr const char* kLegacyDir = "sdmc:/WiiCompiled";
 
 inline constexpr const char* kConfigFileName = "config.toml";

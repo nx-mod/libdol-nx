@@ -1913,7 +1913,7 @@ void PcStackSample(int which, Handle thread) noexcept {
 
 void PcSampleFlush(uint64_t nowMs) noexcept {
     if (g_pcSampleFile == nullptr) {
-        g_pcSampleFile = std::fopen("sdmc:/wii-nx/games/mkwii-nx/logs/pcsamples.bin", "wb");
+        g_pcSampleFile = std::fopen(WIINX_GAME_PATH("logs/pcsamples.bin"), "wb");
         if (g_pcSampleFile == nullptr) {
             g_pcSamplerBroken = true;
             return;

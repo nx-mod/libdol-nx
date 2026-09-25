@@ -125,6 +125,18 @@ add_subdirectory("${WIINX_AURORA_DIR}" aurora-build EXCLUDE_FROM_ALL)
 # game's folder, and switch_layout.h's default is what it used.
 add_compile_definitions(WIINX_GAME_DIR="${WIINX_GAME_NAME}")
 
+# Which shelf the title is on, so its config, caches and logs land beside its
+# NRO rather than always under games/. A project kept in one of the three
+# shelves says so by where it is; one kept anywhere else - next to a libdol-nx
+# checkout, say - is a game.
+get_filename_component(_wiinx_shelf "${WIINX_GAME_DIR}" DIRECTORY)
+get_filename_component(_wiinx_shelf "${_wiinx_shelf}" NAME)
+if (NOT _wiinx_shelf MATCHES "^(games|wads|titles)$")
+    set(_wiinx_shelf "games")
+endif ()
+add_compile_definitions(WIINX_GAME_SHELF="${_wiinx_shelf}")
+message(STATUS "libdol-nx: ${WIINX_GAME_NAME} keeps its data in ${_wiinx_shelf}/")
+
 # libdol-nx: the CPU runtime, the console, the app, and this game's code.
 set(MKW_BUILD_PRODUCTS ON CACHE BOOL "" FORCE)
 set(MKW_GAME_WORKSPACE_DIR "${WIINX_GAME_DIR}" CACHE PATH "" FORCE)

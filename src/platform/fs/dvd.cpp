@@ -149,14 +149,14 @@ static bool IsDvdDataRoot(const fs::path& path) {
     }
     std::fprintf(stderr,
                  "\n[dvd] Set [paths] dvd_root in Config.toml "
-                 "to your extracted Mario Kart Wii DATA directory.\n");
+                 "to this game's extracted DATA directory.\n");
     std::string details = source ? source : "The configured DVD root could not be opened.";
     if (!path.empty()) {
         details += "\n\nPath: ";
         details += HostPathText(path);
     }
-    details += "\n\nSet [paths] dvd_root in Config.toml to the extracted "
-               "Mario Kart Wii DATA directory.";
+    details += "\n\nSet [paths] dvd_root in Config.toml to this game's "
+               "extracted DATA directory.";
     FailDvd("dvd_root", "DVD data is unavailable", details);
 }
 
@@ -797,7 +797,19 @@ void DVD_HLE_PrescanDisc()
     if (g_discPrescanned || g_dvdInitialized) {
         return;
     }
-    const fs::path& rootPath = GetDvdRoot();
+    // A title with no disc has nothing to prescan: WiiWare, a channel and the
+    // System Menu all carry their data inside the executable. Asking GetDvdRoot
+    // here would end the process before the guest ran a single instruction,
+    // which is what happened to every one of them.
+    //
+    // A game that really does want the disc asks for a file by name, and fails
+    // there - where the message can say which file, rather than at boot for a
+    // title that was never going to read one.
+    const fs::path rootPath = RuntimeConfigFile::ResolvedDvdRoot();
+    if (rootPath.empty() || !IsDvdDataRoot(rootPath)) {
+        RT_LOGF(RT_TAG_DVD, "no disc to prescan: this title carries its own data\n");
+        return;
+    }
     ScanDirectory(rootPath / "files", "/");
     ScanDirectory(rootPath / "sys", "/sys/");
     g_discPrescanned = true;
