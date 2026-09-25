@@ -17,6 +17,9 @@ void VI_HLE_WaitForNextRetracePoll();
 // for the GXCopyDisp producer path and false for retrace-context presents.
 void VI_HLE_PresentFrame(bool presentedXfb, bool paceToRetrace);
 bool VI_HLE_IsAdvancingRetrace();
+// What VIGetTvFormat should answer: VI_NTSC(0), VI_PAL(1), VI_MPAL(2).
+// Zero until VIInit, which is what a console reports too.
+uint32_t VI_HLE_TvFormat();
 void VI_HLE_SetXfbReady(uint32_t xfbAddr); // Called by GXCopyDisp to signal EFB→XFB copy
 void Audio_HLE_Tick(CpuContext* ctx, uint32_t deltaMicros);
 void Audio_HLE_Poll(CpuContext* ctx);

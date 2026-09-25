@@ -839,6 +839,22 @@ bool AdvanceDueRetraces(CpuContext* ctx, int maxToProcess, bool serviceAurora)
 // Force one retrace boundary to pass, whether or not its wall-clock deadline
 // has arrived, so the guest's retrace callbacks (AsyncDisplay's counters and
 // friends) run. VI_HLE_PollRetrace below is the time-driven counterpart.
+uint32_t VI_HLE_TvFormat() { return g_vi.tvFormat; }
+
+// VIGetTvFormat (0x801bacd8). A PAL game that is told NTSC misbehaves, so this
+// used to answer VI_PAL always - and was never registered, so it never answered
+// anything at all. Hardcoding either one is wrong in the other half of the
+// world; the format belongs to the VI layer, which knows what VIInit was given.
+//
+// VI_NTSC = 0, VI_PAL = 1, VI_MPAL = 2, and zero until VIInit, which is what a
+// console reports too.
+extern "C" uint32_t HLE_VIGetTvFormat_801bacd8()
+{
+    return VI_HLE_TvFormat();
+}
+
+PPC_NATIVE_OVERRIDE(801BACD8, HLE_VIGetTvFormat_801bacd8, uint32_t, (), ());
+
 void VI_HLE_ForceRetrace(CpuContext* ctx) {
 #if defined(__SWITCH__)
     g_viRetracesForced.fetch_add(1, std::memory_order_relaxed);

@@ -64,61 +64,7 @@ extern "C" void OSFatal_HLE_801a4ec4(CpuContext* ctx) {
 
 REGISTER_NATIVE_FUNCTION_AS(0x801A4EC4, OSFatal_HLE_801a4ec4, "OSFatal_HLE_801a4ec4");
 
-extern "C" void GKI_delay_HLE_801301b4(CpuContext* ctx)
-{
-    const uint32_t delayMs = ctx ? static_cast<uint32_t>(ctx->gpr[3]) : 0;
-    const uint32_t sleepMs = delayMs == 0 ? 1u : std::min(delayMs, 10u);
-    std::this_thread::sleep_for(std::chrono::milliseconds(sleepMs));
-}
 
-extern "C" uint32_t BTM_IsDeviceUp_HLE_8013a300(CpuContext* ctx)
-{
-    // Force Bluetooth stack to "up" to avoid endless polling loops while we lack
-    // real hardware bring-up.
-    constexpr uint32_t kBtmCbBase = 0x80336278u;
-    constexpr uint32_t kDevStateOffset = 0x64Eu;
-    try {
-        ::Memory::Write8(kBtmCbBase + kDevStateOffset, 5u);
-    } catch (const ::Memory::AccessViolation&) {
-        // Ignore; best-effort write
-    }
-
-    if (ctx) {
-        ctx->gpr[3] = 1;
-    }
-    return 1;
-}
-
-PPC_NATIVE_OVERRIDE_VOID(801301B4, GKI_delay_HLE_801301b4, (CpuContext* ctx), (ctx));
-PPC_NATIVE_OVERRIDE(8013A300, BTM_IsDeviceUp_HLE_8013a300, uint32_t, (CpuContext* ctx), (ctx));
-
-// Serial Interface (SI) - GameCube controller ports; stubbed since we don't emulate the MMIO.
-
-// SIInit (0x801b2de0): skips MMIO setup at 0xCD006434 and controller detection.
-extern "C" void SIInit_801b2de0()
-{
-    RT_LOG(RT_TAG_OS) << "SIInit_801b2de0 called: skipping MMIO register setup and controller detection" << std::endl;
-}
-
-// SISetSamplingRate (0x801b3acc): ignored, we don't emulate SI polling timing.
-extern "C" void HLE_SISetSamplingRate_801b3acc(uint32_t msec)
-{
-    RT_LOG(RT_TAG_OS) << "HLE_SISetSamplingRate_801b3acc called: msec=" << msec << ": Stubbed success." << std::endl;
-}
-
-// Video Interface (VI) - TV output.
-
-// VIGetTvFormat (0x801bacd8): CRITICAL, must return 1 (VI_PAL) not 0, or PAL builds
-// misbehave/panic.
-extern "C" uint32_t HLE_VIGetTvFormat_801bacd8()
-{
-    // VI_NTSC = 0, VI_PAL = 1, VI_MPAL = 2
-    RT_LOG(RT_TAG_OS) << "HLE_VIGetTvFormat_801bacd8 called: returning VI_PAL (1)" << std::endl;
-    return 1;
-}
-
-REGISTER_NATIVE_FUNCTION(0x801B2DE0, SIInit_801b2de0);
-PPC_NATIVE_OVERRIDE_VOID(801B3ACC, HLE_SISetSamplingRate_801b3acc, (uint32_t msec), (msec));
 
 // OS____InitMemoryProtection (0x801A7DFC): real version touches MMU/MMIO we don't emulate;
 // no-op and return success so boot doesn't stall.

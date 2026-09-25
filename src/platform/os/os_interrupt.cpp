@@ -1,10 +1,12 @@
-// Interrupt masking/dispatch plus the EXI/IPC hardware stubs that hang off it.
+// Interrupt masking and dispatch, and the IPC hardware stubs that hang off it.
 
 #include <atomic>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+
+#include "sram.h"
 #include <iostream>
 #include <mutex>
 
@@ -196,13 +198,6 @@ extern "C" uint32_t __OSUnmaskInterrupts_801a69bc_hle(uint32_t mask)
     return previous;
 }
 
-// EXI: early hardware init touches Hollywood registers (0xCD00xxxx). Provide a no-op stub.
-extern "C" uint32_t EXIInit_80168fa0()
-{
-    RT_LOG(RT_TAG_OS) << "EXIInit_80168fa0 called: skipping MMIO register setup" << std::endl;
-    return 0;
-}
-
 // ----------------------------------------------------------------------------
 // Interrupt Controller - Mask/Unmask Hardware Interrupts
 // ----------------------------------------------------------------------------
@@ -239,7 +234,6 @@ PPC_NATIVE_OVERRIDE(801A65D4, OS__RestoreInterrupts_801a65d4, int32_t, (int32_t 
 PPC_NATIVE_OVERRIDE(801A661C, OS____InterruptInit_801a661c, uint32_t, (uint32_t r3, uint32_t r4, uint32_t r5, uint32_t r6, uint32_t r7, uint32_t r8), (r3, r4, r5, r6, r7, r8));
 PPC_NATIVE_OVERRIDE(801A66E0, SetInterruptMask_801a66e0, uint32_t, (uint32_t mask, uint32_t enable), (mask, enable));
 PPC_NATIVE_OVERRIDE(801A00E0, OS__ExceptionInit_801a00e0, uint32_t, (uint32_t r3, uint32_t r4, uint32_t r5, uint32_t r6, uint32_t r7, uint32_t r8, uint32_t r20), (r3, r4, r5, r6, r7, r8, r20));
-PPC_NATIVE_OVERRIDE(80168FA0, EXIInit_80168fa0, uint32_t, (), ());
 REGISTER_NATIVE_FUNCTION(0x801A65F8, __OSSetInterruptHandler_801a65f8_hle);
 REGISTER_NATIVE_FUNCTION(0x801A69BC, __OSUnmaskInterrupts_801a69bc_hle);
 
@@ -274,112 +268,6 @@ extern "C" uint32_t OS____MaskInterrupts_801a693c(uint32_t mask, uint32_t unmask
 
 PPC_NATIVE_OVERRIDE(801A693C, OS____MaskInterrupts_801a693c, uint32_t, (uint32_t mask, uint32_t unmask), (mask, unmask));
 
-// ----------------------------------------------------------------------------
-// EXISelect / EXIDeselect - HLE Stubs (0x801689d0 / 0x80168b00)
-// Real implementation touches MMIO at 0xCD0068xx; stub returns 1 (success).
-// ----------------------------------------------------------------------------
-
-extern "C" uint32_t EXISelect_801689d0(uint32_t channel, uint32_t device, uint32_t frequency)
-{
-    // Log occasionally to avoid spam if polled frequently
-    static int log_counter = 0;
-    if (log_counter++ < 10) {
-        RT_LOG(RT_TAG_OS) << "EXISelect_801689d0 called: channel=" << channel
-                  << " device=" << device << " freq=" << frequency 
-                  << " (stubbed success)" << std::endl;
-    }
-    return 1; // Return 1 (true) to indicate successful selection
-}
-
-// Body for the EXI stubs that take only a channel and report success: the real
-// ops drive Hollywood MMIO we do not emulate, and the callers loop until they
-// see success. Each keeps its own log budget and wording; the registrations
-// stay spelled out below because the translator scans them by text.
-#define EXI_CHANNEL_STUB(name, logLimit, channelLabel)                    \
-    extern "C" uint32_t name(uint32_t channel)                            \
-    {                                                                     \
-        static int log_count = 0;                                         \
-        if (log_count++ < (logLimit)) {                                   \
-            RT_LOG(RT_TAG_OS) << #name " called: " channelLabel           \
-                      << channel << " (stubbed success)" << std::endl;    \
-        }                                                                 \
-        return 1;                                                         \
-    }
-
-EXI_CHANNEL_STUB(EXIDeselect_80168b00, 10, "channel=")
-
-// Register the functions
-PPC_NATIVE_OVERRIDE(801689D0, EXISelect_801689d0, uint32_t, (uint32_t channel, uint32_t device, uint32_t frequency), (channel, device, frequency));
-PPC_NATIVE_OVERRIDE(80168B00, EXIDeselect_80168b00, uint32_t, (uint32_t channel), (channel));
-
-// ----------------------------------------------------------------------------
-// SetExiInterruptMask (0x80167e78): stubbed no-op, our fake EXI devices need no interrupt masking.
-// ----------------------------------------------------------------------------
-extern "C" void SetExiInterruptMask_80167e78(uint32_t channel, uint32_t exi_struct_ptr)
-{
-    // channel: r3 (0, 1, 2)
-    // exi_struct_ptr: r4
-    // This function is void and typically just modifies internal OS masks.
-    // We treat it as a successful no-op.
-}
-
-// Register the function
-PPC_NATIVE_OVERRIDE_VOID(80167E78, SetExiInterruptMask_80167e78, (uint32_t channel, uint32_t exi_struct_ptr), (channel, exi_struct_ptr));
-
-// ----------------------------------------------------------------------------
-// EXI Transaction Stubs (Imm, Dma, Sync, Unlock)
-// ----------------------------------------------------------------------------
-
-// RVL__EXIImm / EXIImm
-// Address: 0x80167f68
-// Behavior: Performs an Immediate transfer (1-4 bytes) over EXI.
-//           Stub: Return 1 (success). If it's a read, we clear the buffer.
-extern "C" uint32_t EXIImm_80167f68(uint32_t channel, uint32_t buffer, uint32_t length, uint32_t type, uint32_t callback)
-{
-    // type: 0=Read, 1=Write, 2=RW
-    // If reading, clear the destination buffer to 0 to be safe.
-    if (type == 0 || type == 2) {
-        try {
-            for (uint32_t i = 0; i < length; ++i) {
-                ::Memory::Write8(buffer + i, 0);
-            }
-        } catch (...) {
-            RT_LOG(RT_TAG_OS) << "EXIImm: Failed to write to guest buffer 0x" << std::hex << buffer << std::dec << std::endl;
-        }
-    }
-    
-    // Log only occasionally
-    static int log_count = 0;
-    if (log_count++ < 5) {
-        RT_LOG(RT_TAG_OS) << "EXIImm_80167f68 called: chan=" << channel << " len=" << length << " type=" << type << " (stubbed success)" << std::endl;
-    }
-    return 1; // Success
-}
-
-// RVL__EXIDma / EXIDma
-// Address: 0x80168288
-// Behavior: Performs a DMA transfer over EXI.
-//           Stub: Return 1 (success).
-extern "C" uint32_t EXIDma_80168288(uint32_t channel, uint32_t buffer, uint32_t length, uint32_t type, uint32_t callback)
-{
-    static int log_count = 0;
-    if (log_count++ < 5) {
-        RT_LOG(RT_TAG_OS) << "EXIDma_80168288 called: chan=" << channel << " len=" << length << " (stubbed success)" << std::endl;
-    }
-    return 1; // Success
-}
-
-// RVL__EXISync / EXISync
-// Address: 0x80168380
-// Behavior: Waits for the current EXI transfer to complete.
-//           Stub: Return 1 (success) immediately.
-EXI_CHANNEL_STUB(EXISync_80168380, 5, "chan=")
-
-// RVL__EXIUnlock / EXIUnlock
-// Address: 0x80169260
-// Behavior: Unlocks the EXI channel and triggers any pending callbacks.
-//           Stub: Return 1 (success) to bypass internal callback logic that causes the 0x0 crash.
-EXI_CHANNEL_STUB(EXIUnlock_80169260, 5, "chan=")
 
 // ----------------------------------------------------------------------------
 // OSSetPowerCallback (0x801AB75C): sets the power-button callback pointer in the SDA (r13);
@@ -443,10 +331,6 @@ extern "C" uint32_t OSSetPowerCallback_801ab75c(CpuContext* ctx)
 // Register the function
 PPC_NATIVE_OVERRIDE(801AB75C, OSSetPowerCallback_801ab75c, uint32_t, (CpuContext* ctx), (ctx));
 
-PPC_NATIVE_OVERRIDE(80167F68, EXIImm_80167f68, uint32_t, (uint32_t channel, uint32_t buffer, uint32_t length, uint32_t type, uint32_t callback), (channel, buffer, length, type, callback));
-PPC_NATIVE_OVERRIDE(80168288, EXIDma_80168288, uint32_t, (uint32_t channel, uint32_t buffer, uint32_t length, uint32_t type, uint32_t callback), (channel, buffer, length, type, callback));
-PPC_NATIVE_OVERRIDE(80168380, EXISync_80168380, uint32_t, (uint32_t channel), (channel));
-PPC_NATIVE_OVERRIDE(80169260, EXIUnlock_80169260, uint32_t, (uint32_t channel), (channel));
 
 // ----------------------------------------------------------------------------
 // IPC Register Access Stubs (0x80193020 write / 0x80193010 read): Broadway-IOS MMIO,
@@ -484,21 +368,62 @@ PPC_NATIVE_OVERRIDE(80193010, IPCReadReg_80193010, uint32_t, (uint32_t index), (
 // call translated IPCInit (0x80192F7C) to init the IPC buffer globals; skip it and
 // IPCGetBufferLo/Hi return 0, so ISFS_OpenLib fails with "APP ERROR: Not enough IPC arena".
 // ----------------------------------------------------------------------------
+// Where IPCInit and IPCCltInit sit in the game this was written against. Both
+// belong to the SDK's IPC module and are compiled together, so the gap between
+// them is a property of the module rather than of any one game: whatever
+// address the module lands at, IPCInit is this far ahead of IPCCltInit. That
+// is what lets a game the runtime has never seen be handled here - the address
+// written below belongs to the game, not to us (see native_bindings.h).
+static constexpr uint32_t kIpcCltInitReference = 0x80193478u;
+static constexpr uint32_t kIpcInitReference = 0x80192F7Cu;
+static constexpr uint32_t kIpcInitBackFromCltInit = kIpcCltInitReference - kIpcInitReference;
+
+// A jump to the wrong address lands in the middle of some unrelated function,
+// so the derived address is checked before it is used: a PowerPC function that
+// saves its return address opens with `stwu r1,-N(r1)` then `mflr r0`.
+static bool GuestFunctionStartsHere(uint32_t address)
+{
+    try {
+        const uint32_t first = Memory::Read32(address);
+        const uint32_t second = Memory::Read32(address + 4);
+        return (first & 0xFFFF0000u) == 0x94210000u && (first & 0x8000u) != 0
+               && second == 0x7C0802A6u;
+    } catch (const Memory::AccessViolation&) {
+        return false;
+    }
+}
+
 extern "C" int32_t IPCCltInit_80193478(CpuContext* ctx)
 {
-    RT_LOG(RT_TAG_OS) << "IPCCltInit_80193478 called: calling IPCInit for buffer setup" << std::endl;
-    
-    // Sets 0x803867EC/F0/E8 (IPC buffer lo/hi + init flag) from __OSGetIPCBufferLo/Hi.
-    InvokeIndirectCpu(0x80192F7Cu, ctx);
+    // Sets the IPC buffer lo/hi and the init flag from __OSGetIPCBufferLo/Hi.
+    const uint32_t cltInit = ::NativeBindings::Resolve(kIpcCltInitReference);
+    const uint32_t ipcInit = cltInit != 0 ? cltInit - kIpcInitBackFromCltInit : 0;
+    if (ipcInit == 0 || !GuestFunctionStartsHere(ipcInit)) {
+        RT_LOG(RT_TAG_OS) << "IPCCltInit: this game's IPCInit is not where the module layout puts"
+                             " it (derived 0x" << std::hex << ipcInit << std::dec
+                          << "); leaving the IPC buffer alone rather than calling into the wrong"
+                             " function" << std::endl;
+        return 0;
+    }
+    RT_LOG(RT_TAG_OS) << "IPCCltInit_80193478 called: calling IPCInit at 0x" << std::hex << ipcInit
+                      << std::dec << " for buffer setup" << std::endl;
+    InvokeIndirectCpu(ipcInit, ctx);
 
     // Advance the buffer lo pointer by 0x1000 (iosHeap size), matching real IPCCltInit.
+    // The pointer is named by a small-data offset, which every game chooses for
+    // itself, so this is only safe where the offset is the one it was read from.
+    if (ipcInit != kIpcInitReference) {
+        RT_LOG(RT_TAG_OS) << "IPCCltInit: iosHeap reserve skipped; this game keeps its IPC buffer"
+                             " pointer somewhere else" << std::endl;
+        return 0;
+    }
     uint32_t bufferLo = Memory::Read32(ctx->gpr[13] + -25620); // 0x803867EC at r13-0x6414
     uint32_t newBufLo = bufferLo + 0x1000; // Advance by 4KB for iosHeap
     Memory::Write32(ctx->gpr[13] + -25620, newBufLo);
-    
+
     RT_LOG(RT_TAG_OS) << "IPCCltInit: IPC buffer lo advanced from 0x" << std::hex << bufferLo
               << " to 0x" << newBufLo << std::dec << std::endl;
-    
+
     // Skip the rest (interrupt handler, IPC MMIO access) - those are hardware-specific
     return 0; // Success
 }
