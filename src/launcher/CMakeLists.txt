@@ -24,4 +24,5 @@ target_compile_features(wii-nx-launcher PRIVATE cxx_std_20)
 nx_generate_nacp(wii-nx-launcher.nacp
     NAME "wii-nx" AUTHOR "nx-mod" VERSION "1.0.0")
 nx_create_nro(wii-nx-launcher_nro TARGET wii-nx-launcher
-    OUTPUT wii-nx-launcher.nro NACP wii-nx-launcher.nacp)
+    OUTPUT wii-nx-launcher.nro NACP wii-nx-launcher.nacp
+    ICON "${CMAKE_CURRENT_SOURCE_DIR}/assets/icon.jpg")

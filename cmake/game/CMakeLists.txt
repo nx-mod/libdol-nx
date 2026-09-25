@@ -153,8 +153,42 @@ if (TARGET WiiCompiled)
     # The folder the game is copied to on the SD card names it, so the runtime
     # finds its own config, disc, caches and logs.
 
+    # What to call this on screen. The disc's own name is not it: internal names
+    # run words together ("MegaMan9", "MarioKartWii"), so a project spells the
+    # real one out, and the region comes off the fourth character of the disc id
+    # the way every catalogue writes it.
+    set(_wiinx_title "${WIINX_GAME_NAME}")
+    if (_wiinx_project MATCHES "\n[ \t]*title:[ \t]*([^\r\n#]+)")
+        string(STRIP "${CMAKE_MATCH_1}" _wiinx_title)
+    elseif (_wiinx_project MATCHES "\n[ \t]*display_name:[ \t]*([^\r\n#]+)")
+        string(STRIP "${CMAKE_MATCH_1}" _wiinx_title)
+    endif ()
+
+    set(_wiinx_region "")
+    if (_wiinx_project MATCHES "\n[ \t]*game_id:[ \t]*([A-Za-z0-9]+)")
+        string(SUBSTRING "${CMAKE_MATCH_1}" 3 1 _wiinx_region_letter)
+        string(TOUPPER "${_wiinx_region_letter}" _wiinx_region_letter)
+        if (_wiinx_region_letter STREQUAL "E")
+            set(_wiinx_region "USA")
+        elseif (_wiinx_region_letter STREQUAL "P")
+            set(_wiinx_region "Europe")
+        elseif (_wiinx_region_letter STREQUAL "J")
+            set(_wiinx_region "Japan")
+        elseif (_wiinx_region_letter STREQUAL "K")
+            set(_wiinx_region "Korea")
+        elseif (_wiinx_region_letter STREQUAL "A")
+            set(_wiinx_region "World")
+        endif ()
+    endif ()
+
+    set(_wiinx_display "${_wiinx_title}")
+    if (_wiinx_region)
+        set(_wiinx_display "${_wiinx_title} (${_wiinx_region})")
+    endif ()
+    message(STATUS "libdol-nx: shown as \"${_wiinx_display}\"")
+
     nx_generate_nacp(${WIINX_GAME_NAME}.nacp
-        NAME "${WIINX_GAME_NAME}" AUTHOR "nx-mod" VERSION "1.0.0")
+        NAME "${_wiinx_display}" AUTHOR "nx-mod" VERSION "1.0.0")
     nx_create_nro(${WIINX_GAME_NAME}_nro TARGET WiiCompiled
         OUTPUT ${WIINX_GAME_NAME}.nro NACP ${WIINX_GAME_NAME}.nacp)
     message(STATUS "libdol-nx: ${WIINX_GAME_NAME} -> ${WIINX_GAME_NAME}.nro")

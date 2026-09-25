@@ -13,6 +13,8 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <cstring>
+#include <cstdint>
 #include <dirent.h>
 #include <string>
 #include <sys/stat.h>
@@ -43,6 +45,51 @@ struct Entry {
 bool Exists(const std::string& path) {
     struct stat info {};
     return stat(path.c_str(), &info) == 0;
+}
+
+// The name an NRO carries for itself.
+//
+// Every build writes one - "Mega Man 9 (USA)" rather than "megaman9-nx" - into
+// the NACP the loader and the home menu read, so it is already there and does
+// not need a file of its own beside it. The layout: "NRO0" at 0x10 with the
+// program's size at 0x18, then "ASET" where the program ends, and in that the
+// NACP's offset and size. The first language entry begins with the name, 0x200
+// bytes, NUL-padded.
+std::string NroName(const std::string& path) {
+    std::FILE* file = std::fopen(path.c_str(), "rb");
+    if (file == nullptr) {
+        return {};
+    }
+    auto close = [&] { std::fclose(file); };
+
+    char magic[4]{};
+    std::uint32_t nroSize = 0;
+    if (std::fseek(file, 0x10, SEEK_SET) != 0 || std::fread(magic, 1, 4, file) != 4 ||
+        std::memcmp(magic, "NRO0", 4) != 0 ||
+        std::fseek(file, 0x18, SEEK_SET) != 0 || std::fread(&nroSize, 4, 1, file) != 1) {
+        close();
+        return {};
+    }
+
+    struct { std::uint64_t offset, size; } nacp{};
+    if (std::fseek(file, static_cast<long>(nroSize), SEEK_SET) != 0 ||
+        std::fread(magic, 1, 4, file) != 4 || std::memcmp(magic, "ASET", 4) != 0 ||
+        // 0x00 magic, 0x04 version, 0x08 icon offset+size, 0x18 nacp offset+size.
+        std::fseek(file, static_cast<long>(nroSize) + 0x18, SEEK_SET) != 0 ||
+        std::fread(&nacp, sizeof(nacp), 1, file) != 1 || nacp.size == 0) {
+        close();
+        return {};
+    }
+
+    char name[0x201]{};
+    if (std::fseek(file, static_cast<long>(nroSize + nacp.offset), SEEK_SET) != 0 ||
+        std::fread(name, 1, 0x200, file) != 0x200) {
+        close();
+        return {};
+    }
+    close();
+    name[0x200] = '\0';
+    return name[0] == '\0' ? std::string{} : std::string(name);
 }
 
 // The NRO inside a title's folder: the one named after the folder, or failing
@@ -85,7 +132,13 @@ void Collect(const Shelf& shelf, std::vector<Entry>& out) {
         }
         const std::string name = item->d_name;
         if (const std::string nro = FindNro(directory, name); !nro.empty()) {
-            out.push_back({name, nro, shelf.label});
+            // Its own name if it has one; the folder is only a fallback for a
+            // title built before the build started writing one.
+            std::string shown = NroName(nro);
+            if (shown.empty()) {
+                shown = name;
+            }
+            out.push_back({shown, nro, shelf.label});
         }
     }
     closedir(handle);
