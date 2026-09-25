@@ -1,0 +1,12 @@
+#!/bin/sh
+# CMake hands the compiler's absolute path; distccd refuses one ("compiler name
+# cannot be an absolute path"). distcc resolves a bare name through the server's
+# /usr/lib/distcc whitelist, which works, so drop the path and keep the name.
+#
+# PATH must hold the real toolchain: distcc needs it for the local fallback, and
+# masquerade mode must not find this script again.
+compiler=$1
+shift
+PATH="/opt/devkitpro/devkitA64/bin:$PATH"
+export PATH
+exec /usr/bin/distcc "$(basename "$compiler")" "$@"

@@ -474,6 +474,9 @@ int RunTranslateRecursive(string[] argsTail)
                           $"{nativeGuestEffects.ConservativeContracts.Count:N0} full-context.");
         var residentTranslationExclusions = baseTranslationExclusions.Value;
         Console.WriteLine(
+            $"[translator] Base translation exclusions: {residentTranslationExclusions.Count:N0} address(es) " +
+            "left untranslated because a native replaces them.");
+        Console.WriteLine(
             $"[translator] Leaf inlining: {leafInliningBlockedTargets.Value.Count:N0} address(es) are not " +
             "inlinable (native, excluded from translation, or mod-patched).");
 
@@ -771,10 +774,6 @@ int RunTranslateRecursive(string[] argsTail)
                 }
 
                 knownBaseFunctionEntryPoints.Add(target);
-                if (!visited.Add(target))
-                {
-                    continue;
-                }
                 if (speculative)
                 {
                     // What a guess leads to is still a guess. A prologue found
@@ -785,12 +784,24 @@ int RunTranslateRecursive(string[] argsTail)
                     // translator fault by definition. The Wii Menu died on
                     // 0x81645DB8 that way - opcode 2, a 64-bit trap, which
                     // cannot appear in Broadway code at all.
-                    speculativeSeeds.Enqueue(target);
+                    //
+                    // The dedup belongs to the speculative queue, which does it
+                    // at dequeue with visited.Add. Marking the target visited
+                    // here instead made that filter drop the very address this
+                    // discovery had just found, so everything reachable only
+                    // from a speculative entry went untranslated while its call
+                    // sites were still emitted - 880 of them in Mega Man 9.
+                    if (!translated.Contains(target) && !visited.Contains(target))
+                    {
+                        speculativeSeeds.Enqueue(target);
+                    }
+                    continue;
                 }
-                else
+                if (!visited.Add(target))
                 {
-                    queue.Enqueue((target, work.Depth + 1));
+                    continue;
                 }
+                queue.Enqueue((target, work.Depth + 1));
             }
 
             // Discovery needs decoded PPC instructions and SSA temporarily. The
@@ -848,6 +859,35 @@ int RunTranslateRecursive(string[] argsTail)
                 Console.WriteLine(
                     $"[translator] Skipped {speculativeSkips.Count:N0} map entry/entries that did not translate; " +
                     "these are seeded only by the map and are never reached by a call.");
+            }
+        }
+
+        // A direct call whose target has neither a translated body nor a native
+        // is a hole: the call site is emitted, the target is not, and the game
+        // dies the moment it reaches it. Nothing above catches this - a target
+        // can be visited, never translated, and then skipped by the speculative
+        // pass for having been visited - so count them here, where both sets
+        // are known, rather than let the game find them one crash at a time.
+        {
+            var callTargets = new HashSet<uint>();
+            foreach (var summary in baseSummaries)
+            {
+                foreach (var target in summary.Value.DirectGuestTargets)
+                {
+                    callTargets.Add(target);
+                }
+            }
+            callTargets.ExceptWith(translated);
+            callTargets.ExceptWith(residentTranslationExclusions);
+            if (callTargets.Count != 0)
+            {
+                foreach (var target in callTargets.Order().Take(20))
+                {
+                    Console.WriteLine($"[translator]   direct call to 0x{target:X8} has no translated body");
+                }
+                Console.WriteLine(
+                    $"[translator] WARNING: {callTargets.Count:N0} direct call target(s) have neither a " +
+                    "translated body nor a native. Each one ends the game if it is reached.");
             }
         }
 

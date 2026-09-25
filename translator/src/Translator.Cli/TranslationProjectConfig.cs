@@ -396,6 +396,10 @@ internal sealed class TranslationProjectConfig
     {
         public string? Id { get; init; }
         public string? DisplayName { get; init; }
+        // What the launcher and the home menu call this game. Nothing is
+        // translated differently for it; the build reads it for the NACP name,
+        // and it is named here so the manifest stays one file.
+        public string? Title { get; init; }
         public string? GameId { get; init; }
         // A title installed from a WAD or downloaded from Nintendo is named by
         // its title id rather than a disc id. Nothing is translated differently
