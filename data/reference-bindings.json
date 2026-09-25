@@ -49,6 +49,11 @@
     "library": "libdol-nx",
     "native": "RFLiIsWorking_HLE_800bd860"
   },
+  "0x800EF4B8": {
+    "file": "libdol-nx/src/platform/input/si.cpp",
+    "library": "libdol-nx",
+    "native": "OS____GetDIConfig_800ef4b8"
+  },
   "0x80123F88": {
     "file": "libdol-nx/src/platform/audio/audio.cpp",
     "library": "libdol-nx",
@@ -185,13 +190,13 @@
     "native": "PPCMthid4_8012e684"
   },
   "0x801301B4": {
-    "file": "libdol-nx/src/platform/os/os_init.cpp",
-    "library": "libdol-nx",
+    "file": "libwii-nx/src/input/bluetooth.cpp",
+    "library": "libwii-nx",
     "native": "GKI_delay_HLE_801301b4"
   },
   "0x8013A300": {
-    "file": "libdol-nx/src/platform/os/os_init.cpp",
-    "library": "libdol-nx",
+    "file": "libwii-nx/src/input/bluetooth.cpp",
+    "library": "libwii-nx",
     "native": "BTM_IsDeviceUp_HLE_8013a300"
   },
   "0x8015BC80": {
@@ -325,42 +330,42 @@
     "native": "ESP_GetTitleId_stub"
   },
   "0x80167E78": {
-    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "file": "libdol-nx/src/platform/system/exi.cpp",
     "library": "libdol-nx",
     "native": "SetExiInterruptMask_80167e78"
   },
   "0x80167F68": {
-    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "file": "libdol-nx/src/platform/system/exi.cpp",
     "library": "libdol-nx",
     "native": "EXIImm_80167f68"
   },
   "0x80168288": {
-    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "file": "libdol-nx/src/platform/system/exi.cpp",
     "library": "libdol-nx",
     "native": "EXIDma_80168288"
   },
   "0x80168380": {
-    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "file": "libdol-nx/src/platform/system/exi.cpp",
     "library": "libdol-nx",
     "native": "EXISync_80168380"
   },
   "0x801689D0": {
-    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "file": "libdol-nx/src/platform/system/exi.cpp",
     "library": "libdol-nx",
     "native": "EXISelect_801689d0"
   },
   "0x80168B00": {
-    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "file": "libdol-nx/src/platform/system/exi.cpp",
     "library": "libdol-nx",
     "native": "EXIDeselect_80168b00"
   },
   "0x80168FA0": {
-    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "file": "libdol-nx/src/platform/system/exi.cpp",
     "library": "libdol-nx",
     "native": "EXIInit_80168fa0"
   },
   "0x80169260": {
-    "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
+    "file": "libdol-nx/src/platform/system/exi.cpp",
     "library": "libdol-nx",
     "native": "EXIUnlock_80169260"
   },
@@ -2680,12 +2685,12 @@
     "native": "SCGetProductGameRegion_HLE"
   },
   "0x801B2DE0": {
-    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "file": "libdol-nx/src/platform/input/si.cpp",
     "library": "libdol-nx",
     "native": "SIInit_801b2de0"
   },
   "0x801B3ACC": {
-    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "file": "libdol-nx/src/platform/input/si.cpp",
     "library": "libdol-nx",
     "native": "HLE_SISetSamplingRate_801b3acc"
   },
@@ -2773,6 +2778,11 @@
     "file": "libdol-nx/src/platform/system/vi.cpp",
     "library": "libdol-nx",
     "native": "VIGetCurrentLine_HLE_801bac48"
+  },
+  "0x801BACD8": {
+    "file": "libdol-nx/src/platform/system/vi.cpp",
+    "library": "libdol-nx",
+    "native": "HLE_VIGetTvFormat_801bacd8"
   },
   "0x801BAD38": {
     "file": "libdol-nx/src/platform/system/vi.cpp",
