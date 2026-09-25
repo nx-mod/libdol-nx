@@ -160,6 +160,23 @@ static bool IsDvdDataRoot(const fs::path& path) {
     FailDvd("dvd_root", "DVD data is unavailable", details);
 }
 
+// Where this title's disc data lives, or empty when it has none. WiiWare, a
+// channel and the System Menu all carry their data inside the executable, so
+// having no disc is an ordinary state rather than a misconfiguration: every one
+// of them used to be killed at boot by a GetDvdRoot that could only succeed or
+// end the process.
+//
+// A game that really does want the disc asks for a file by name and fails
+// there, where the message can say which file, instead of at boot for a title
+// that was never going to read one.
+static fs::path DiscDataRootOrEmpty() {
+    const fs::path path = RuntimeConfigFile::ResolvedDvdRoot();
+    if (path.empty() || !IsDvdDataRoot(path)) {
+        return {};
+    }
+    return path;
+}
+
 static const fs::path& GetDvdRoot() {
     std::call_once(g_dvdRootOnce, []() {
         const fs::path path = RuntimeConfigFile::ResolvedDvdRoot();
@@ -245,7 +262,16 @@ static void LoadFstIndex() {
     }
     g_fstLoaded = true;
 
-    const fs::path fstPath = GetDvdRoot() / "sys" / "fst.bin";
+    // No disc, no file table. This already tolerates a missing fst.bin below,
+    // so the only thing a title without a disc could die on here is the root
+    // check itself.
+    const fs::path discRoot = DiscDataRootOrEmpty();
+    if (discRoot.empty()) {
+        RT_LOGF(RT_TAG_DVD, "no disc file table: this title carries its own data\n");
+        return;
+    }
+
+    const fs::path fstPath = discRoot / "sys" / "fst.bin";
     std::ifstream fstFile(fstPath, std::ios::binary);
     if (!fstFile.is_open()) {
         return;
@@ -797,16 +823,8 @@ void DVD_HLE_PrescanDisc()
     if (g_discPrescanned || g_dvdInitialized) {
         return;
     }
-    // A title with no disc has nothing to prescan: WiiWare, a channel and the
-    // System Menu all carry their data inside the executable. Asking GetDvdRoot
-    // here would end the process before the guest ran a single instruction,
-    // which is what happened to every one of them.
-    //
-    // A game that really does want the disc asks for a file by name, and fails
-    // there - where the message can say which file, rather than at boot for a
-    // title that was never going to read one.
-    const fs::path rootPath = RuntimeConfigFile::ResolvedDvdRoot();
-    if (rootPath.empty() || !IsDvdDataRoot(rootPath)) {
+    const fs::path rootPath = DiscDataRootOrEmpty();
+    if (rootPath.empty()) {
         RT_LOGF(RT_TAG_DVD, "no disc to prescan: this title carries its own data\n");
         return;
     }
@@ -850,14 +868,20 @@ extern "C" void DVDInit_8015EA1C()
     Memory::Write16(diskHeader + 0x04, 0x3031);     // '01' (Maker)
     Memory::Write8(diskHeader + 0x06, 0x01);        // Disk #1
     // 4. Scan Files (unless DVD_HLE_PrescanDisc already did, during boot)
+    // A title with no disc leaves g_discPrescanned false because it had nothing
+    // to scan, not because the scan still owes us something: asking for the
+    // root here is the same boot-time death the prescan was taught to avoid.
     if (!g_discPrescanned) {
-        const fs::path& rootPath = GetDvdRoot();
+        const fs::path rootPath = DiscDataRootOrEmpty();
+        if (rootPath.empty()) {
+            RT_LOGF(RT_TAG_DVD, "no disc to index: this title carries its own data\n");
+        } else {
+            // Map "<dvd_root>/files" -> "/"
+            ScanDirectory(rootPath / "files", "/");
 
-        // Map "<dvd_root>/files" -> "/"
-        ScanDirectory(rootPath / "files", "/");
-
-        // Map "<dvd_root>/sys" -> "/sys/" (e.g. main.dol, bi2.bin)
-        ScanDirectory(rootPath / "sys", "/sys/");
+            // Map "<dvd_root>/sys" -> "/sys/" (e.g. main.dol, bi2.bin)
+            ScanDirectory(rootPath / "sys", "/sys/");
+        }
     }
 
     const auto& overlays = RuntimeRiivolution::Overlays();
