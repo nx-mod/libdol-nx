@@ -787,11 +787,15 @@ public static partial class TranslatedBuildShardEmitter
         // A different requested shard count is a topology change rather than
         // drift, so the recorded table is replaced instead of silently
         // overriding what the caller asked for.
-        var existing = ReadShardBoundaryTable(path, shardCount);
+        // Drift within the ranges is expected and tolerated. A large change in
+        // how many functions there are is not drift: the cut points were chosen
+        // to balance a different set, and reusing them puts everything that has
+        // appeared since into whichever range happened to be sparse.
+        var existing = ReadShardBoundaryTable(path, shardCount, functions.Count);
         if (existing is not null)
         {
             // Content-gated, so an unchanged table keeps its modification time.
-            WriteShardBoundaryTable(path, "base_common", existing);
+            WriteShardBoundaryTable(path, "base_common", existing, functions.Count);
             return new ShardBoundaryResolution(existing, path, Reused: true);
         }
 
@@ -809,11 +813,17 @@ public static partial class TranslatedBuildShardEmitter
         }
 
         var table = new ShardBoundaryTable(packed.Select(static group => group[0].Address).ToArray());
-        WriteShardBoundaryTable(path, "base_common", table);
+        WriteShardBoundaryTable(path, "base_common", table, functions.Count);
         return new ShardBoundaryResolution(table, path, Reused: false);
     }
 
-    private static ShardBoundaryTable? ReadShardBoundaryTable(string path, int expectedShardCount)
+    // A recorded table is reused only when it was packed for about the same
+    // number of functions. An eighth either way is drift; more than that means
+    // the set it balanced is not the set being emitted.
+    private const double ShardBoundaryFunctionCountTolerance = 0.125;
+
+    private static ShardBoundaryTable? ReadShardBoundaryTable(string path, int expectedShardCount,
+                                                             int functionCount)
     {
         if (!File.Exists(path)) return null;
         try
@@ -843,6 +853,23 @@ public static partial class TranslatedBuildShardEmitter
             {
                 if (parsed[index] <= parsed[index - 1]) return null;
             }
+            // A table written before this field existed says nothing about what
+            // it was packed for, so it is repacked once and records it.
+            if (!root.TryGetProperty("functionCount", out var recorded) ||
+                recorded.ValueKind != JsonValueKind.Number)
+            {
+                return null;
+            }
+            var packedFor = recorded.GetInt32();
+            if (packedFor <= 0) return null;
+            var drift = Math.Abs(functionCount - packedFor) / (double)packedFor;
+            if (drift > ShardBoundaryFunctionCountTolerance)
+            {
+                Console.WriteLine(
+                    $"[translator] base_common boundaries were packed for {packedFor:N0} functions " +
+                    $"and there are now {functionCount:N0}: repacking rather than reusing them.");
+                return null;
+            }
             return new ShardBoundaryTable(parsed);
         }
         catch (Exception ex) when (ex is JsonException or IOException or FormatException
@@ -855,7 +882,8 @@ public static partial class TranslatedBuildShardEmitter
         }
     }
 
-    private static void WriteShardBoundaryTable(string path, string partition, ShardBoundaryTable table)
+    private static void WriteShardBoundaryTable(string path, string partition, ShardBoundaryTable table,
+                                               int functionCount)
     {
         var starts = table.StartAddresses;
         var output = new StringBuilder();
@@ -864,6 +892,12 @@ public static partial class TranslatedBuildShardEmitter
         output.AppendLine($"  \"formatVersion\": {ShardBoundaryVersion.ToString(CultureInfo.InvariantCulture)},");
         output.AppendLine($"  \"partition\": \"{Escape(partition)}\",");
         output.AppendLine($"  \"shardCount\": {starts.Count.ToString(CultureInfo.InvariantCulture)},");
+        // How many functions the cut points were chosen for. Reusing them for a
+        // very different number is what put 2,957 of Mega Man 10's functions
+        // into one 26.9 MB shard: its boundaries were frozen at 4,008 functions
+        // and reused at 8,221, and the region that had been nearly empty when
+        // they were chosen was the one that filled up.
+        output.AppendLine($"  \"functionCount\": {functionCount.ToString(CultureInfo.InvariantCulture)},");
         // Ascending, fixed-width, invariant hexadecimal: the file is byte-stable
         // for a given set of cut points regardless of host culture.
         output.AppendLine("  \"shardStartAddresses\": [");
