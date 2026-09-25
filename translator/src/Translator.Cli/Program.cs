@@ -2898,7 +2898,8 @@ int RunGenerateDataInit()
     // Generate runtime configuration header with the manifest's SDA base pointers
     var (dataInitSda1Base, dataInitSda2Base) = loadedProject.RequireSdaBases();
     RuntimeConfigGenerator.GenerateConfigHeader(
-        dataInitSda1Base, dataInitSda2Base, runtimeConfigOutput, loadedProject.Identity.DisplayName);
+        dataInitSda1Base, dataInitSda2Base, runtimeConfigOutput, loadedProject.Identity.DisplayName,
+        loadedProject.Translation.EntryPoints.Count > 0 ? loadedProject.Translation.EntryPoints[0] : null);
 
     // Load the REL file for runtime embedding (apply relocations since runtime does not OSLink)
     RelImage? relImage = null;
@@ -3791,7 +3792,8 @@ ProgramImage LoadImage()
         sda1Base,
         sda2Base,
         loadedProject.Output.RuntimeConfig,
-        loadedProject.Identity.DisplayName);
+        loadedProject.Identity.DisplayName,
+        loadedProject.Translation.EntryPoints.Count > 0 ? loadedProject.Translation.EntryPoints[0] : null);
     Console.WriteLine(
         $"[translator] SDA bases: r13 (_SDA_BASE_) 0x{sda1Base:X8}, r2 (_SDA2_BASE_) 0x{sda2Base:X8} " +
         $"(entry 0x{dol.EntryPoint:X8}).");

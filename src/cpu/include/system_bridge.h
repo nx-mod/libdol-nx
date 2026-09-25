@@ -66,10 +66,25 @@ void WriteCrashArtifacts(std::string_view reason,
 // isa/ppc_isa_context.h - that is its standalone host seam, not a duplicate.)
 void ShowRuntimeFatalPopup(std::string_view category, std::string_view details) noexcept;
 
-// Mario Kart Wii's translated entry point. The products always boot here, so
-// this is applied as the default while parsing the command line; there is no
-// flag to override it.
-inline constexpr uint32_t kDefaultEntryAddress = 0x800060A4u;
+// Where the guest starts. Each game's own entry comes from its DOL and is
+// written into the generated RuntimeConfig.h; this constant is only the
+// fallback for a build that has no generated header.
+//
+// It was Mario Kart Wii's entry, used for every game, which is why Mega Man 9
+// got its whole graphics stack up and then stopped: 0x800060A4 is a bl in
+// Mario Kart and four zero bytes of padding in Mega Man 9, so nothing was
+// registered there and there was nothing to start.
+#if __has_include("RuntimeConfig.h")
+#include "RuntimeConfig.h"
+#define WIINX_HAVE_RUNTIME_CONFIG_ENTRY 1
+#endif
+
+inline constexpr uint32_t kDefaultEntryAddress =
+#if defined(WIINX_HAVE_RUNTIME_CONFIG_ENTRY) && defined(RUNTIME_CONFIG_HAS_ENTRY_POINT)
+    RuntimeConfig::ENTRY_POINT;
+#else
+    0x800060A4u;
+#endif
 
 class SystemBridge {
 public:
