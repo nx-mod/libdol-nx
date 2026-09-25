@@ -74,14 +74,9 @@ void ShowRuntimeFatalPopup(std::string_view category, std::string_view details) 
 // got its whole graphics stack up and then stopped: 0x800060A4 is a bl in
 // Mario Kart and four zero bytes of padding in Mega Man 9, so nothing was
 // registered there and there was nothing to start.
-#if __has_include("RuntimeConfig.h")
-#include "RuntimeConfig.h"
-#define WIINX_HAVE_RUNTIME_CONFIG_ENTRY 1
-#endif
-
 inline constexpr uint32_t kDefaultEntryAddress =
-#if defined(WIINX_HAVE_RUNTIME_CONFIG_ENTRY) && defined(RUNTIME_CONFIG_HAS_ENTRY_POINT)
-    RuntimeConfig::ENTRY_POINT;
+#if defined(WIINX_GUEST_ENTRY)
+    WIINX_GUEST_ENTRY;
 #else
     0x800060A4u;
 #endif

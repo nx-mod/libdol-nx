@@ -135,6 +135,20 @@ if (NOT _wiinx_shelf MATCHES "^(games|wads|titles)$")
     set(_wiinx_shelf "games")
 endif ()
 add_compile_definitions(WIINX_GAME_SHELF="${_wiinx_shelf}")
+
+# Where the guest starts. It is written into the generated RuntimeConfig.h too,
+# but that header is not on every source's include path - main.cpp cannot see
+# it - and a fallback that quietly uses another game's entry is the very
+# failure this fixes. A definition reaches every translation unit.
+file(READ "${WIINX_GAME_DIR}/recomp.yml" _wiinx_entry_project)
+if (_wiinx_entry_project MATCHES "entry_points:[ \t\r\n]*-[ \t]*(0[xX][0-9A-Fa-f]+)")
+    add_compile_definitions(WIINX_GUEST_ENTRY=${CMAKE_MATCH_1}u)
+    message(STATUS "libdol-nx: the guest starts at ${CMAKE_MATCH_1}")
+else ()
+    message(FATAL_ERROR
+        "No entry point in ${WIINX_GAME_DIR}/recomp.yml (translation.entry_points). "
+        "Without it the runtime would start at another game's entry.")
+endif ()
 message(STATUS "libdol-nx: ${WIINX_GAME_NAME} keeps its data in ${_wiinx_shelf}/")
 
 # libdol-nx: the CPU runtime, the console, the app, and this game's code.
@@ -152,6 +166,10 @@ if (TARGET WiiCompiled)
 
     # The folder the game is copied to on the SD card names it, so the runtime
     # finds its own config, disc, caches and logs.
+
+    # The project, for the name and region below. The read used to happen higher
+    # up for the address-alias switch; that went, and took this with it.
+    file(READ "${WIINX_GAME_DIR}/recomp.yml" _wiinx_project)
 
     # What to call this on screen. The disc's own name is not it: internal names
     # run words together ("MegaMan9", "MarioKartWii"), so a project spells the
