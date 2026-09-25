@@ -141,6 +141,10 @@ if(WIINX_TOOLS AND NOT CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
     add_executable(wiinx-nand tools/src/wiinx_nand.cpp)
     target_link_libraries(wiinx-nand PRIVATE wiinx::format)
 
+    # The name a title calls itself, out of its own banner.
+    add_executable(wiinx-name tools/src/wiinx_name.cpp)
+    target_link_libraries(wiinx-name PRIVATE wiinx::format)
+
     # Zstandard, for the chunks RVZ and WIA are compressed with. Without it the
     # tool still reads everything that is stored plainly.
     find_package(PkgConfig QUIET)

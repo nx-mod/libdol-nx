@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <utility>
 #include <cstring>
 #include <cstdint>
 #include <dirent.h>
@@ -28,10 +29,12 @@ struct Shelf {
     const char* label;
 };
 
+// System first: the Wii Menu and the channels are what a console shows you
+// before anything else, and they are the shortest list.
 constexpr Shelf kShelves[] = {
+    {"titles", "System"},
     {"games", "Games"},
     {"wads", "WiiWare"},
-    {"titles", "System"},
 };
 
 constexpr const char* kRoot = "sdmc:/wii-nx";
@@ -160,27 +163,72 @@ std::vector<Entry> Installed() {
     return entries;
 }
 
+// libnx's console is 80x45 at 1280x720, and the runtime puts its loading line
+// on row 42 - bottom-centred, the way a game does. This matches it, so the
+// launcher and everything it starts look like one thing.
+constexpr int kColumns = 80;
+constexpr int kRows = 45;
+constexpr int kFooterRow = kRows - 2;        // the bottom line
+constexpr int kHintRow = kFooterRow - 3;     // the controls, three above it
+constexpr const char* kFooter = "GITHUB | NX-MOD | WII-NX";
+
+void PutCentred(int row, const std::string& text, const char* colour = nullptr) {
+    int column = (kColumns - static_cast<int>(text.size())) / 2 + 1;
+    if (column < 1) {
+        column = 1;
+    }
+    std::printf("\x1b[%d;%dH%s%s%s", row, column,
+                colour == nullptr ? "" : colour, text.c_str(),
+                colour == nullptr ? "" : "\x1b[0m");
+}
+
 void Draw(const std::vector<Entry>& entries, std::size_t chosen) {
     consoleClear();
-    std::printf("\x1b[1;1H wii-nx\n\n");
-    if (entries.empty()) {
-        std::printf("   Nothing installed.\n\n"
-                    "   A title lives in %s/<games|wads|titles>/<name>/<name>.nro\n",
-                    kRoot);
-        return;
-    }
+
+    // Every shelf heading and every title is one line; the block is centred on
+    // the screen so a short list does not sit in the top corner.
+    std::vector<std::pair<const char*, std::string>> lines;   // shelf, or null for a title
     const char* shelf = nullptr;
-    for (std::size_t index = 0; index < entries.size(); ++index) {
-        if (shelf == nullptr || entries[index].shelf != shelf) {
-            shelf = entries[index].shelf;
-            std::printf("\n %s\n", shelf);
+    for (const auto& entry : entries) {
+        if (shelf == nullptr || entry.shelf != shelf) {
+            // A blank line between shelves, so System and Games do not run
+            // together. Nothing above the first heading.
+            if (shelf != nullptr) {
+                lines.emplace_back(nullptr, std::string{});
+            }
+            shelf = entry.shelf;
+            lines.emplace_back(shelf, std::string{});
         }
-        std::printf("  %s %s\n", index == chosen ? "\x1b[32m>" : " ", entries[index].name.c_str());
-        if (index == chosen) {
-            std::printf("\x1b[0m");
-        }
+        lines.emplace_back(nullptr, entry.name);
     }
-    std::printf("\n\n A start   B exit\n");
+
+    const int body = static_cast<int>(lines.size());
+    const int top = std::max(2, (kRows - body) / 2);
+
+    PutCentred(top - 1, "WII-NX", "\x1b[1m");
+    if (entries.empty()) {
+        PutCentred(kRows / 2, "Nothing installed");
+        PutCentred(kRows / 2 + 2, std::string(kRoot) + "/<games|wads|titles>/<name>/<name>.nro");
+    } else {
+        std::size_t index = 0;
+        for (int line = 0; line < body; ++line) {
+            const auto& [heading, text] = lines[static_cast<std::size_t>(line)];
+            if (heading != nullptr) {
+                PutCentred(top + line + 1, heading, "\x1b[2m");
+                continue;
+            }
+            if (text.empty()) {
+                continue;                      // the spacer between shelves
+            }
+            const bool selected = index == chosen;
+            PutCentred(top + line + 1, selected ? "> " + text + " <" : text,
+                       selected ? "\x1b[32;1m" : nullptr);
+            ++index;
+        }
+        PutCentred(kHintRow, "A start    B exit", "\x1b[2m");
+    }
+
+    PutCentred(kFooterRow, kFooter, "\x1b[2m");
 }
 
 }  // namespace

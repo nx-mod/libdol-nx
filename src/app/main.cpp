@@ -921,6 +921,11 @@ std::atomic<bool> g_switchConsoleActive{false};
 constexpr int kConsoleColumns = 80;
 constexpr int kConsoleStatusRow = 42;
 
+// The same line the launcher shows, in the same place, so a title and the
+// launcher that started it read as one thing. It used to name the library
+// LIBWII-NX, which has not been its name since the three-library split.
+constexpr const char* kBootFooter = "GITHUB | NX-MOD | WII-NX";
+
 std::streambuf* g_savedCoutBuffer = nullptr;
 
 void SwitchConsoleBegin() noexcept {
@@ -990,7 +995,7 @@ void SwitchLoadRender(int stage, float fraction) noexcept {
     g_loadPercentShown.store(percent, std::memory_order_relaxed);
     // Project banner rather than a progress word; the stage bookkeeping above is
     // kept so a progress indicator can come back later.
-    SwitchConsoleStatus("GITHUB | NX-MOD | LIBWII-NX | WII-NX");
+    SwitchConsoleStatus(kBootFooter);
 }
 
 void SwitchLoadStage(int stage) noexcept {
