@@ -45,10 +45,27 @@ A signature holds hashes, never code: the first 16 instructions and the whole
 function, each with the operands that legitimately differ between games masked
 out (branch targets, lis/addis immediates, small-data offsets). A function
 matches when both hashes do and the match is unique in the game.
+
+Some functions are identical under that mask. NANDRead and NANDWrite are the
+same instructions to the byte and differ only in which function they call, and
+the call target is exactly what the mask removes. Such a signature carries
+`siblings` (a group name) and `order` (its place within the group), and the
+group binds only when it matches its own size: N siblings against N addresses
+are that group, and `order` says which address is which, lowest first. Anything
+else - more matches than members, or members that match different places - is
+left unbound, because a replacement pointed at the wrong function is worse than
+none. `order` assumes the compiler emits the group in the order the SDK source
+declares it, so it is recorded per signature rather than inferred.
+
+`signed_from` is provenance, not matching input: the game, or list of games, the
+same hashes were confirmed in. One signature seen in three games is the evidence
+that its function is shared rather than that game's own, which is the question
+worth asking before anything is written as a game-specific native.
 """
 
 import datetime
 import hashlib
+import itertools
 import json
 import os
 import re
@@ -501,14 +518,42 @@ def scan_with(dol, signatures):
             by_window.setdefault(key, []).append(start + offset)
 
     bindings, missing = [], []
+    ambiguous = []
     for sig in masked:
         hits = [a for a in by_window.get(sig["start"], [])
                 if (code := dol.read(a, sig["size"])) is not None and masked_hash(code) == sig["body"]]
         if len(hits) == 1:
             bindings.append({"name": sig["name"], "build": sig["build"], "address": f"0x{hits[0]:08X}",
                              "registration": sig.get("registration")})
+        elif sig.get("siblings"):
+            ambiguous.append((sig, hits))
         else:
             missing.append((sig["name"], sig["build"], len(hits)))
+
+    # Siblings: functions a masked signature cannot tell apart, because the only
+    # thing that differs between them is an operand the mask removes. NANDRead
+    # and NANDWrite are the case this was written for - the same instructions to
+    # the byte, differing only in which function they call, and the call target
+    # is masked precisely so a signature survives being carried between games.
+    #
+    # They are still separable, because the group as a whole is not ambiguous:
+    # if a group of N siblings matches exactly N places in this game, then those
+    # N places are the group, and `order` says which is which. That holds only
+    # while the compiler emits them in the order the SDK source declares them,
+    # so it is written down per signature rather than assumed for every name,
+    # and a group that does not match its own size is left unbound.
+    for group, members in itertools.groupby(
+            sorted(ambiguous, key=lambda item: (item[0]["siblings"], item[0].get("order", 0))),
+            key=lambda item: item[0]["siblings"]):
+        members = list(members)
+        sites = sorted(members[0][1])
+        if len(members) != len(sites) or any(sorted(hits) != sites for _, hits in members):
+            for sig, hits in members:
+                missing.append((sig["name"], sig["build"], len(hits)))
+            continue
+        for (sig, _), address in zip(members, sites):
+            bindings.append({"name": sig["name"], "build": sig["build"], "address": f"0x{address:08X}",
+                             "registration": sig.get("registration")})
 
     if exact:
         found = find_exact(dol, exact)
@@ -576,6 +621,16 @@ def main(argv):
             return 1
         print(json.dumps(entry, indent=1))
         return 0
+    if command == "sign" and len(argv) == 6:
+        name, build_id, address, size = argv[2], argv[3], int(argv[4], 16), int(argv[5], 16)
+        code = dol.read(address, size)
+        if code is None or size < WINDOW * 4:
+            print("no function of that size there (functions shorter than 16 instructions are not signed)")
+            return 1
+        entry = {"name": name, "build": build_id, "size": size,
+                 "start": masked_hash(code[:WINDOW * 4]), "body": masked_hash(code)}
+        print(json.dumps(entry))
+        return 0
     if command == "functions":
         starts = function_starts(dol)
         if "--out" in argv:
@@ -634,16 +689,6 @@ def commands_without_dol(argv):
         known = load_builds()
         write_header(known)
         print(f"wrote {HEADER}: {len(known)} builds")
-        return 0
-    if command == "sign" and len(argv) == 6:
-        name, build_id, address, size = argv[2], argv[3], int(argv[4], 16), int(argv[5], 16)
-        code = dol.read(address, size)
-        if code is None or size < WINDOW * 4:
-            print("no function of that size there (functions shorter than 16 instructions are not signed)")
-            return 1
-        entry = {"name": name, "build": build_id, "size": size,
-                 "start": masked_hash(code[:WINDOW * 4]), "body": masked_hash(code)}
-        print(json.dumps(entry))
         return 0
     print(__doc__.strip())
     return 2

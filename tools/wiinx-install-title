@@ -33,7 +33,7 @@ from wiicrypto import COMMON_KEY, aes_cbc_decrypt  # noqa: E402
 
 SIGNATURE = 0x140
 ALIGN = 0x40
-SHARED_ENTRY = 28  # a SHA-1, then eight characters
+SHARED_ENTRY = 28  # eight characters of name, then a SHA-1
 
 
 def load(name):
@@ -114,14 +114,18 @@ def main(argv):
     if os.path.exists(shared_map_path):
         shared = bytearray(open(shared_map_path, "rb").read())
 
+    # An entry is the name first and the hash second - `char sharedId[8]` then
+    # `u8 sha1hash[20]` - which is what a console, Dolphin and NandBinCheck all
+    # read. Writing the two the other way round produces a map only this tool
+    # can understand, and the contents are then unreachable to everything else.
     def shared_name(sha1):
         for index in range(len(shared) // SHARED_ENTRY):
             entry = shared[index * SHARED_ENTRY:(index + 1) * SHARED_ENTRY]
-            if entry[:20] == sha1:
-                return entry[20:].decode("ascii"), False
+            if entry[8:] == sha1:
+                return entry[:8].decode("ascii"), False
         name = f"{len(shared) // SHARED_ENTRY:08x}"
-        shared.extend(sha1)
         shared.extend(name.encode("ascii"))
+        shared.extend(sha1)
         return name, True
 
     for index, cid, ctype, size, sha1 in wad.contents(tmd):

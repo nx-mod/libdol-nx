@@ -1,0 +1,163 @@
+#!/usr/bin/env python3
+"""Name a game's unknown functions from a game that names them.
+
+    tools/wiinx-suggest-names <game folder> --from <game folder> [--min-callees N]
+
+A function's identity is mostly settled by who it calls. NANDRead is the one
+that calls nandIsInitialized, then ISFS::Read, then nandConvertErrorCode; no
+other function in the SDK does exactly that. So a function whose named callees
+match, one for one and in order, a named function in another game is almost
+certainly the same function - and that holds across SDK builds, which is what
+signatures by themselves cannot do, because a recompile changes every hash.
+
+This only ever prints suggestions. Nothing is written: a name is a claim about
+what code does, and the disassembly is what settles it. What this does is turn
+"read 3,000 functions" into "check twenty".
+
+Ambiguity is reported rather than guessed. A fingerprint that names two
+different functions in the reference names neither here.
+"""
+import argparse
+import bisect
+import os
+import re
+import struct
+import sys
+
+UNNAMED = re.compile(r"^(?:0x)?[0-9a-f]{8}$")
+
+
+def read_dol(path):
+    data = open(path, "rb").read()
+    text = []
+    for i in range(7):
+        offset = struct.unpack_from(">I", data, 0x00 + 4 * i)[0]
+        address = struct.unpack_from(">I", data, 0x48 + 4 * i)[0]
+        size = struct.unpack_from(">I", data, 0x90 + 4 * i)[0]
+        if size:
+            text.append((offset, address, size))
+    return data, text
+
+
+def read_map(path):
+    symbols = {}
+    for line in open(path):
+        parts = line.split()
+        if len(parts) >= 2:
+            try:
+                symbols[int(parts[0], 16)] = parts[1]
+            except ValueError:
+                pass
+    return symbols
+
+
+def call_targets(data, text, start, end):
+    """Every direct call this function makes, in order."""
+    for offset, address, size in text:
+        if not (address <= start < address + size):
+            continue
+        base = offset + (start - address)
+        out = []
+        for at in range(0, min(end - start, address + size - start), 4):
+            word = struct.unpack_from(">I", data, base + at)[0]
+            if word >> 26 != 18 or not (word & 1):
+                continue
+            displacement = word & 0x03FFFFFC
+            if displacement & 0x02000000:
+                displacement -= 0x04000000
+            out.append((start + at + displacement) & 0xFFFFFFFF)
+        return out
+    return []
+
+
+def prologue_starts(data, text):
+    """Where functions begin, from the code rather than a map: a frame is set up
+    with `stwu r1,-N(r1)` and the return address saved with `mflr r0`. A game
+    whose map names only part of itself - the System Menu names 2,299 of 11,000 -
+    has no unnamed map entries to work from, only unmapped code."""
+    found = []
+    for offset, address, size in text:
+        for at in range(0, size - 8, 4):
+            first = struct.unpack_from(">I", data, offset + at)[0]
+            if (first & 0xFFFF0000) != 0x94210000 or not (first & 0x8000):
+                continue
+            if struct.unpack_from(">I", data, offset + at + 4)[0] != 0x7C0802A6:
+                continue
+            found.append(address + at)
+    return found
+
+
+def fingerprints(project, min_callees):
+    dol_path = None
+    for candidate in ("game/main.dol", "title/program.dol", "title/main.dol",
+                      "disc/sys/main.dol"):
+        if os.path.exists(os.path.join(project, candidate)):
+            dol_path = os.path.join(project, candidate)
+            break
+    if dol_path is None:
+        sys.exit(f"no DOL under {project}")
+    data, text = read_dol(dol_path)
+    symbols = read_map(os.path.join(project, "functions.map"))
+    starts = sorted(set(symbols) | set(prologue_starts(data, text)))
+
+    named = {}   # fingerprint -> set of names
+    unknown = {} # address -> fingerprint
+    for index, start in enumerate(starts):
+        end = starts[index + 1] if index + 1 < len(starts) else start
+        callees = call_targets(data, text, start, end)
+        # Only callees this game can name, so the fingerprint means the same
+        # thing in both games.
+        fingerprint = tuple(symbols[c] for c in callees
+                            if c in symbols and not UNNAMED.match(symbols[c]))
+        # Distinct callees, not calls: a function that calls PSMTXRotRad three
+        # times says almost nothing, and "locks a mutex then unlocks it" is
+        # every other function in a sound library.
+        if len(set(fingerprint)) < min_callees:
+            continue
+        label = symbols.get(start)
+        if label is None or UNNAMED.match(label):
+            unknown[start] = fingerprint
+        else:
+            named.setdefault(fingerprint, set()).add(label)
+    return named, unknown, symbols, starts
+
+
+def main():
+    parser = argparse.ArgumentParser(add_help=True)
+    parser.add_argument("project")
+    parser.add_argument("--from", dest="reference", required=True)
+    parser.add_argument("--min-callees", type=int, default=3)
+    args = parser.parse_args()
+
+    _, unknown, symbols, starts = fingerprints(args.project, args.min_callees)
+    reference, _, _, _ = fingerprints(args.reference, args.min_callees)
+
+    # A fingerprint shared by two unknowns here cannot name either of them,
+    # whatever the reference says.
+    counts = {}
+    for fingerprint in unknown.values():
+        counts[fingerprint] = counts.get(fingerprint, 0) + 1
+
+    suggested = 0
+    ambiguous = 0
+    for address in sorted(unknown):
+        names = reference.get(unknown[address])
+        if not names:
+            continue
+        if len(names) > 1 or counts[unknown[address]] > 1:
+            ambiguous += 1
+            continue
+        name = next(iter(names))
+        index = bisect.bisect_left(starts, address)
+        size = starts[index + 1] - address if index + 1 < len(starts) else 0
+        print(f"0x{address:08X}  size 0x{size:<5X} {name}")
+        print(f"             calls: {', '.join(unknown[address])}")
+        suggested += 1
+    print(f"\n{suggested} suggestion(s); {ambiguous} fingerprint(s) named more "
+          f"than one function in the reference and were left alone.")
+    print(f"{len(unknown)} unnamed function(s) had at least {args.min_callees} "
+          "named callees to fingerprint.")
+
+
+if __name__ == "__main__":
+    main()
