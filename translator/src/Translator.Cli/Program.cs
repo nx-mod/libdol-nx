@@ -686,7 +686,7 @@ int RunTranslateRecursive(string[] argsTail)
             for (var i = 0; i < batch.Count; i++)
             {
                 if (results[i] is not { } result) continue;
-                CommitResult(batch[i], result, discoveryTargets[i], summaries[i]);
+                CommitResult(batch[i], result, discoveryTargets[i], summaries[i], speculative);
             }
         }
 
@@ -747,7 +747,8 @@ int RunTranslateRecursive(string[] argsTail)
             (uint Address, int Depth, string Name) work,
             FunctionDiscoveryResult result,
             IReadOnlyList<uint> discoveryTargets,
-            GqrFunctionSummary summary)
+            GqrFunctionSummary summary,
+            bool speculative)
         {
             // File writing moved to parallel section above
             totals.Add(result.Metrics);
@@ -770,7 +771,23 @@ int RunTranslateRecursive(string[] argsTail)
                 }
 
                 knownBaseFunctionEntryPoints.Add(target);
-                if (visited.Add(target))
+                if (!visited.Add(target))
+                {
+                    continue;
+                }
+                if (speculative)
+                {
+                    // What a guess leads to is still a guess. A prologue found
+                    // in data decodes often enough to look like a function, and
+                    // the branch targets read out of it are then nonsense; put
+                    // one of those in the walk's queue and it stops the run,
+                    // because a walked target that will not decode is a
+                    // translator fault by definition. The Wii Menu died on
+                    // 0x81645DB8 that way - opcode 2, a 64-bit trap, which
+                    // cannot appear in Broadway code at all.
+                    speculativeSeeds.Enqueue(target);
+                }
+                else
                 {
                     queue.Enqueue((target, work.Depth + 1));
                 }

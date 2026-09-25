@@ -40,17 +40,45 @@ def read_dol(data):
     return text, blobs, bss_address, bss_size, entry
 
 
-def write_dol(path, code, address, bss_address, bss_size, entry):
+# The last instruction that can end a function. Nothing that returns can live
+# above the highest of these, so this is where code stops and the constants,
+# strings and tables begin.
+TERMINATORS = (0x4E800020,)     # blr
+
+
+def code_end(image):
+    """How much of the image is code, rounded up to a 32-byte boundary.
+
+    A flat image says nothing about where its text stops, and a translator
+    handed the whole thing as code will decode a string as instructions the
+    moment a function's end is missed. The System Menu's did exactly that and
+    stopped on "Failed to create\n\0Boot from cache" - 0x0A00426F, which
+    decodes as a 64-bit trap that cannot appear in this processor's code at all.
+    """
+    words = struct.unpack(f">{len(image) // 4}I", image[: len(image) // 4 * 4])
+    last = max((index for index, word in enumerate(words) if word in TERMINATORS),
+               default=None)
+    if last is None:
+        return len(image)
+    return min(len(image), (last * 4 + 4 + 31) & ~31)
+
+
+def write_dol(path, code, data, address, bss_address, bss_size, entry):
     header = bytearray(0x100)
-    struct.pack_into(">I", header, 0, 0x100)            # text0 file offset
-    struct.pack_into(">I", header, 72, address)         # text0 address
-    struct.pack_into(">I", header, 144, len(code))      # text0 size
+    struct.pack_into(">I", header, 0, 0x100)                    # text0 file offset
+    struct.pack_into(">I", header, 72, address)                 # text0 address
+    struct.pack_into(">I", header, 144, len(code))              # text0 size
+    if data:
+        struct.pack_into(">I", header, 28, 0x100 + len(code))   # data0 file offset
+        struct.pack_into(">I", header, 100, address + len(code))
+        struct.pack_into(">I", header, 172, len(data))
     struct.pack_into(">I", header, 216, bss_address)
     struct.pack_into(">I", header, 220, bss_size)
     struct.pack_into(">I", header, 224, entry)
     with open(path, "wb") as out:
         out.write(header)
         out.write(code)
+        out.write(data)
 
 
 def main(argv):
@@ -87,13 +115,18 @@ def main(argv):
               f"0x{address:08X}+0x{size:X}", file=sys.stderr)
         return 1
 
-    code = blob[HEADER:image_end - address]
+    image = blob[HEADER:image_end - address]
+    split = code_end(image)
+    code, data = image[:split], image[split:]
     print(f">> {source}")
     print(f"   {code_bytes:,} bytes of setup code, discarded: it maps memory and returns")
-    print(f"   program   0x{load:08X} + {len(code):,} bytes")
+    print(f"   code      0x{load:08X} + {len(code):,} bytes")
+    if data:
+        print(f"   data      0x{load + len(code):08X} + {len(data):,} bytes"
+              f"  (past the last blr, so not code)")
     print(f"   bss       0x{image_end:08X} + {bss_size:,} bytes")
     print(f"   entry     0x{load:08X}")
-    write_dol(output, code, load, image_end, bss_size, load)
+    write_dol(output, code, data, load, image_end, bss_size, load)
     print(f">> wrote {output}")
     return 0
 
