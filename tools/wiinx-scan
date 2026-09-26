@@ -2,7 +2,7 @@
 """Find which library builds a game links, and where its natives' functions are.
 
     tools/wiinx-scan builds <game.dol>
-    tools/wiinx-scan scan   <game.dol> [--out bindings.json]
+    tools/wiinx-scan scan   <game.dol> [--out bindings.json] [--prune]
     tools/wiinx-scan functions <game.dol> [--out functions.map]
     tools/wiinx-scan os-globals <game.dol>
     tools/wiinx-scan sign   <game.dol> <name> <build> <address> <size>
@@ -16,7 +16,9 @@ builds  lists the library builds the game names in its startup banners, as
 scan    finds each native's function in the game - for the builds it links -
         by code signature, and prints what it found. --out writes the game's
         bindings.json: each native's registration name against the address it
-        has in this game, which is what the translator reads.
+        has in this game, which is what the translator reads. A rescan keeps
+        bindings the file already had that this scan cannot speak to, and names
+        them; --prune writes only what this scan bound.
 functions
         finds where this game's functions start, from its own code: every
         direct call's target, and every pointer into the code that follows a
@@ -605,6 +607,49 @@ def scan_with(dol, signatures):
     return bindings, missing
 
 
+def merge_bindings(path, scanned, prune):
+    """What to write over an existing bindings file.
+
+    Writing only what a scan matched loses two different things. A game can
+    carry bindings no signature covers at all - found by hand, or by a tool
+    that is not this one - and a signature that has been rewritten since the
+    file was made can stop matching a native the file already binds. Replacing
+    the file wholesale deleted both without a word, which is how megaman10-nx
+    came to be one rescan away from losing strchr, strncmp and strrchr.
+
+    So a rescan carries over what it cannot speak to, and says what it carried.
+    Returns (table, kept, stale, refused).
+    """
+    if not os.path.exists(path):
+        return scanned, [], [], None
+    try:
+        with open(path) as handle:
+            existing = json.load(handle)
+    except (OSError, ValueError) as problem:
+        return scanned, [], [], f"cannot read the file it would replace ({problem})"
+    if not isinstance(existing, dict):
+        return scanned, [], [], "the file it would replace is not an object"
+
+    # mkwii-nx's bindings are keyed by reference address rather than by
+    # registration name: it is the game the reference addresses come from, so
+    # its keys *are* addresses. That file is made another way, and merging
+    # name-keyed bindings into it would quietly produce a file in neither
+    # format.
+    address_keyed = [k for k in existing if re.fullmatch(r"0[xX][0-9a-fA-F]{8}", k)]
+    if existing and len(address_keyed) > len(existing) // 2:
+        return scanned, [], [], (f"it is keyed by reference address, not by registration name "
+                                 f"({len(address_keyed)} of {len(existing)} keys) - this is not "
+                                 f"the file `scan --out` writes")
+
+    carried = {k: v for k, v in existing.items() if k not in scanned}
+    if prune:
+        return scanned, [], [], None
+    signed = {registration_of(s) for s in load_signatures()}
+    kept = [k for k in carried if k not in signed]
+    stale = [k for k in carried if k in signed]
+    return {**carried, **scanned}, kept, stale, None
+
+
 def main(argv):
     if not argv:
         print(__doc__.strip())
@@ -697,10 +742,26 @@ def main(argv):
             # under; the ones whose bindings are generated are keyed by their
             # own name, which is what the generator looks for.
             table = {b.get("registration") or b["name"]: b["address"] for b in bindings}
+            table, kept, stale, refused = merge_bindings(path, table, "--prune" in argv)
+            if refused:
+                print(f"refused to write {path}: {refused}")
+                return 1
             with open(path, "w") as handle:
                 json.dump(dict(sorted(table.items())), handle, indent=1)
                 handle.write("\n")
             print(f"wrote {path}: {len(table)} bindings")
+            # A rescan that quietly dropped a binding the file already had was
+            # indistinguishable from one that never found it. Both kinds of
+            # carry-over are named, because either can be the thing that is
+            # wrong: a hand-written entry nothing signs, or a native a signature
+            # used to match and no longer does.
+            if kept:
+                print(f"  kept {len(kept)} binding(s) no signature covers: " + ", ".join(sorted(kept)))
+            if stale:
+                print(f"  kept {len(stale)} binding(s) a signature covers but did not match "
+                      f"this run - verify these, they may have moved: " + ", ".join(sorted(stale)))
+            if (kept or stale) and "--prune" not in argv:
+                print("  (--prune writes only what this scan bound)")
         # A native this game has not got is ordinary: no game has every one.
         # The lines above say which, and the bindings that were found stand.
         return 0

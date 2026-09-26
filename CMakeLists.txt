@@ -98,15 +98,73 @@ add_library(wiinx::wiinx ALIAS wiinx_all)
 # ---------------------------------------------------------------------------
 # cpu, platform, app - the running console. They need Aurora (GX on WebGPU) and
 # a game's translated code. A build that has Aurora already (the Switch build
-# adds it first) or points WIINX_AURORA_DIR at it gets them.
+# adds it first), or points WIINX_AURORA_DIR at a checkout, or has one beside
+# this library under any of its usual names, gets them.
 # ---------------------------------------------------------------------------
-set(WIINX_AURORA_DIR "${WIINX_ROOT}/../aurora-nx" CACHE PATH "Aurora (aurora-nx) source tree")
-if(TARGET aurora_core OR EXISTS "${WIINX_AURORA_DIR}/CMakeLists.txt")
+include("${WIINX_ROOT}/cmake/DependencyTrees.cmake")
+set(WIINX_AURORA_DIR "" CACHE PATH "Aurora source tree; unset searches for one")
+wiinx_find_tree(WIINX_AURORA_DIR "Aurora" "${WIINX_ROOT}"
+    NAMES ${WIINX_AURORA_NAMES} CROSS_MARKER "${WIINX_AURORA_CROSS_MARKER}")
+
+if(TARGET aurora_core)
+    set(WIINX_AURORA_FROM "the aurora_core target this build already defines")
+elseif(WIINX_AURORA_DIR)
+    set(WIINX_AURORA_FROM "${WIINX_AURORA_DIR}")
+else()
+    set(WIINX_AURORA_FROM "")
+endif()
+if(WIINX_AURORA_FROM)
     set(WIINX_RUNTIME_DEFAULT ON)
 else()
     set(WIINX_RUNTIME_DEFAULT OFF)
 endif()
 option(WIINX_RUNTIME "Build the CPU runtime, the platform and the app" ${WIINX_RUNTIME_DEFAULT})
+
+# Switching the runtime off used to be silent, so a configure without Aurora
+# built the libraries, said nothing, and left out the cpu, the platform and the
+# app - which is most of what this repository is. Whichever way it goes, say so.
+# Aurora needs Dawn, and fetches it when no webgpu_dawn target exists - against a
+# pinned tag that 404s. The build that works arranges Dawn from a local checkout
+# first (cmake/game does), so reaching the fetch at all means the runtime was
+# asked for without one. Say that, rather than letting it fail as a download.
+set(WIINX_DAWN_DIR "" CACHE PATH "Dawn source tree; unset searches for one")
+wiinx_find_tree(WIINX_DAWN_DIR "Dawn" "${WIINX_ROOT}" NAMES ${WIINX_DAWN_NAMES})
+if(WIINX_DAWN_DIR)
+    set(WIINX_DAWN_DIR_MESSAGE "\nThere is a checkout at ${WIINX_DAWN_DIR}; cmake/game builds it.")
+endif()
+# Having a checkout is not enough: it is cmake/game that builds it into the
+# webgpu_dawn target Aurora reuses. This project on its own does not, so the
+# target (or the prebuilt package) is the thing to require.
+if(TARGET webgpu_dawn OR MKW_NATIVE_PREBUILT)
+    set(WIINX_DAWN_FROM ON)
+else()
+    set(WIINX_DAWN_FROM OFF)
+endif()
+
+if(WIINX_RUNTIME AND WIINX_AURORA_FROM AND NOT WIINX_DAWN_FROM)
+    message(FATAL_ERROR
+        "WIINX_RUNTIME is on and Aurora is here, but Dawn is not: Aurora would try to "
+        "download it, against a tag that no longer resolves.\n"
+        "Build a game through cmake/game, which arranges Dawn from a checkout first:\n"
+        "  cmake -S ${WIINX_ROOT}/cmake/game -B <build> -DWIINX_GAME_DIR=<game>\n"
+        "or add a build that defines webgpu_dawn before this project, or "
+        "-DWIINX_RUNTIME=OFF for the libraries alone."
+        "${WIINX_DAWN_DIR_MESSAGE}")
+endif()
+if(WIINX_RUNTIME AND NOT WIINX_AURORA_FROM)
+    message(FATAL_ERROR
+        "WIINX_RUNTIME is on, but Aurora is not here: the cpu, the platform and "
+        "the app are built against it.\n"
+        "Set -DWIINX_AURORA_DIR=<checkout>, or add Aurora before this project so "
+        "aurora_core exists, or -DWIINX_RUNTIME=OFF for the libraries alone.\n"
+        "Looked in: ${WIINX_AURORA_DIR_SEARCHED}")
+elseif(WIINX_RUNTIME)
+    message(STATUS "wiinx: runtime on (Aurora from ${WIINX_AURORA_FROM})")
+else()
+    message(STATUS
+        "wiinx: runtime OFF - no Aurora found, so the cpu, the platform and the app "
+        "are not built. Libraries only. Looked in: ${WIINX_AURORA_DIR_SEARCHED}")
+endif()
 
 if(WIINX_RUNTIME)
     # The runtime and translated game code include their own headers by bare
