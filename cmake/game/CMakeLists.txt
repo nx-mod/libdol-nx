@@ -4,7 +4,7 @@
 #
 #   cmake -S cmake/game -B <game>/build -G Ninja \
 #         -DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/cmake/Switch.cmake \
-#         -DWIINX_GAME_DIR=<game> -DWIINX_DAWN_DIR=<dawn-nx> -DWIINX_AURORA_DIR=<aurora-nx>
+#         -DWIINX_GAME_DIR=<game> [-DWIINX_DAWN_DIR=<dawn>] [-DWIINX_AURORA_DIR=<aurora>]
 # Build the game, not everything beside it:
 #
 #   cmake --build <dir> --target <game>_nro
@@ -32,8 +32,12 @@ endif ()
 
 get_filename_component(WIINX_ROOT "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
 set(WIINX_GAME_DIR "" CACHE PATH "The game project to build")
-set(WIINX_DAWN_DIR "${WIINX_ROOT}/../dawn-nx" CACHE PATH "dawn-nx checkout")
-set(WIINX_AURORA_DIR "${WIINX_ROOT}/../aurora-nx" CACHE PATH "aurora-nx checkout")
+include("${WIINX_ROOT}/cmake/DependencyTrees.cmake")
+set(WIINX_DAWN_DIR "" CACHE PATH "Dawn checkout; unset searches for one")
+set(WIINX_AURORA_DIR "" CACHE PATH "Aurora checkout; unset searches for one")
+wiinx_find_tree(WIINX_DAWN_DIR "Dawn" "${WIINX_ROOT}" NAMES ${WIINX_DAWN_NAMES})
+wiinx_find_tree(WIINX_AURORA_DIR "Aurora" "${WIINX_ROOT}"
+    NAMES ${WIINX_AURORA_NAMES} CROSS_MARKER "${WIINX_AURORA_CROSS_MARKER}")
 
 if (NOT EXISTS "${WIINX_GAME_DIR}/recomp.yml")
     message(FATAL_ERROR "No game project at ${WIINX_GAME_DIR} (-DWIINX_GAME_DIR=<folder>)")
@@ -45,7 +49,12 @@ if (NOT EXISTS "${WIINX_GAME_DIR}/generated/build_shards/shards.cmake")
 endif ()
 foreach (piece DAWN AURORA)
     if (NOT EXISTS "${WIINX_${piece}_DIR}/CMakeLists.txt")
-        message(FATAL_ERROR "${piece} is missing from ${WIINX_${piece}_DIR} (-DWIINX_${piece}_DIR=<path>)")
+        # Say where it looked. The old message named only the one path it had
+        # guessed, which was a folder name nothing on disk uses.
+        message(FATAL_ERROR
+            "${piece} is not here, and a game is built against it "
+            "(-DWIINX_${piece}_DIR=<checkout>).\n"
+            "Looked in: ${WIINX_${piece}_DIR_SEARCHED}${WIINX_${piece}_DIR}")
     endif ()
 endforeach ()
 get_filename_component(WIINX_GAME_NAME "${WIINX_GAME_DIR}" NAME)

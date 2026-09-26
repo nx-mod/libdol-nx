@@ -12,8 +12,8 @@
 #   3. builds it against libdol-nx           (cmake/game)
 #   4. leaves <game>/build/<game>.nro, ready for sdmc:/wii-nx/games/<game>/
 #
-#   --dawn DIR      dawn-nx checkout     (default: next to libdol-nx)
-#   --aurora DIR    aurora-nx checkout   (default: next to libdol-nx)
+#   --dawn DIR      Dawn checkout        (default: found next to libdol-nx)
+#   --aurora DIR    Aurora checkout      (default: found next to libdol-nx)
 #   --jobs N        parallel compiles    (default 2; translation is memory-hungry)
 #   --into DIR      put a new game's project here (its own repository, say)
 #   --skip-translate  build only, when the C++ is already there
@@ -25,8 +25,24 @@ libwiinx=$(cd "$here/.." && pwd)
 usage() { sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 [ $# -ge 1 ] || usage
 target=$1; shift
-dawn="$libwiinx/../dawn-nx"
-aurora="$libwiinx/../aurora-nx"
+# Aurora and Dawn are checkouts beside the library, and the folder names are not
+# fixed: Aurora is `aurora-main` inside the wiicompiled product, Dawn is plainly
+# `dawn`. Guessing one name each meant the defaults never resolved and every
+# working invocation passed --aurora/--dawn by hand.
+find_tree() {
+    for product in "" wiicompiled gccompiled-nx wii-nx; do
+        for name in "$@"; do
+            candidate="$libwiinx/..${product:+/$product}/$name"
+            if [ -f "$candidate/CMakeLists.txt" ]; then
+                (cd "$candidate" && pwd)
+                return 0
+            fi
+        done
+    done
+    return 1
+}
+dawn=$(find_tree dawn-nx dawn-main dawn || true)
+aurora=$(find_tree aurora-nx aurora-main aurora || true)
 jobs=2
 translate=1
 into=
@@ -80,11 +96,22 @@ command -v cmake >/dev/null || { echo "cmake not found" >&2; exit 1; }
 [ -f "$DEVKITPRO/cmake/Switch.cmake" ] || {
     echo "devkitPro's Switch toolchain is not at \$DEVKITPRO ($DEVKITPRO)" >&2; exit 1; }
 
+# An empty one of these would reach cmake as the empty path, and `cd "" && pwd`
+# succeeds - it would have handed over whatever directory this ran from.
+for piece in dawn aurora; do
+    eval "path=\${$piece}"
+    [ -n "$path" ] || {
+        echo "no $piece checkout found beside $libwiinx (--$piece DIR)" >&2; exit 1; }
+    [ -f "$path/CMakeLists.txt" ] || {
+        echo "--$piece $path has no CMakeLists.txt" >&2; exit 1; }
+    eval "$piece=\$(cd \"\$path\" && pwd)"
+done
+
 echo "== building $(basename "$game")"
 cmake -S "$libwiinx/cmake/game" -B "$game/build" -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE="$DEVKITPRO/cmake/Switch.cmake" \
-    -DWIINX_GAME_DIR="$game" -DWIINX_DAWN_DIR="$(cd "$dawn" && pwd)" \
-    -DWIINX_AURORA_DIR="$(cd "$aurora" && pwd)"
+    -DWIINX_GAME_DIR="$game" -DWIINX_DAWN_DIR="$dawn" \
+    -DWIINX_AURORA_DIR="$aurora"
 # The game's own target, not everything: a plain build compiles every target
 # the third-party projects define, including ones nothing links, and some of
 # those are written for a desktop libc rather than this one.
