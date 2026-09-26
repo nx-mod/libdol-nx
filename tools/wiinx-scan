@@ -496,6 +496,15 @@ def find_exact(dol, signatures):
     return hits
 
 
+def registration_of(signature):
+    # The name the translator binds by, and so the name a native is "found"
+    # under. Several signatures usually share one registration: a function keeps
+    # its identity between SDK builds while its length and its code change, so
+    # each build it has been signed against contributes another signature. Only
+    # the one written for this game's build is expected to match.
+    return signature.get("registration") or signature["name"]
+
+
 def scan(dol):
     return scan_with(dol, load_signatures())
 
@@ -517,18 +526,21 @@ def scan_with(dol, signatures):
             key = masked_hash(blob[offset:offset + WINDOW * 4])
             by_window.setdefault(key, []).append(start + offset)
 
-    bindings, missing = [], []
+    # Per signature first, collapsed per registration at the end: a signature
+    # that does not match is not a missing native, it is the wrong build's
+    # signature for one, and saying so per signature reported hundreds of
+    # natives missing that the next signature down bound.
+    matched, unbound = [], []
     ambiguous = []
     for sig in masked:
         hits = [a for a in by_window.get(sig["start"], [])
                 if (code := dol.read(a, sig["size"])) is not None and masked_hash(code) == sig["body"]]
         if len(hits) == 1:
-            bindings.append({"name": sig["name"], "build": sig["build"], "address": f"0x{hits[0]:08X}",
-                             "registration": sig.get("registration")})
+            matched.append((sig, hits[0]))
         elif sig.get("siblings"):
             ambiguous.append((sig, hits))
         else:
-            missing.append((sig["name"], sig["build"], len(hits)))
+            unbound.append((sig, len(hits)))
 
     # Siblings: functions a masked signature cannot tell apart, because the only
     # thing that differs between them is an operand the mask removes. NANDRead
@@ -549,22 +561,47 @@ def scan_with(dol, signatures):
         sites = sorted(members[0][1])
         if len(members) != len(sites) or any(sorted(hits) != sites for _, hits in members):
             for sig, hits in members:
-                missing.append((sig["name"], sig["build"], len(hits)))
+                unbound.append((sig, len(hits)))
             continue
         for (sig, _), address in zip(members, sites):
-            bindings.append({"name": sig["name"], "build": sig["build"], "address": f"0x{address:08X}",
-                             "registration": sig.get("registration")})
+            matched.append((sig, address))
 
     if exact:
         found = find_exact(dol, exact)
         for sig in exact:
             hits = found[sig["exact"]]
             if len(hits) == 1:
-                bindings.append({"name": sig["name"], "build": sig["build"],
-                                 "address": f"0x{hits[0]:08X}",
-                                 "registration": sig.get("registration")})
+                matched.append((sig, hits[0]))
             else:
-                missing.append((sig["name"], sig["build"], len(hits)))
+                unbound.append((sig, len(hits)))
+
+    # One answer per registration. It is bound when its signatures agree on a
+    # single address, and reported unbound both when none of them matched and
+    # when two of them matched different places: bindings.json is a plain
+    # name -> address map, so disagreement there would silently keep whichever
+    # was written last, and a native at the wrong address is worse than one the
+    # game has to run itself.
+    sites = {}
+    for sig, address in matched:
+        sites.setdefault(registration_of(sig), set()).add(address)
+    # The signature that matched names the native where there is one, so a
+    # registration reports the build it was actually found in.
+    naming = {}
+    for sig, _ in itertools.chain(matched, unbound):
+        naming.setdefault(registration_of(sig), sig)
+
+    bindings, missing = [], []
+    for registration, sig in naming.items():
+        placed = sites.get(registration, set())
+        if len(placed) == 1:
+            bindings.append({"name": sig["name"], "build": sig["build"],
+                             "address": f"0x{next(iter(placed)):08X}",
+                             "registration": sig.get("registration")})
+        else:
+            missing.append((sig["name"], sig["build"], len(placed),
+                            "conflict" if placed else "no match"))
+    bindings.sort(key=lambda b: b["address"])
+    missing.sort(key=lambda m: m[0])
     return bindings, missing
 
 
@@ -650,8 +687,9 @@ def main(argv):
         bindings, missing = scan(dol)
         for b in bindings:
             print(f"{b['address']}  {b['name']}  [{b['build']}]")
-        for name, build_id, hits in missing:
-            print(f"not found  {name}  [{build_id}]  ({hits} matches)")
+        for name, build_id, hits, why in missing:
+            detail = f"{hits} addresses disagree" if why == "conflict" else "no signature matched"
+            print(f"not found  {name}  [{build_id}]  ({detail})")
         if "--out" in argv:
             path = argv[argv.index("--out") + 1]
             # The translator's format: registration name -> address, nothing else.
