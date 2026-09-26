@@ -1051,33 +1051,59 @@ const std::chrono::steady_clock::time_point g_switchBootStart = std::chrono::ste
 int g_netLogSocket = -1;
 sockaddr_in g_netLogAddr{};
 constexpr uint16_t kNetLogPort = 5555;
+// Why the UDP log is not running, when a loghost.txt is there and it is not.
+// Every way this can fail used to be a bare `return`, so writing "ip:port" into
+// the file - which is how the listener is described everywhere else - disabled
+// the only log that survives a hang, and said nothing. The file was there, it
+// was readable, and the log simply never came.
+std::string g_netLogDiagnostic;
 
 void SwitchNetLogInit() noexcept {
     FILE* hostFile = std::fopen(WIINX_CONFIG_PATH("loghost.txt"), "r");
     if (hostFile == nullptr) {
-        return;
+        return;  // No file, no sockets: a normal launch is untouched.
     }
     char host[64] = {};
     const bool haveHost = std::fgets(host, sizeof(host), hostFile) != nullptr;
     std::fclose(hostFile);
     if (!haveHost) {
+        g_netLogDiagnostic = "loghost.txt is empty";
         return;
     }
     for (char* cursor = host; *cursor != '\0'; ++cursor) {
-        if (*cursor == '\n' || *cursor == '\r' || *cursor == ' ') {
+        if (*cursor == '\n' || *cursor == '\r' || *cursor == ' ' || *cursor == '\t') {
             *cursor = '\0';
             break;
         }
     }
-    if (R_FAILED(socketInitializeDefault())) {
-        return;
+    // "1.2.3.4" or "1.2.3.4:5555". The port is this port either way, but a file
+    // that names it is the obvious thing to write, so read it rather than
+    // failing inet_pton on the colon.
+    uint16_t port = kNetLogPort;
+    if (char* colon = std::strrchr(host, ':'); colon != nullptr) {
+        *colon = '\0';
+        const long parsed = std::strtol(colon + 1, nullptr, 10);
+        if (parsed > 0 && parsed <= 65535) {
+            port = static_cast<uint16_t>(parsed);
+        } else {
+            g_netLogDiagnostic = std::string("loghost.txt names port '") + (colon + 1) + "', which is not a port";
+            return;
+        }
     }
     g_netLogAddr.sin_family = AF_INET;
-    g_netLogAddr.sin_port = htons(kNetLogPort);
+    g_netLogAddr.sin_port = htons(port);
     if (inet_pton(AF_INET, host, &g_netLogAddr.sin_addr) != 1) {
+        g_netLogDiagnostic = std::string("loghost.txt names '") + host + "', which is not an IPv4 address";
+        return;
+    }
+    if (R_FAILED(socketInitializeDefault())) {
+        g_netLogDiagnostic = "the console's sockets would not start";
         return;
     }
     g_netLogSocket = socket(AF_INET, SOCK_DGRAM, 0);
+    if (g_netLogSocket < 0) {
+        g_netLogDiagnostic = "a UDP socket would not open";
+    }
 }
 
 void SwitchDurableLog(std::string_view text) noexcept {
@@ -2007,6 +2033,14 @@ void SwitchWatchdogMain(void*) {
             sendto(g_netLogSocket, line, static_cast<size_t>(length), 0,
                    reinterpret_cast<const sockaddr*>(&g_netLogAddr), sizeof(g_netLogAddr));
         }
+        // And into the file, once the guest has stopped moving. This line is the
+        // diagnosis for a hang - it says where the guest is and what the host
+        // thinks it is doing - and it used to go only to the socket, so a hang
+        // with no listener left nothing behind but a boot log that stopped. Only
+        // while stuck, so a healthy run does not fill the file with it.
+        if (length > 0 && sameCount >= 3 && (sameCount % 5) == 3) {
+            SwitchDurableLog(std::string_view(line, static_cast<size_t>(length) - 1));
+        }
     }
 }
 
@@ -2119,6 +2153,11 @@ int RuntimeMain(int argc, char** argv) {
     StartSwitchWatchdog();
     SwitchConsoleBegin();
     SwitchLoadStage(0);
+    // Into the file, which is where it can still be read: the socket is the very
+    // thing that is not working.
+    if (!g_netLogDiagnostic.empty()) {
+        SwitchDurableLog("[boot] UDP log off: " + g_netLogDiagnostic);
+    }
     SwitchDurableLog("[boot] transcript initialised, entering RuntimeMain");
     if (!layoutMigration.empty()) {
         SwitchDurableLog(("[layout] " + layoutMigration).c_str());
