@@ -1,0 +1,179 @@
+#!/usr/bin/env python3
+"""Look for natives bound to the wrong function, by comparing titles.
+
+    tools/wiinx-check-bindings <project> <project>... [--all]
+
+A binding is a claim that a native replaces the function at an address. When
+that claim is wrong the title calls the native for something else entirely,
+and nothing says so until it breaks - Wii Menu's AIGetDMABytesLeft was bound
+to AIGetDMALength that way. The same native bound in several titles is the
+same SDK function each time, so the titles can check each other:
+
+  shape     the function's instructions, immediates and targets dropped, are
+            unlike every other title's function for that native
+  hardware  it touches different hardware registers (0xCC00xxxx/0xCD00xxxx)
+            than another title's does
+  shared    two natives are bound to one address in a title
+  start     the address is not where the title's function map says a
+            function starts
+
+Only what is flagged is printed unless --all. Disassembly settles it.
+"""
+import bisect
+import difflib
+import json
+import os
+import re
+import struct
+import sys
+
+try:
+    import yaml
+except ImportError:
+    yaml = None
+
+
+def load_dol(path):
+    data = open(path, "rb").read()
+    sections = []
+    for i in range(18):
+        offset, address, size = (struct.unpack_from(">I", data, base + 4 * i)[0]
+                                 for base in (0x00, 0x48, 0x90))
+        if size:
+            sections.append((address, offset, size))
+
+    def word(at):
+        for address, offset, size in sections:
+            if address <= at < address + size:
+                return struct.unpack_from(">I", data, offset + at - address)[0]
+        return None
+    return word
+
+
+def dol_path(project):
+    text = open(os.path.join(project, "recomp.yml")).read()
+    if yaml:
+        return os.path.join(project, yaml.safe_load(text)["inputs"]["dol"]["path"])
+    match = re.search(r"dol:\s*\n\s*path:\s*(\S+)", text)
+    return os.path.join(project, match.group(1))
+
+
+def function_starts(project):
+    starts = set()
+    path = os.path.join(project, "functions.map")
+    if os.path.exists(path):
+        for line in open(path):
+            parts = line.split()
+            if parts and re.fullmatch(r"(0x)?[0-9a-fA-F]{8}", parts[0]):
+                starts.add(int(parts[0], 16))
+    return sorted(starts)
+
+
+def shape(word):
+    op = word >> 26
+    if op in (16, 18):
+        return (op, word & 3)
+    if op in (4, 19, 31, 59, 63):
+        return (op, (word >> 1) & 0x3FF, (word >> 21) & 31, (word >> 16) & 31, (word >> 11) & 31)
+    return (op, (word >> 21) & 31, (word >> 16) & 31)
+
+
+def hardware(words):
+    """Hardware registers a function reaches through lis 0xCC00/0xCD00."""
+    touched, bases = set(), {}
+    for word in words:
+        op = word >> 26
+        if op == 15 and ((word >> 16) & 31) == 0:  # lis
+            upper = word & 0xFFFF
+            if upper in (0xCC00, 0xCD00, 0xCD80):
+                bases[(word >> 21) & 31] = upper
+            else:
+                bases.pop((word >> 21) & 31, None)
+        elif 32 <= op <= 55 and ((word >> 16) & 31) in bases:
+            touched.add((bases[(word >> 16) & 31] << 16) | (word & 0xFFFF))
+    return touched
+
+
+class Title:
+    def __init__(self, project):
+        self.name = os.path.basename(os.path.abspath(project))
+        self.word = load_dol(dol_path(project))
+        self.starts = function_starts(project)
+        self.bindings = {k: int(v, 16) for k, v in json.load(
+            open(os.path.join(project, "bindings.json"))).items()}
+
+    def body(self, address, limit=0x800):
+        index = bisect.bisect_right(self.starts, address)
+        end = self.starts[index] if index < len(self.starts) else address + 0x100
+        end = min(end, address + limit)
+        words = []
+        at = address
+        while at < end:
+            word = self.word(at)
+            if word is None:
+                break
+            words.append(word)
+            at += 4
+            if word == 0x4E800020 and not self.starts:  # blr, when there is no map
+                break
+        return words
+
+
+def main(argv):
+    show_all = "--all" in argv
+    projects = [a for a in argv if not a.startswith("--")]
+    if len(projects) < 2:
+        print(__doc__.strip())
+        return 2
+    titles = [Title(p) for p in projects]
+    flagged = 0
+
+    for title in titles:
+        by_address = {}
+        for native, address in title.bindings.items():
+            by_address.setdefault(address, []).append(native)
+        for address, natives in sorted(by_address.items()):
+            if len(natives) > 1:
+                flagged += 1
+                print(f"shared   {title.name}: 0x{address:08X} has {', '.join(sorted(natives))}")
+        if title.starts:
+            starts = set(title.starts)
+            for native, address in sorted(title.bindings.items()):
+                if address not in starts:
+                    flagged += 1
+                    print(f"start    {title.name}: {native} at 0x{address:08X} is not a function start")
+
+    natives = sorted({n for t in titles for n in t.bindings})
+    for native in natives:
+        holders = [t for t in titles if native in t.bindings]
+        if len(holders) < 2:
+            continue
+        bodies = {t.name: t.body(t.bindings[native]) for t in holders}
+        shapes = {name: [shape(w) for w in words] for name, words in bodies.items()}
+        regs = {name: hardware(words) for name, words in bodies.items()}
+        for t in holders:
+            others = [n for n in shapes if n != t.name and shapes[n]]
+            if not shapes[t.name] or not others:
+                continue
+            best = max(difflib.SequenceMatcher(None, shapes[t.name], shapes[o], autojunk=False).ratio()
+                       for o in others)
+            reg_mismatch = regs[t.name] and all(regs[o] and regs[o] != regs[t.name] for o in others)
+            bad = best < 0.5 or reg_mismatch
+            if bad or show_all:
+                flagged += bad
+                why = []
+                if best < 0.5:
+                    why.append(f"shape {best:.2f} against the best other title")
+                if reg_mismatch:
+                    mine = ",".join(f"{r:08X}" for r in sorted(regs[t.name]))
+                    theirs = ",".join(f"{r:08X}" for r in sorted(regs[others[0]]))
+                    why.append(f"touches {mine}, {others[0]} touches {theirs}")
+                label = "SUSPECT " if bad else "ok      "
+                print(f"{label} {t.name}: {native} at 0x{t.bindings[native]:08X} "
+                      f"({len(bodies[t.name])} insns){': ' + '; '.join(why) if why else f' best {best:.2f}'}")
+    print(f"\n{flagged} flagged across {len(titles)} titles")
+    return 1 if flagged else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
