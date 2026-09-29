@@ -295,6 +295,10 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
     "${WIINX_ROOT}/src/app/*.cpp"
     "${WIINX_ROOT}/src/accel/*_bind.cpp")
 list(FILTER SOURCES EXCLUDE REGEX "/src/app/(switch|product)/")
+if(MKW_PLATFORM_SWITCH)
+    # The mapping wizard builds SDL gamepad mappings; Switch pads need none.
+    list(FILTER SOURCES EXCLUDE REGEX "/src/app/controller_mapping_wizard\\.cpp$")
+endif()
 
 # The console's own modules. What is here is what both machines have; the
 # peripherals and system software only one of them has live in that console's
@@ -389,11 +393,9 @@ target_compile_features(mkw_platform PUBLIC cxx_std_17)
 set_target_properties(mkw_platform PROPERTIES UNITY_BUILD OFF)
 
 if(MKW_PLATFORM_SWITCH)
-    # SDL3 entry points the runtime/aurora still call but Horizon has no SDL
-    # backend for. OBJECT library (consumed via $<TARGET_OBJECTS:> in
+    # Switch-only host glue. OBJECT library (consumed via $<TARGET_OBJECTS:> in
     # mkw_configure_product) so nothing is dropped by archive extraction.
     add_library(mkw_switch_shim OBJECT
-        "${WIINX_ROOT}/src/app/switch/switch_sdl_shim.cpp"
         "${WIINX_ROOT}/src/app/switch/switch_thread_stack.cpp"
         "${WIINX_ROOT}/src/app/switch/switch_layout.cpp")
     target_link_libraries(mkw_switch_shim PRIVATE aurora::core)

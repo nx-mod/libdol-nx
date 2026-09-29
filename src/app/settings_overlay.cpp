@@ -10,13 +10,8 @@
 #include "runtime_log.h"
 #include "wii_remote_input.h"
 
+#include <aurora/gamepad.h>
 #include <imgui.h>
-#include <SDL3/SDL_events.h>
-#include <SDL3/SDL_gamepad.h>
-#include <SDL3/SDL_keyboard.h>
-#include <SDL3/SDL_mouse.h>
-#include <SDL3/SDL_scancode.h>
-#include <SDL3/SDL_timer.h>
 
 #include <array>
 #include <algorithm>
@@ -28,6 +23,7 @@
 #include <cstdint>
 #include <limits>
 #include <iostream>
+#include <thread>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -96,7 +92,7 @@ int g_soundEffectsVolumePercent = 100;
 int g_uiVolumePercent = 100;
 int g_voicesVolumePercent = 100;
 bool g_audioMuted = false;
-int32_t g_muteHotkey = SDL_SCANCODE_BACKSLASH;
+int32_t g_muteHotkey = AURORA_SCANCODE_BACKSLASH;
 bool g_audioMixWorker = true;
 bool g_audioCatchUp = true;
 bool g_attenuateMusicWhenMediaPlays = false;
@@ -122,7 +118,7 @@ void LoadPersistedSettingsFromConfig() {
     g_uiVolumePercent = static_cast<int>(std::lround(RuntimeConfigFile::UiVolume(1.0f) * 100.0f));
     g_voicesVolumePercent = static_cast<int>(std::lround(RuntimeConfigFile::VoicesVolume(1.0f) * 100.0f));
     g_audioMuted = RuntimeConfigFile::AudioMuted(false);
-    g_muteHotkey = RuntimeConfigFile::MuteHotkey(SDL_SCANCODE_BACKSLASH);
+    g_muteHotkey = RuntimeConfigFile::MuteHotkey(AURORA_SCANCODE_BACKSLASH);
     g_audioMixWorker = RuntimeConfigFile::AudioMixWorkerEnabled(true);
     g_audioCatchUp = RuntimeConfigFile::AudioCatchUpEnabled(true);
     Audio_HLE_SetCatchUp(g_audioCatchUp);
@@ -426,25 +422,22 @@ void DrawWiiRemoteSettings(uint32_t selectedGamePort) {
         }
     }
     if (kind == WiiRemoteInput::Kind::WiiUPro) {
-        if (SDL_Gamepad* gamepad = SDL_GetGamepadFromPlayerIndex(static_cast<int>(selectedGamePort))) {
+        if (AuroraGamepad* gamepad = aurora_gamepad_for_player(static_cast<int>(selectedGamePort))) {
             // SDL's Wii driver posts the D-pad as joystick buttons 11-14 (the
-            // SDL_GAMEPAD_BUTTON_DPAD_* values) while its default HIDAPI mapping
-            // expects a hat, so SDL_GetGamepadButton never sees them; read the
-            // joystick directly, like the fallback in aurora's PADRead does.
-            SDL_Joystick* joystick = SDL_GetGamepadJoystick(gamepad);
-            const auto rawButton = [&](int index) {
-                return joystick != nullptr && SDL_GetJoystickButton(joystick, index);
-            };
-            ImGui::Text("Raw D-pad: %s %s %s %s", rawButton(SDL_GAMEPAD_BUTTON_DPAD_UP) ? "UP" : "up",
-                        rawButton(SDL_GAMEPAD_BUTTON_DPAD_DOWN) ? "DOWN" : "down",
-                        rawButton(SDL_GAMEPAD_BUTTON_DPAD_LEFT) ? "LEFT" : "left",
-                        rawButton(SDL_GAMEPAD_BUTTON_DPAD_RIGHT) ? "RIGHT" : "right");
-            ImGui::Text("Raw face buttons: %s %s %s %s", rawButton(SDL_GAMEPAD_BUTTON_EAST) ? "A" : "a",
-                        rawButton(SDL_GAMEPAD_BUTTON_SOUTH) ? "B" : "b", rawButton(SDL_GAMEPAD_BUTTON_NORTH) ? "X" : "x",
-                        rawButton(SDL_GAMEPAD_BUTTON_WEST) ? "Y" : "y");
+            // DPAD_* button values) while its default HIDAPI mapping expects a
+            // hat, so the gamepad API never sees them; read the raw buttons,
+            // like the fallback in aurora's PADRead does.
+            const auto rawButton = [&](int index) { return aurora_gamepad_raw_button(gamepad, index); };
+            ImGui::Text("Raw D-pad: %s %s %s %s", rawButton(AURORA_GAMEPAD_BUTTON_DPAD_UP) ? "UP" : "up",
+                        rawButton(AURORA_GAMEPAD_BUTTON_DPAD_DOWN) ? "DOWN" : "down",
+                        rawButton(AURORA_GAMEPAD_BUTTON_DPAD_LEFT) ? "LEFT" : "left",
+                        rawButton(AURORA_GAMEPAD_BUTTON_DPAD_RIGHT) ? "RIGHT" : "right");
+            ImGui::Text("Raw face buttons: %s %s %s %s", rawButton(AURORA_GAMEPAD_BUTTON_EAST) ? "A" : "a",
+                        rawButton(AURORA_GAMEPAD_BUTTON_SOUTH) ? "B" : "b", rawButton(AURORA_GAMEPAD_BUTTON_NORTH) ? "X" : "x",
+                        rawButton(AURORA_GAMEPAD_BUTTON_WEST) ? "Y" : "y");
             ImGui::Text("Raw ZL/ZR: %d / %d (pressed above 0)",
-                        SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER),
-                        SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER));
+                        aurora_gamepad_axis(gamepad, AURORA_GAMEPAD_AXIS_LEFT_TRIGGER),
+                        aurora_gamepad_axis(gamepad, AURORA_GAMEPAD_AXIS_RIGHT_TRIGGER));
             ImGui::TextDisabled("Capitals = held. If a button never turns to capitals while physically held,");
             ImGui::TextDisabled("that press is not reaching SDL at all (a driver-level issue, not a mapping one).");
             ImGui::TextDisabled("This pad uses Nintendo's own layout (a/b/x/y as labelled); the shared");
@@ -468,8 +461,7 @@ const char* KeyBindingName(int scancode) {
     case PAD_KEY_MOUSE_X2: return "Mouse side 2";
     case PAD_KEY_INVALID: return "Unmapped";
     default:
-        return scancode >= 0 && scancode < SDL_SCANCODE_COUNT
-            ? SDL_GetScancodeName(static_cast<SDL_Scancode>(scancode)) : "Unknown";
+        return aurora_scancode_name(scancode);
     }
 }
 
@@ -481,13 +473,13 @@ struct RebindState {
     uint32_t port = 0;
     uint16_t target = 0;
     bool secondary = false;
-    SDL_JoystickID instance = 0;
+    AuroraControllerID instance = 0;
     Clock::time_point deadline{};
     std::string label;
-    std::array<bool, SDL_SCANCODE_COUNT> keys{};
+    std::array<bool, AURORA_SCANCODE_COUNT> keys{};
     uint32_t mouse = 0;
-    std::array<bool, SDL_GAMEPAD_BUTTON_COUNT> buttons{};
-    std::array<bool, SDL_GAMEPAD_AXIS_COUNT> axesReady{};
+    std::array<bool, AURORA_GAMEPAD_BUTTON_COUNT> buttons{};
+    std::array<bool, AURORA_GAMEPAD_AXIS_COUNT> axesReady{};
 } g_rebind;
 
 void BeginRebind(RebindKind kind, uint16_t target, const char* label, bool secondary = false) {
@@ -501,17 +493,17 @@ void BeginRebind(RebindKind kind, uint16_t target, const char* label, bool secon
     g_rebind.label = label;
     g_rebind.deadline = Clock::now() + std::chrono::seconds(10);
     int count = 0;
-    const bool* keys = SDL_GetKeyboardState(&count);
+    const bool* keys = aurora_keyboard_state(&count);
     std::copy_n(keys, std::min(count, static_cast<int>(g_rebind.keys.size())), g_rebind.keys.begin());
-    g_rebind.mouse = SDL_GetMouseState(nullptr, nullptr);
+    g_rebind.mouse = aurora_mouse_buttons(nullptr, nullptr);
     const int index = PADGetIndexForPort(g_rebind.port);
     if (kind == RebindKind::Controller && index >= 0) {
-        if (auto* pad = PADGetSDLGamepadForIndex(index)) {
-            g_rebind.instance = SDL_GetGamepadID(pad);
-            for (int i = 0; i < SDL_GAMEPAD_BUTTON_COUNT; ++i)
-                g_rebind.buttons[i] = SDL_GetGamepadButton(pad, static_cast<SDL_GamepadButton>(i));
-            for (int i = 0; i < SDL_GAMEPAD_AXIS_COUNT; ++i)
-                g_rebind.axesReady[i] = std::abs(static_cast<int>(SDL_GetGamepadAxis(pad, static_cast<SDL_GamepadAxis>(i)))) < 8000;
+        if (auto* pad = PADGetGamepadForIndex(index)) {
+            g_rebind.instance = aurora_gamepad_id(pad);
+            for (int i = 0; i < AURORA_GAMEPAD_BUTTON_COUNT; ++i)
+                g_rebind.buttons[i] = aurora_gamepad_button(pad, static_cast<AuroraGamepadButton>(i));
+            for (int i = 0; i < AURORA_GAMEPAD_AXIS_COUNT; ++i)
+                g_rebind.axesReady[i] = std::abs(static_cast<int>(aurora_gamepad_axis(pad, static_cast<AuroraGamepadAxis>(i)))) < 8000;
         }
     }
 }
@@ -520,8 +512,8 @@ void CompleteRebind(uint32_t value) {
     const auto& capture = g_rebind;
     if (capture.kind == RebindKind::Controller) {
         const int index = PADGetIndexForPort(capture.port);
-        auto* pad = index >= 0 ? PADGetSDLGamepadForIndex(index) : nullptr;
-        if (pad == nullptr || SDL_GetGamepadID(pad) != capture.instance) {
+        auto* pad = index >= 0 ? PADGetGamepadForIndex(index) : nullptr;
+        if (pad == nullptr || aurora_gamepad_id(pad) != capture.instance) {
             g_rebind.active = false;
             return;
         }
@@ -581,28 +573,28 @@ void DrawRebindPrompt() {
         if (g_rebind.active && (clear || remaining <= 0.0f)) {
             CompleteRebind(g_rebind.kind == RebindKind::Controller ? PAD_NATIVE_BUTTON_DISABLED
                                                                   : static_cast<uint32_t>(PAD_KEY_INVALID));
-        } else if (g_rebind.active && SDL_GetKeyboardFocus() != nullptr && g_rebind.kind != RebindKind::Controller) {
+        } else if (g_rebind.active && aurora_keyboard_focused() && g_rebind.kind != RebindKind::Controller) {
             int count = 0;
-            const bool* keys = SDL_GetKeyboardState(&count);
-            for (int i = 1; i < std::min(count, static_cast<int>(SDL_SCANCODE_COUNT)) && g_rebind.active; ++i) {
-                if (keys[i] && !g_rebind.keys[i] && i != SDL_SCANCODE_F10) CompleteRebind(i);
+            const bool* keys = aurora_keyboard_state(&count);
+            for (int i = 1; i < std::min(count, static_cast<int>(AURORA_SCANCODE_COUNT)) && g_rebind.active; ++i) {
+                if (keys[i] && !g_rebind.keys[i] && i != AURORA_SCANCODE_F10) CompleteRebind(i);
                 g_rebind.keys[i] = keys[i];
             }
-            const uint32_t mouse = SDL_GetMouseState(nullptr, nullptr);
+            const uint32_t mouse = aurora_mouse_buttons(nullptr, nullptr);
             for (int i = 1; i <= 5 && g_rebind.active; ++i)
                 if (!overControl && g_rebind.kind != RebindKind::MuteHotkey &&
                     (mouse & ~g_rebind.mouse & (1u << (i - 1))) != 0) CompleteRebind(static_cast<uint32_t>(-i - 1));
             g_rebind.mouse = mouse;
-        } else if (g_rebind.active && SDL_GetKeyboardFocus() != nullptr && g_rebind.kind == RebindKind::Controller) {
-            auto* pad = SDL_GetGamepadFromID(g_rebind.instance);
+        } else if (g_rebind.active && aurora_keyboard_focused() && g_rebind.kind == RebindKind::Controller) {
+            auto* pad = aurora_gamepad_from_id(g_rebind.instance);
             if (pad != nullptr) {
-                for (int i = 0; i < SDL_GAMEPAD_BUTTON_COUNT && g_rebind.active; ++i) {
-                    const bool pressed = SDL_GetGamepadButton(pad, static_cast<SDL_GamepadButton>(i));
+                for (int i = 0; i < AURORA_GAMEPAD_BUTTON_COUNT && g_rebind.active; ++i) {
+                    const bool pressed = aurora_gamepad_button(pad, static_cast<AuroraGamepadButton>(i));
                     if (pressed && !g_rebind.buttons[i]) CompleteRebind(i);
                     g_rebind.buttons[i] = pressed;
                 }
-                for (int i = 0; i < SDL_GAMEPAD_AXIS_COUNT && g_rebind.active; ++i) {
-                    const int value = SDL_GetGamepadAxis(pad, static_cast<SDL_GamepadAxis>(i));
+                for (int i = 0; i < AURORA_GAMEPAD_AXIS_COUNT && g_rebind.active; ++i) {
+                    const int value = aurora_gamepad_axis(pad, static_cast<AuroraGamepadAxis>(i));
                     if (std::abs(value) < 8000) g_rebind.axesReady[i] = true;
                     if (g_rebind.axesReady[i] && std::abs(value) >= 16384)
                         CompleteRebind(PADEncodeAxisButton(i, value < 0));
@@ -640,16 +632,16 @@ bool DrawKeyboardSettings(uint32_t port) {
     ImGui::TextDisabled("Replaces the gamepad on this port. F10 opens settings.");
     if (ImGui::Button("Use WASD + mouse preset") || usePreset) {
         const std::array<int, PAD_BUTTON_COUNT> keys = {
-            PAD_KEY_MOUSE_LEFT, SDL_SCANCODE_SPACE, SDL_SCANCODE_E, SDL_SCANCODE_Q,
-            SDL_SCANCODE_RETURN, PAD_KEY_MOUSE_MIDDLE, SDL_SCANCODE_LSHIFT, PAD_KEY_MOUSE_RIGHT,
-            SDL_SCANCODE_UP, SDL_SCANCODE_DOWN, SDL_SCANCODE_LEFT, SDL_SCANCODE_RIGHT,
+            PAD_KEY_MOUSE_LEFT, AURORA_SCANCODE_SPACE, AURORA_SCANCODE_E, AURORA_SCANCODE_Q,
+            AURORA_SCANCODE_RETURN, PAD_KEY_MOUSE_MIDDLE, AURORA_SCANCODE_LSHIFT, PAD_KEY_MOUSE_RIGHT,
+            AURORA_SCANCODE_UP, AURORA_SCANCODE_DOWN, AURORA_SCANCODE_LEFT, AURORA_SCANCODE_RIGHT,
         };
         for (size_t i = 0; i < keys.size(); ++i)
             PADSetKeyButtonBinding(port, {keys[i], kControllerButtons[i].padButton});
         const std::array<int, PAD_AXIS_COUNT> axes = {
-            SDL_SCANCODE_D, SDL_SCANCODE_A, SDL_SCANCODE_W, SDL_SCANCODE_S,
-            SDL_SCANCODE_L, SDL_SCANCODE_J, SDL_SCANCODE_I, SDL_SCANCODE_K,
-            SDL_SCANCODE_LSHIFT, PAD_KEY_MOUSE_RIGHT,
+            AURORA_SCANCODE_D, AURORA_SCANCODE_A, AURORA_SCANCODE_W, AURORA_SCANCODE_S,
+            AURORA_SCANCODE_L, AURORA_SCANCODE_J, AURORA_SCANCODE_I, AURORA_SCANCODE_K,
+            AURORA_SCANCODE_LSHIFT, PAD_KEY_MOUSE_RIGHT,
         };
         uint32_t axisCount = 0;
         auto* mappings = PADGetKeyAxisBindings(port, &axisCount);
@@ -1338,7 +1330,8 @@ void DrawTopBar() {
     ImGui::EndMainMenuBar();
 }
 
-bool IsToggleKey(const SDL_Event& event, SDL_Scancode code) {
+#if !defined(__SWITCH__)
+bool IsToggleKey(const SDL_Event& event, int code) {
     return event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat && event.key.scancode == code;
 }
 
@@ -1353,6 +1346,7 @@ bool IsMouseActivity(const SDL_Event& event) {
         return false;
     }
 }
+#endif
 
 // Runs on the thread that pumps SDL events (the same one that calls Draw), so
 // the SDL cursor calls are safe here.
@@ -1366,10 +1360,10 @@ void UpdateCursorAutoHide() {
     // ImGui_ImplSDL3_NewFrame calls SDL_ShowCursor every frame unless this flag is set.
     if (shouldHide) {
         ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
-        SDL_HideCursor();
+        aurora_set_cursor_visible(false);
     } else {
         ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouseCursorChange;
-        SDL_ShowCursor();
+        aurora_set_cursor_visible(true);
     }
 }
 
@@ -1422,30 +1416,32 @@ void HandleEvents(const AuroraEvent* events) noexcept {
         if (ev->type == AURORA_CONTROLLER_ADDED || ev->type == AURORA_CONTROLLER_REMOVED) {
             g_configuredControllerIndices.fill(std::numeric_limits<int32_t>::min());
         }
+#if !defined(__SWITCH__)
         if (ev->type != AURORA_SDL_EVENT) {
             continue;
         }
         controller_mapping_wizard::HandleSdlEvent(ev->sdl);
-        if (g_rebind.active && (IsToggleKey(ev->sdl, SDL_SCANCODE_BACKSPACE) ||
-                                IsToggleKey(ev->sdl, SDL_SCANCODE_DELETE))) {
+        if (g_rebind.active && (IsToggleKey(ev->sdl, AURORA_SCANCODE_BACKSPACE) ||
+                                IsToggleKey(ev->sdl, AURORA_SCANCODE_DELETE))) {
             CompleteRebind(g_rebind.kind == RebindKind::Controller ? PAD_NATIVE_BUTTON_DISABLED
                                                                   : static_cast<uint32_t>(PAD_KEY_INVALID));
         }
-        if (!g_rebind.active && IsToggleKey(ev->sdl, SDL_SCANCODE_F10)) {
+        if (!g_rebind.active && IsToggleKey(ev->sdl, AURORA_SCANCODE_F10)) {
             SetTopBarVisible(!g_topBarVisible);
         }
         if (!g_rebind.active && g_muteHotkey != PAD_KEY_INVALID &&
-            IsToggleKey(ev->sdl, static_cast<SDL_Scancode>(g_muteHotkey))) {
+            IsToggleKey(ev->sdl, g_muteHotkey)) {
             g_audioMuted = !g_audioMuted;
             AudioBackend::Instance().SetMuted(g_audioMuted);
             RuntimeConfigFile::SetAudioMuted(g_audioMuted);
         }
-        if (!g_rebind.active && !g_topBarVisible && IsToggleKey(ev->sdl, SDL_SCANCODE_ESCAPE)) {
+        if (!g_rebind.active && !g_topBarVisible && IsToggleKey(ev->sdl, AURORA_SCANCODE_ESCAPE)) {
             g_exitPromptOpen = true;
         }
         if (IsMouseActivity(ev->sdl)) {
             g_lastMouseActivity = Clock::now();
         }
+#endif
     }
 }
 
@@ -1456,8 +1452,8 @@ void ReleaseControllers() noexcept {
     for (uint32_t port = 0; port < PAD_MAX_CONTROLLERS; ++port) {
         const s32 index = PADGetIndexForPort(port);
         if (index < 0) continue;
-        if (SDL_Gamepad* pad = PADGetSDLGamepadForIndex(static_cast<u32>(index))) {
-            SDL_SetGamepadLED(pad, 0, 0, 0);
+        if (AuroraGamepad* pad = PADGetGamepadForIndex(static_cast<u32>(index))) {
+            aurora_gamepad_set_led(pad, 0, 0, 0);
             queued = true;
         }
     }
@@ -1467,7 +1463,7 @@ void ReleaseControllers() noexcept {
     // SDL hands LED and rumble reports to its own HIDAPI sender thread rather
     // than writing them here, so without this the process dies before the
     // controller ever receives them.
-    if (queued) SDL_Delay(120);
+    if (queued) std::this_thread::sleep_for(std::chrono::milliseconds(120));
 }
 
 void Draw() noexcept {

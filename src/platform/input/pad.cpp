@@ -11,19 +11,19 @@
 #include <cstdlib>
 #include <cstring>
 
-#include <SDL3/SDL_gamepad.h>
+#include <aurora/gamepad.h>
 #include <dolphin/pad.h>
 
 namespace {
 
 std::atomic<bool> g_rumbleEnabled{true};
 
-bool NativeButtonHeld(SDL_Gamepad* gamepad, uint32_t nativeButton) {
+bool NativeButtonHeld(AuroraGamepad* gamepad, uint32_t nativeButton) {
     if (gamepad == nullptr || nativeButton == PAD_NATIVE_BUTTON_INVALID ||
-        nativeButton >= SDL_GAMEPAD_BUTTON_COUNT) {
+        nativeButton >= AURORA_GAMEPAD_BUTTON_COUNT) {
         return false;
     }
-    return SDL_GetGamepadButton(gamepad, static_cast<SDL_GamepadButton>(nativeButton));
+    return aurora_gamepad_button(gamepad, static_cast<AuroraGamepadButton>(nativeButton));
 }
 
 // A digital button bound to L or R has no analog travel of its own. On real
@@ -40,7 +40,7 @@ void FillTriggersHeldByButtons(PADStatus* statuses) {
         if (index < 0) {
             continue;
         }
-        SDL_Gamepad* gamepad = PADGetSDLGamepadForIndex(static_cast<u32>(index));
+        AuroraGamepad* gamepad = PADGetGamepadForIndex(static_cast<u32>(index));
         if (gamepad == nullptr) {
             continue;
         }
