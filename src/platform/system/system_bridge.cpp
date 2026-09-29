@@ -533,8 +533,16 @@ void SystemBridge::SeedLowMemDefaults(const Memory::Config& config) {
         entries.push_back({0x80003180u, code, "OS app game code"});
         entries.push_back({0x80003194u, code, "OS app gamename"});
     } else {
+#if defined(RUNTIME_CONFIG_HAS_TITLE_ID)
+        // A title launched from the NAND (WiiWare, a channel, the Wii Menu) has
+        // no disc header; ES leaves its title code where the disc's would be.
+        entries.push_back({0x80000000u, RuntimeConfig::TITLE_ID_LO, "Title game code"});
+        entries.push_back({0x80003180u, RuntimeConfig::TITLE_ID_LO, "OS app game code"});
+        entries.push_back({0x80003194u, RuntimeConfig::TITLE_ID_LO, "OS app gamename"});
+#else
         RT_LOG(RT_TAG_RUNTIME) << "no disc header to seed low memory from: "
                                  "the game's own ID is unknown" << std::endl;
+#endif
     }
     for (const auto& marker : RuntimeProduct::Active().bootMarkers) {
         entries.push_back({marker.address, marker.value, marker.label, true});

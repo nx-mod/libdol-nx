@@ -22,7 +22,8 @@
    "body": "f16428d07d89ca67",
    "signed_from": "RSPE01",
    "registration": "AIGetDMABytesLeft_8012405c",
-   "spans": 3
+   "spans": 3,
+   "touches": "0xCC00503A"
   },
   {
    "name": "AIGetDMABytesLeft",
@@ -32,7 +33,8 @@
    "body": "68b0fad97e35694d",
    "signed_from": "SMNE01",
    "registration": "AIGetDMABytesLeft_8012405c",
-   "spans": 4
+   "spans": 4,
+   "touches": "0xCC00503A"
   },
   {
    "name": "AIGetDMABytesLeft",
@@ -42,7 +44,8 @@
    "body": "b5aab85d457e3f89",
    "signed_from": "RMCP01",
    "registration": "AIGetDMABytesLeft_8012405c",
-   "spans": 5
+   "spans": 5,
+   "touches": "0xCC00503A"
   },
   {
    "name": "AIGetDMALength",
@@ -52,7 +55,8 @@
    "body": "f7b3882da1805204",
    "signed_from": "SMNE01",
    "registration": "AIGetDMALength_80124084",
-   "spans": 4
+   "spans": 4,
+   "touches": "0xCC005036"
   },
   {
    "name": "AIGetDMALength",
@@ -62,7 +66,8 @@
    "body": "857ca60302c44591",
    "signed_from": "RMCP01",
    "registration": "AIGetDMALength_80124084",
-   "spans": 5
+   "spans": 5,
+   "touches": "0xCC005036"
   },
   {
    "name": "AIGetDMAStartAddr",
@@ -72,7 +77,8 @@
    "body": "b0e43e18842a1e00",
    "signed_from": "SMNE01",
    "registration": "AIGetDMAStartAddr_8012406c",
-   "spans": 4
+   "spans": 4,
+   "touches": "0xCC005030"
   },
   {
    "name": "AIGetDMAStartAddr",
@@ -82,7 +88,8 @@
    "body": "9955221a371a6e69",
    "signed_from": "RMCP01",
    "registration": "AIGetDMAStartAddr_8012406c",
-   "spans": 5
+   "spans": 5,
+   "touches": "0xCC005030"
   },
   {
    "name": "AIGetDSPSampleRate",
@@ -7362,6 +7369,83 @@
    "signed_from": "RMCP01",
    "registration": "strlen",
    "spans": 3
+  },
+  {
+   "name": "IPCCltInit",
+   "build": "rvl.os@2010-04-20",
+   "size": 180,
+   "start": "d637a0d594604058",
+   "body": "312e485b6a30355d",
+   "signed_from": "RHAE",
+   "registration": "IPCCltInit_80193478"
+  },
+  {
+   "name": "KPADRead",
+   "build": "rvl.kpad@2010-04-20",
+   "size": 1836,
+   "start": "f241ea0b1383fabc",
+   "body": "f16376e6b0a1c0da",
+   "signed_from": "RHAE",
+   "registration": "KPAD__Read_HLE"
+  },
+  {
+   "name": "WPADInit",
+   "build": "rvl.wpad@2010-04-20",
+   "size": 112,
+   "start": "10704bc5fa66e24d",
+   "body": "9b28b62a1cd2cb5f",
+   "signed_from": "RHAE",
+   "registration": "WPADInit_HLE"
+  },
+  {
+   "name": "DSPAddTask",
+   "build": "rvl.dsp@2010-04-20",
+   "size": 112,
+   "start": "02b1dcf969c94971",
+   "body": "3c389f15929d3e05",
+   "signed_from": "RHAE",
+   "registration": "DSPAddTask_8015d50c"
+  },
+  {
+   "name": "VIConfigure",
+   "build": "rvl.vi@2010-04-20",
+   "size": 1764,
+   "start": "94d9cc6bf795124c",
+   "body": "273556ef2a94c49c",
+   "signed_from": "RHAE",
+   "registration": "VIConfigure_HLE_801b9f6c"
+  },
+  {
+   "name": "AIStartDMA",
+   "build": "any",
+   "size": 20,
+   "exact": "b6cf9bc94b5f5b71",
+   "signed_from": "RHAE",
+   "registration": "AIStartDMA_80124048"
+  },
+  {
+   "name": "AIGetDMAStartAddr",
+   "build": "any",
+   "size": 24,
+   "exact": "e66820e4502edf47",
+   "signed_from": "RHAE",
+   "registration": "AIGetDMAStartAddr_8012406c"
+  },
+  {
+   "name": "AIGetDMALength",
+   "build": "any",
+   "size": 16,
+   "exact": "cf2a0ea4b7809acb",
+   "signed_from": "RHAE",
+   "registration": "AIGetDMALength_80124084"
+  },
+  {
+   "name": "AIGetDMABytesLeft",
+   "build": "any",
+   "size": 16,
+   "exact": "5f82456b08aeaed4",
+   "signed_from": "RHAE",
+   "registration": "AIGetDMABytesLeft_8012405c"
   }
  ]
 }
