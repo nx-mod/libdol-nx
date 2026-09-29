@@ -194,6 +194,46 @@ int main() {
     Check("  and the map still has one entry",
           memory.files["/shared1/content.map"].size() == 28);
 
+    // The map is name first, then hash, as the console and everything else reads it.
+    {
+        const auto& map = memory.files["/shared1/content.map"];
+        Check("the map entry starts with its name",
+              map.size() == 28 && std::memcmp(map.data(), "00000000", 8) == 0);
+    }
+
+    // Where each content is, and whether it is there.
+    {
+        const auto where = ResolveContents(store, TitleId{kSecond});
+        bool all = where.size() == 2;
+        for (const auto& content : where) all = all && content.present;
+        Check("every content of an installed title resolves", all);
+        Check("  the shared one through /shared1",
+              where.size() == 2 && where[1].shared && where[1].path == "/shared1/00000000.app");
+
+        const auto kept = memory.files["/shared1/00000000.app"];
+        memory.files.erase("/shared1/00000000.app");
+        const auto missing = ResolveContents(store, TitleId{kSecond});
+        Check("  a missing shared content is reported as missing",
+              missing.size() == 2 && !missing[1].present && missing[0].present);
+        memory.files["/shared1/00000000.app"] = kept;
+    }
+
+    // A map this library used to write, hash first, is read the right way and
+    // written back name first.
+    {
+        auto& map = memory.files["/shared1/content.map"];
+        std::vector<std::uint8_t> reversed(map.begin() + 8, map.end());
+        reversed.insert(reversed.end(), map.begin(), map.begin() + 8);
+        map = reversed;
+        const auto where = ResolveContents(store, TitleId{kSecond});
+        Check("a hash-first map still resolves",
+              where.size() == 2 && where[1].present && where[1].path == "/shared1/00000000.app");
+        Check("  and installing again writes it name first",
+              InstallTitle(store, second, cipher) == InstallResult::Installed &&
+              std::memcmp(memory.files["/shared1/content.map"].data(), "00000000", 8) == 0 &&
+              memory.files["/shared1/content.map"].size() == 28);
+    }
+
     // Removing one leaves the other, and leaves what they share.
     Check("a title is removed", RemoveTitle(store, first));
     Check("  its content is gone", memory.files.count(ContentFilePath(first, 1)) == 0);

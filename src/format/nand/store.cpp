@@ -9,6 +9,7 @@
 
 #include "wiinx/format/nand/wad.hpp"
 
+#include <cctype>
 #include <cstdio>
 #include <cstring>
 
@@ -16,7 +17,7 @@ namespace wiinx::nand {
 namespace {
 
 constexpr std::string_view kSharedPath = "/shared1";
-constexpr std::size_t kSharedEntrySize = 28;  // a SHA-1, then eight characters
+constexpr std::size_t kSharedEntrySize = 28;  // eight characters of name, then a SHA-1
 
 std::string Hex8(std::uint32_t value) {
     char text[9];
@@ -24,19 +25,53 @@ std::string Hex8(std::uint32_t value) {
     return text;
 }
 
-// /shared1/content.map: one entry per shared content, its hash and the name it
-// was given. A title finds a content it shares by looking its hash up here.
+bool IsName(const std::uint8_t* at) {
+    for (int i = 0; i < 8; i++) {
+        if (!std::isxdigit(at[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// /shared1/content.map: one entry per shared content, the name it was given and
+// its hash - `char name[8]` then `u8 sha1[20]`, which is what a console,
+// Dolphin, libwii-nx's NAND and tools/wiinx-install-title read. A title finds a
+// content it shares by looking its hash up here.
 struct SharedMap {
     std::vector<std::uint8_t> bytes;
 
     std::size_t count() const { return bytes.size() / kSharedEntrySize; }
 
+    // This library once wrote the two the other way round, which nothing else
+    // can read. A map in that order is turned round on load, and written back
+    // the right way the next time anything installs.
+    void Normalize() {
+        bytes.resize(count() * kSharedEntrySize);
+        bool reversed = count() != 0;
+        for (std::size_t index = 0; index < count() && reversed; index++) {
+            const std::uint8_t* entry = bytes.data() + index * kSharedEntrySize;
+            reversed = !IsName(entry) && IsName(entry + 20);
+        }
+        if (!reversed) {
+            return;
+        }
+        std::vector<std::uint8_t> fixed;
+        fixed.reserve(bytes.size());
+        for (std::size_t index = 0; index < count(); index++) {
+            const std::uint8_t* entry = bytes.data() + index * kSharedEntrySize;
+            fixed.insert(fixed.end(), entry + 20, entry + 28);
+            fixed.insert(fixed.end(), entry, entry + 20);
+        }
+        bytes.swap(fixed);
+    }
+
     // The name a hash already has, or nothing when it is not here yet.
     std::optional<std::string> find(const std::array<std::uint8_t, 20>& sha1) const {
         for (std::size_t index = 0; index < count(); index++) {
             const std::uint8_t* entry = bytes.data() + index * kSharedEntrySize;
-            if (std::memcmp(entry, sha1.data(), sha1.size()) == 0) {
-                return std::string(reinterpret_cast<const char*>(entry + 20), 8);
+            if (std::memcmp(entry + 8, sha1.data(), sha1.size()) == 0) {
+                return std::string(reinterpret_cast<const char*>(entry), 8);
             }
         }
         return std::nullopt;
@@ -45,11 +80,18 @@ struct SharedMap {
     // Adds one, named the way the console names them: in order, from 00000000.
     std::string add(const std::array<std::uint8_t, 20>& sha1) {
         const std::string name = Hex8(static_cast<std::uint32_t>(count()));
-        bytes.insert(bytes.end(), sha1.begin(), sha1.end());
         bytes.insert(bytes.end(), name.begin(), name.end());
+        bytes.insert(bytes.end(), sha1.begin(), sha1.end());
         return name;
     }
 };
+
+SharedMap LoadSharedMap(const Store& store) {
+    SharedMap shared;
+    store.Read(std::string(kSharedPath) + "/content.map", shared.bytes);
+    shared.Normalize();
+    return shared;
+}
 
 }  // namespace
 
@@ -84,6 +126,33 @@ std::vector<InstalledTitle> InstalledTitles(const Store& store) {
                                            static_cast<std::uint16_t>(tmd->contents.size()),
                                            tmd->TotalSize()});
         }
+    }
+    return found;
+}
+
+std::vector<ContentLocation> ResolveContents(const Store& store, TitleId id) {
+    std::vector<ContentLocation> found;
+    std::vector<std::uint8_t> bytes;
+    if (!store.Read(TmdPath(id), bytes)) {
+        return found;
+    }
+    const auto tmd = Tmd::Parse(bytes.data(), bytes.size());
+    if (!tmd) {
+        return found;
+    }
+    const SharedMap shared = LoadSharedMap(store);
+    for (const ContentRecord& content : tmd->contents) {
+        ContentLocation where{content.id, content.index, content.Shared(), {}, false};
+        if (content.Shared()) {
+            if (const auto name = shared.find(content.sha1)) {
+                where.path = std::string(kSharedPath) + "/" + *name + ".app";
+            }
+        } else {
+            where.path = ContentFilePath(id, content.id);
+        }
+        std::vector<std::uint8_t> ignored;
+        where.present = !where.path.empty() && store.Read(where.path, ignored);
+        found.push_back(std::move(where));
     }
     return found;
 }
@@ -124,8 +193,7 @@ InstallResult InstallTitle(const Store& store, const std::vector<std::uint8_t>& 
 
     // The shared map, as it stands. A title that shares a content another one
     // already installed writes nothing but the map entry.
-    SharedMap shared;
-    store.Read(std::string(kSharedPath) + "/content.map", shared.bytes);
+    SharedMap shared = LoadSharedMap(store);
 
     for (const ContentRecord& content : tmd.contents) {
         const auto extent = wad->Content(content.index);
