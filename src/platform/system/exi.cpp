@@ -213,8 +213,21 @@ extern "C" uint32_t EXIDma_80168288(uint32_t channel, uint32_t buffer, uint32_t 
 {
     // type: 0=Read, 1=Write. A read is the payload half of the transfer the
     // command word opened, and is where SRAM actually arrives.
-    if (type == 0) {
-        ExiReadSelectedDevice(buffer, length);
+    //
+    // When nothing answers, the bytes are still written, and they are zero:
+    // Dolphin's IEXIDevice::DMARead moves a byte per step and its TransferByte
+    // leaves that byte at nought for a device that is not there. Writing
+    // nothing instead leaves the guest reading whatever its buffer held, which
+    // is how an absent memory card can look like a present one full of noise.
+    if (type == 0 && !ExiReadSelectedDevice(buffer, length)) {
+        try {
+            for (uint32_t i = 0; i < length; ++i) {
+                ::Memory::Write8(buffer + i, 0);
+            }
+        } catch (const ::Memory::AccessViolation&) {
+            RT_LOG(RT_TAG_OS) << "EXIDma: could not clear " << length
+                              << " byte(s) at 0x" << std::hex << buffer << std::dec << std::endl;
+        }
     }
 
     static int log_count = 0;
