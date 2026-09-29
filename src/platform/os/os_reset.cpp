@@ -12,6 +12,12 @@
 #include <chrono>
 #include <thread>
 
+#if defined(__SWITCH__)
+#include <switch.h>
+extern "C" char** __system_argv;
+extern "C" int __system_argc;
+#endif
+
 namespace {
 
 static std::string ReadGuestStringSafe(uint32_t addr)
@@ -117,17 +123,33 @@ extern "C" void OS__Panic_801A2660_Cpu(CpuContext* ctx)
 
 PPC_NATIVE_OVERRIDE_VOID(801A2660, OS__Panic_801A2660_Cpu, (CpuContext* ctx), (ctx));
 
-// 0x801A8A80 -> OSResetSystem
-extern "C" uint32_t OSResetSystem()
+// Leaving the program the way the console's buttons leave a title.
+//
+// Power off closes it: back to wherever it was started from - the HOME menu
+// for an installed application or forwarder, the homebrew menu otherwise.
+// Reset starts it again: the same NRO is named as the next one to load, which
+// hbloader then does.
+extern "C" void RuntimeLeave(bool restart)
 {
-    RT_LOGF(RT_TAG_OS, "OSResetSystem: simulating console reset\n");
+    RT_LOGF(RT_TAG_OS, "%s\n", restart ? "reset: restarting" : "power off: closing");
     std::fflush(stderr);
+#if defined(__SWITCH__)
+    if (restart && envHasNextLoad() && __system_argc > 0 && __system_argv[0] != nullptr) {
+        envSetNextLoad(__system_argv[0], __system_argv[0]);
+    }
+#endif
     // The AX mix worker holds resolved host pointers into the guest regions;
     // it must be stopped before those mappings are torn down.
     AxDspHle::ShutdownMixWorker();
     Memory::Reset();
     SetRuntimeExitCode(0);
     std::exit(EXIT_SUCCESS);
+}
+
+// 0x801A8A80 -> OSResetSystem: the console restarting its title.
+extern "C" uint32_t OSResetSystem()
+{
+    RuntimeLeave(true);
     return 0; // unreachable, but keeps the signature consistent with callers
 }
 
