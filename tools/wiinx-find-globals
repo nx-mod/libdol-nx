@@ -360,9 +360,23 @@ class Finder:
                     self.put("dvd.dvdContexts", base, f"DVDLowInit {start:08X} stamps its four contexts")
                     break
 
+    # EGG ----------------------------------------------------------------------
+    def egg(self):
+        # AsyncDisplay::endRender calls Display::copyEFBtoXFB, then
+        # GXSetDrawDoneCallback with DrawDoneCallback as its argument.
+        start, ev = self.events("EGG__AsyncDisplay__endRender")
+        if not start:
+            return
+        calls = [e[1] for e in ev if e[0] == "call"]
+        code = [e[1] for e in ev if e[0] == "addr" and isinstance(e[1], int) and self.is_function(e[1])]
+        if len(calls) >= 2 and len(code) == 1:
+            self.put("egg.Display_copyEFBtoXFB", calls[0], f"endRender {start:08X} calls it first")
+            self.put("gx.GXSetDrawDoneCallback", calls[1], "endRender registers the callback with it")
+            self.put("egg.DrawDoneCallback", code[0], "the callback endRender registers")
+
     def run(self):
         self.setters, self.hints = None, []
-        for step in (self.vi, self.gx, self.audio, self.os):
+        for step in (self.vi, self.gx, self.audio, self.os, self.egg):
             step()
         return self
 
