@@ -22,16 +22,32 @@ extern "C" GXFifoObj* GXInit(void* base, u32 size);
  * GXInit HLE - Initialize the Graphics subsystem
  * This replaces the translated function that writes to MMIO addresses.
  */
+const GxGlobals& Gx() {
+    using RuntimeGuestGlobals::find;
+    static const GxGlobals globals{
+        find("gx.__GXData"), find("gx.gxData"), find("gx.FifoObj"),
+        find("gx.CPUFifo"), find("gx.GPFifo"),
+        find("gx.CPUFifoReady"), find("gx.GPFifoReady"),
+        find("gx.GXOverflowSuspendInProgress"), find("gx.__GXCurrentThread"),
+        find("gx.FinishQueue"), find("gx.DrawDone"),
+        find("gx.DisplayListFifo"), find("gx.__savedGXdata"), find("gx.OldCPUFifo"),
+        find("gx.GXCPInterruptHandler"), find("gx.GXTokenInterruptHandler"),
+        find("gx.GXFinishInterruptHandler"),
+    };
+    return globals;
+}
+
 extern "C" uint32_t GX__Init_8016b850(uint32_t fifoBase, uint32_t fifoSize)
 {
-    constexpr uint32_t kFifoObjAddr = 0x80343740u;
-    constexpr uint32_t kGXDataAddr = 0x803437C0u;
+    const GxGlobals& gx = Gx();
+    const uint32_t kFifoObjAddr = gx.fifoObj;
+    const uint32_t kGXDataAddr = gx.gxData;
     constexpr uint32_t kGXDataSize = 0x600u;
 
     GXInit(GuestToHostPtr(fifoBase, fifoSize), fifoSize);
 
     // Initialize GXData structure in guest memory
-    try {
+    if (kGXDataAddr != 0 && gx.gxDataPtr != 0) try {
         for (uint32_t offset = 0; offset < kGXDataSize; offset += 4) {
             Memory::Write32(kGXDataAddr + offset, 0);
         }
@@ -41,7 +57,7 @@ extern "C" uint32_t GX__Init_8016b850(uint32_t fifoBase, uint32_t fifoSize)
         Memory::Write32(kGXDataAddr + 0x5e4, 0);
         Memory::Write32(kGXDataAddr + 0x5e8, 0);
         Memory::Write32(kGXDataAddr + 0x5fc, 0);
-        Memory::Write32(kGXDataPtrAddr, kGXDataAddr);
+        Memory::Write32(gx.gxDataPtr, kGXDataAddr);
         // GXData+0x5F8 was just cleared; drop any stale recording shadow with it.
         BeginDisplayListRecording(0, 0);
     } catch (const ::Memory::AccessViolation& e) {
@@ -49,13 +65,15 @@ extern "C" uint32_t GX__Init_8016b850(uint32_t fifoBase, uint32_t fifoSize)
     }
 
     __GX__FifoInit_8016d180();
-    GX__InitFifoBase_8016c7c8(kFifoObjAddr, fifoBase, fifoSize);
-    GX__SetCPUFifo_8016c94c(kFifoObjAddr);
-    GX__SetGPFifo_8016cb2c(kFifoObjAddr);
+    if (kFifoObjAddr != 0) {
+        GX__InitFifoBase_8016c7c8(kFifoObjAddr, fifoBase, fifoSize);
+        GX__SetCPUFifo_8016c94c(kFifoObjAddr);
+        GX__SetGPFifo_8016cb2c(kFifoObjAddr);
+    }
     __GX__PEInit_8016ee14();
 
     try {
-        uint32_t gd = Memory::Read32(kGXDataPtrAddr);
+        uint32_t gd = GuestGxData();
         if (gd) {
             Memory::Write32(gd + 0x254, 0);
             Memory::Write32(gd + 0x174, 0x0f0000ff);
@@ -107,32 +125,28 @@ extern "C" void __GX__FifoInit_8016d180()
 {
     constexpr uint32_t kCpInterruptId = 0x11u;
     constexpr uint32_t kCpInterruptMask = 0x4000u;
-    constexpr uint32_t kCpInterruptHandlerAddr = 0x8016c668u;
-    constexpr uint32_t kGxCurrentThreadPtrAddr = 0x803867c4u;
-    constexpr uint32_t kGxThreadQueueAddr = 0x803867c0u;
-    constexpr uint32_t kCpuFifoObjAddr = 0x80343de4u;
-    constexpr uint32_t kGpFifoObjAddr = 0x80343dc0u;
     constexpr size_t kFifoObjSize = 0x24u;
-    constexpr uint32_t kFifoWrapFlagAddr = 0x803867b0u;
-    constexpr uint32_t kFifoWrapFlag2Addr = 0x803867b1u;
+    const GxGlobals& gx = Gx();
 
-    __OSSetInterruptHandler_801a65f8_hle(kCpInterruptId, kCpInterruptHandlerAddr);
-    __OSUnmaskInterrupts_801a69bc_hle(kCpInterruptMask);
+    if (gx.cpInterruptHandler) {
+        __OSSetInterruptHandler_801a65f8_hle(kCpInterruptId, gx.cpInterruptHandler);
+        __OSUnmaskInterrupts_801a69bc_hle(kCpInterruptMask);
+    }
 
-    try { Memory::Write32(kGxCurrentThreadPtrAddr, OS__GetCurrentThread_801a98b0_hle()); } catch (const ::Memory::AccessViolation&) {}
-    try { Memory::Write32(kGxThreadQueueAddr, 0); } catch (const ::Memory::AccessViolation&) {}
-
-    auto zeroBlock = [](uint32_t addr, size_t sizeBytes) {
-        for (size_t offset = 0; offset < sizeBytes; offset += 4) {
-            Memory::Write32(addr + static_cast<uint32_t>(offset), 0);
-        }
+    auto write32 = [](uint32_t addr, uint32_t value) {
+        if (addr) try { Memory::Write32(addr, value); } catch (const ::Memory::AccessViolation&) {}
     };
-
-    try { zeroBlock(kCpuFifoObjAddr, kFifoObjSize); } catch (const ::Memory::AccessViolation&) {}
-    try { zeroBlock(kGpFifoObjAddr, kFifoObjSize); } catch (const ::Memory::AccessViolation&) {}
-
-    try { Memory::Write8(kFifoWrapFlagAddr, 0); } catch (const ::Memory::AccessViolation&) {}
-    try { Memory::Write8(kFifoWrapFlag2Addr, 0); } catch (const ::Memory::AccessViolation&) {}
+    auto write8 = [](uint32_t addr, uint8_t value) {
+        if (addr) try { Memory::Write8(addr, value); } catch (const ::Memory::AccessViolation&) {}
+    };
+    write32(gx.currentThread, OS__GetCurrentThread_801a98b0_hle());
+    write32(gx.overflowSuspend, 0);
+    for (size_t offset = 0; offset < kFifoObjSize; offset += 4) {
+        if (gx.cpuFifo) write32(gx.cpuFifo + static_cast<uint32_t>(offset), 0);
+        if (gx.gpFifo) write32(gx.gpFifo + static_cast<uint32_t>(offset), 0);
+    }
+    write8(gx.cpuFifoReady, 0);
+    write8(gx.gpFifoReady, 0);
 }
 
 extern "C" void __GX__PEInit_8016ee14()
@@ -141,18 +155,20 @@ extern "C" void __GX__PEInit_8016ee14()
     constexpr uint32_t kPeFinishInterruptId = 0x13u;
     constexpr uint32_t kPeTokenInterruptMask = 0x1000u;
     constexpr uint32_t kPeFinishInterruptMask = 0x2000u;
-    constexpr uint32_t kPeTokenHandlerAddr = 0x8016eccc;
-    constexpr uint32_t kPeFinishHandlerAddr = 0x8016ed94;
-    constexpr uint32_t kPeThreadQueueAddr = 0x803867d0u;
+    const GxGlobals& gx = Gx();
 
-    __OSSetInterruptHandler_801a65f8_hle(kPeTokenInterruptId, kPeTokenHandlerAddr);
-    __OSSetInterruptHandler_801a65f8_hle(kPeFinishInterruptId, kPeFinishHandlerAddr);
-    __OSUnmaskInterrupts_801a69bc_hle(kPeTokenInterruptMask);
-    __OSUnmaskInterrupts_801a69bc_hle(kPeFinishInterruptMask);
+    if (gx.tokenInterruptHandler) {
+        __OSSetInterruptHandler_801a65f8_hle(kPeTokenInterruptId, gx.tokenInterruptHandler);
+        __OSUnmaskInterrupts_801a69bc_hle(kPeTokenInterruptMask);
+    }
+    if (gx.finishInterruptHandler) {
+        __OSSetInterruptHandler_801a65f8_hle(kPeFinishInterruptId, gx.finishInterruptHandler);
+        __OSUnmaskInterrupts_801a69bc_hle(kPeFinishInterruptMask);
+    }
 
-    try { Memory::Write32(kPeThreadQueueAddr, 0); } catch (const ::Memory::AccessViolation&) {}
+    if (gx.finishQueue) try { Memory::Write32(gx.finishQueue, 0); } catch (const ::Memory::AccessViolation&) {}
     try {
-        const uint32_t gd = Memory::Read32(kGXDataPtrAddr);
+        const uint32_t gd = GuestGxData();
         if (gd) {
             const uint16_t cur = Memory::Read16(gd + 0x0Au);
             Memory::Write16(gd + 0x0Au, static_cast<uint16_t>(cur | 0x000Fu));
@@ -167,41 +183,49 @@ PPC_NATIVE_OVERRIDE_VOID(8016ee14, __GX__PEInit_8016ee14, (), ());
 
 extern "C" void GX__BeginDisplayList_80172e00(uint32_t la, uint32_t s) {
     try {
-        uint32_t gd = Memory::Read32(kGXDataPtrAddr);
-        if (!gd) return;
+        const GxGlobals& gx = Gx();
+        const uint32_t fifo = gx.displayListFifo;
+        uint32_t gd = GuestGxData();
+        if (!gd || !fifo || !gx.savedGxData || !gx.oldCpuFifo) return;
         if (Memory::Read32(gd + 0x5FCu)) GX__SetDirtyState_8016ee78();
-        if (Memory::Read8(gd + 0x5F9u)) std::memcpy(Memory::GetPointer(0x80344110, 0x600), Memory::GetPointer(gd, 0x600), 0x600);
-        Memory::Write32(0x80344094, la + s - 4u);
-        Memory::Write32(0x803440AC, 0);
-        Memory::Write32(0x80344090, la);
-        Memory::Write32(0x80344098, s);
-        Memory::Write32(0x803440A4, la);
-        Memory::Write32(0x803440A8, la);
+        if (Memory::Read8(gd + 0x5F9u)) std::memcpy(Memory::GetPointer(gx.savedGxData, 0x600), Memory::GetPointer(gd, 0x600), 0x600);
+        Memory::Write32(fifo + kFifoTop, la + s - 4u);
+        Memory::Write32(fifo + kFifoCount, 0);
+        Memory::Write32(fifo, la);
+        Memory::Write32(fifo + kFifoSize, s);
+        Memory::Write32(fifo + kFifoReadPtr, la);
+        Memory::Write32(fifo + kFifoWritePtr, la);
         Memory::Write8(gd + 0x5F8u, 1u);
         // Mirror the guest fifo-object fields the FIFO write path consumes so
         // HleFifoWrite never has to read them back out of guest memory.
         BeginDisplayListRecording(la, s);
         GXFlush();
-        GX__GetCPUFifo_8016cf10(0x80344710);
-        GX__SetCPUFifo_8016c94c(0x80344090);
+        GX__GetCPUFifo_8016cf10(gx.oldCpuFifo);
+        GX__SetCPUFifo_8016c94c(fifo);
     } catch (...) {}
 }
 PPC_NATIVE_OVERRIDE_VOID(80172e00, GX__BeginDisplayList_80172e00, (uint32_t la, uint32_t s), (la, s));
 
 extern "C" uint32_t GX__EndDisplayList_80172eb4() {
     try {
+        const GxGlobals& gx = Gx();
+        const uint32_t fifo = gx.displayListFifo;
+        if (!fifo || !gx.savedGxData || !gx.oldCpuFifo) {
+            EndDisplayListRecording();
+            return 0;
+        }
         GXFlush();
-        GX__GetCPUFifo_8016cf10(0x80344090);
-        const uint8_t wrapped = Memory::Read8(kDlFifoAddr + kDlWrapFlagOffset);
-        GX__SetCPUFifo_8016c94c(0x80344710);
+        GX__GetCPUFifo_8016cf10(fifo);
+        const uint8_t wrapped = Memory::Read8(fifo + kFifoWrap);
+        GX__SetCPUFifo_8016c94c(gx.oldCpuFifo);
 
-        const uint32_t gd = Memory::Read32(kGXDataPtrAddr);
+        const uint32_t gd = GuestGxData();
         if (gd) {
             if (Memory::Read8(gd + 0x5F9u) != 0) {
                 const int32_t interruptLevel = OS__DisableInterrupts_801a65ac();
                 const uint32_t savedWord8 = Memory::Read32(gd + 0x08u);
                 std::memcpy(Memory::GetPointer(gd, 0x600),
-                            Memory::GetPointer(0x80344110, 0x600),
+                            Memory::GetPointer(gx.savedGxData, 0x600),
                             0x600);
                 Memory::Write32(gd + 0x08u, savedWord8);
                 OS__RestoreInterrupts_801a65d4(interruptLevel);
@@ -215,7 +239,7 @@ extern "C" uint32_t GX__EndDisplayList_80172eb4() {
         // stop here even on the gd == 0 path.
         EndDisplayListRecording();
 
-        return wrapped == 0 ? Memory::Read32(kDlCountAddr) : 0;
+        return wrapped == 0 ? Memory::Read32(fifo + kFifoCount) : 0;
     } catch (...) {
         // Leaving the shadow active would silently swallow every subsequent
         // FIFO write into a dead list.

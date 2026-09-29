@@ -119,6 +119,13 @@ if [ -f "$dir/bindings.json" ]; then
         "$dir/native/native_bindings.cpp" || {
         echo "could not write this game's bindings table" >&2; exit 1; }
 fi
+# The same for the SDK's variables (src/cpu/include/guest_globals.h).
+if [ -f "$dir/globals.json" ]; then
+    mkdir -p "$dir/native"
+    "$libwiinx/tools/wiinx-make-globals" "$dir/globals.json" \
+        "$dir/native/guest_globals.cpp" || {
+        echo "could not write this game's globals table" >&2; exit 1; }
+fi
 
 out="$dir/generated"
 step translate-recursive translate-recursive "$entry" --project "$project" \

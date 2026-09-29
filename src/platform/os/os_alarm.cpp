@@ -6,6 +6,7 @@
 
 #include "abi_bridge.h"
 #include "memory.h"
+#include "guest_globals.h"
 #include "guest_interrupt_context.h"
 #include "hle_stubs.h"
 #include "ppc_runtime.h"
@@ -445,7 +446,7 @@ PPC_NATIVE_OVERRIDE_VOID(801A08E0, OS__SetPeriodicAlarm_801a08e0, (CpuContext* c
 // pump this file's alarm queue: RFLInitRes spins on it waiting for async RFL
 // work that only completes when the interrupt-driven alarmCheckCb_ fires.
 // Original at 0x800BD860 reads the "working" flag at RFL manager + 0x1B34,
-// returning 0 when the manager pointer (0x80386298) is null.
+// returning 0 when sRFLManager is null or not named for this game.
 extern "C" uint32_t RFLiIsWorking_HLE_800bd860()
 {
     // Pump alarms/callbacks on the current guest thread when available. Using a
@@ -459,8 +460,11 @@ extern "C" uint32_t RFLiIsWorking_HLE_800bd860()
     ProcessAlarmQueue(cpu, 32);
 
     // Now return the actual "working" status
-    constexpr uint32_t kRflManagerPtrAddr = 0x80386298u;
+    static const uint32_t kRflManagerPtrAddr = RuntimeGuestGlobals::find("rfl.sRFLManager");
     constexpr uint32_t kWorkingFlagOffset = 0x1b34u;
+    if (kRflManagerPtrAddr == 0) {
+        return 0;
+    }
 
     try {
         const uint32_t managerBase = ::Memory::Read32(kRflManagerPtrAddr);

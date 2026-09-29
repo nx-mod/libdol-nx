@@ -16,12 +16,22 @@ public sealed class RuntimeConfigGenerator
     /// project manifest, not from scanning the boot code: they're data pinned to the DOL's SHA-256, and
     /// guessing them from section midpoints could silently produce a wrong runtime.
     /// </summary>
+    /// <summary>
+    /// The MEM1 arena start for an image ending at <paramref name="imageEnd"/>: the SDK
+    /// linker puts a 64 KiB stack after the image (8-byte aligned), and OSInit rounds
+    /// what follows up to 32. Checked on Mario Kart Wii (0x80399180) and Mega Man 9
+    /// (0x80500280, whose __init_registers sets r1 = 0x80500278).
+    /// </summary>
+    public static uint ArenaLoFor(uint imageEnd) =>
+        ((((imageEnd + 7u) & ~7u) + 0x10000u) + 31u) & ~31u;
+
     public static void GenerateConfigHeader(
         uint sda1Base,
         uint sda2Base,
         string outputPath,
         string projectName = "PowerPC DOL",
-        uint? entryPoint = null)
+        uint? entryPoint = null,
+        uint? arenaLo = null)
     {
         var sb = new StringBuilder();
         sb.AppendLine($"// AUTO-GENERATED for {projectName}");
@@ -58,6 +68,14 @@ public sealed class RuntimeConfigGenerator
             sb.AppendLine("// runtime used to begin at a fixed address, which was one game's.");
             sb.AppendLine($"constexpr uint32_t ENTRY_POINT = 0x{entry:X8}u;  // translation.entry_points[0]");
             sb.AppendLine("#define RUNTIME_CONFIG_HAS_ENTRY_POINT 1");
+        }
+        if (arenaLo is { } arena)
+        {
+            sb.AppendLine();
+            sb.AppendLine("// Where the MEM1 arena begins: past the image and its 64 KiB stack, as");
+            sb.AppendLine("// OSInit rounds the linker's __ArenaLo.");
+            sb.AppendLine($"constexpr uint32_t ARENA_LO = 0x{arena:X8}u;");
+            sb.AppendLine("#define RUNTIME_CONFIG_HAS_ARENA_LO 1");
         }
         sb.AppendLine();
         sb.AppendLine("} // namespace RuntimeConfig");

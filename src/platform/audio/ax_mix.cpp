@@ -1464,31 +1464,30 @@ void Init() {
 
 void InitForAXOut(CpuContext* ctx) {
     Init();
-    g_axTaskPtr = kAxDspTaskAddr;
+    const AudioGlobals& a = Audio();
+    if (a.axDspTask == 0) {
+        // Without the game's task there is nothing to hand the mixer.
+        return;
+    }
+    g_axTaskPtr = a.axDspTask;
     Memory::Write32(g_axTaskPtr + 0x00u, 1);
     Memory::Write32(g_axTaskPtr + 0x04u, 0);
-    Memory::Write32(g_axTaskPtr + 0x0cu, kAxIramMmemAddr);
+    Memory::Write32(g_axTaskPtr + 0x0cu, a.axDspSlave);
     Memory::Write32(g_axTaskPtr + 0x14u, 0);
-    Memory::Write32(g_axTaskPtr + 0x18u, kAxDramMmemAddr);
+    Memory::Write32(g_axTaskPtr + 0x18u, a.axDramImage);
     Memory::Write32(g_axTaskPtr + 0x1cu, kAxDramLength);
     Memory::Write32(g_axTaskPtr + 0x20u, kAxDramDspAddr);
-    Memory::Write32(g_axTaskPtr + 0x28u, kAxInitCallback);
-    Memory::Write32(g_axTaskPtr + 0x2cu, kAxResumeCallback);
-    Memory::Write32(g_axTaskPtr + 0x30u, kAxDoneCallback);
-    Memory::Write32(g_axTaskPtr + 0x34u, kAxRequestCallback);
-    if (ctx) {
-        const uint32_t r13 = ctx->gpr[13];
-        Memory::Write32(g_axTaskPtr + 0x10u, Memory::Read16(r13 - 0x73fcu));
-        Memory::Write16(g_axTaskPtr + 0x24u, Memory::Read16(r13 - 0x7400u));
-        Memory::Write16(g_axTaskPtr + 0x26u, Memory::Read16(r13 - 0x73feu));
-    }
+    Memory::Write32(g_axTaskPtr + 0x28u, a.axInitCallback);
+    Memory::Write32(g_axTaskPtr + 0x2cu, a.axResumeCallback);
+    Memory::Write32(g_axTaskPtr + 0x30u, a.axDoneCallback);
+    Memory::Write32(g_axTaskPtr + 0x34u, a.axRequestCallback);
+    if (a.axDspSlaveLength) Memory::Write32(g_axTaskPtr + 0x10u, Memory::Read16(a.axDspSlaveLength));
+    if (a.axDspInitVector) Memory::Write16(g_axTaskPtr + 0x24u, Memory::Read16(a.axDspInitVector));
+    if (a.axDspResumeVector) Memory::Write16(g_axTaskPtr + 0x26u, Memory::Read16(a.axDspResumeVector));
     Instance().ConfigureFromTask(g_axTaskPtr);
     LinkSingleDspTask(g_axTaskPtr);
-    if (ctx) {
-        const uint32_t r13 = ctx->gpr[13];
-        Memory::Write32(r13 - 0x66d8u, 1);
-        Memory::Write32(r13 - 0x66dcu, 0);
-    }
+    TryWriteNamed32(a.axDspInitFlag, 1);
+    TryWriteNamed32(a.axDspDoneFlag, 0);
 }
 
 void Stop() {
@@ -1496,7 +1495,7 @@ void Stop() {
 }
 
 uint32_t CheckInit() {
-    return ReadGuestU32OrZero(kDspInitializedAddr);
+    return TryReadNamed32(Audio().dspInitFlag);
 }
 
 uint32_t AddTask(uint32_t taskPtr) {
@@ -1506,19 +1505,19 @@ uint32_t AddTask(uint32_t taskPtr) {
 
     MarkDspInitialized();
     Instance().ConfigureFromTask(taskPtr);
-    const uint32_t firstTask = ReadGuestU32OrZero(kDspFirstTaskAddr);
+    const uint32_t firstTask = TryReadNamed32(Audio().dspFirstTask);
     if (firstTask == 0) {
         LinkSingleDspTask(taskPtr);
     } else {
-        const uint32_t oldCurrent = ReadGuestU32OrZero(kDspCurrentTaskAddr);
+        const uint32_t oldCurrent = TryReadNamed32(Audio().dspLastTask);
         Memory::TryWrite32(oldCurrent + 0x38u, taskPtr);
         Memory::TryWrite32(taskPtr + 0x38u, 0);
         Memory::TryWrite32(taskPtr + 0x3cu, oldCurrent);
-        Memory::TryWrite32(kDspCurrentTaskAddr, taskPtr);
+        TryWriteNamed32(Audio().dspLastTask, taskPtr);
     }
     Memory::TryWrite32(taskPtr + 0x00u, 0);
     Memory::TryWrite32(taskPtr + 0x08u, 1);
-    if (taskPtr == ReadGuestU32OrZero(kDspFirstTaskAddr)) {
+    if (taskPtr == TryReadNamed32(Audio().dspFirstTask)) {
         AssertTask(taskPtr);
     }
     return taskPtr;
@@ -1543,9 +1542,9 @@ uint32_t ReadMailFromDSP() {
 uint32_t AssertTask(uint32_t taskPtr) {
     if (taskPtr != 0) {
         g_axTaskPtr = taskPtr;
-        Memory::TryWrite32(kDspAssertPendingAddr, 1);
-        Memory::TryWrite32(kDspAssertTaskAddr, taskPtr);
-        Memory::TryWrite32(kDspRunningTaskAddr, taskPtr);
+        TryWriteNamed32(Audio().dspRudeTaskPending, 1);
+        TryWriteNamed32(Audio().dspRudeTask, taskPtr);
+        TryWriteNamed32(Audio().dspCurrTask, taskPtr);
         Memory::Write32(taskPtr, 1);
         Instance().QueueResumeCallback();
     }

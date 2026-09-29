@@ -25,8 +25,9 @@ constexpr uint32_t kSamplesPerFrame = 96;
 constexpr uint32_t kChannels = 3;
 
 // .sdata2 constants the guest function loads through r2.
-constexpr uint32_t kOneConstantAddr = 0x80388588u;   // 1.0f
-constexpr uint32_t kScaleConstantAddr = 0x8038858Cu; // 0.6f send pre-scale
+// The SDK's own constants for this path, the same in every game.
+constexpr float kOne = 1.0f;
+constexpr float kSendScale = 0.6f;  // send pre-scale
 
 // AXFX_REVERBSTD_EXP field offsets (byte offsets into the struct in r4).
 constexpr uint32_t kFieldPreDelayCoef = 0x18;
@@ -207,8 +208,8 @@ bool BuildFrame(uint32_t buffersAddr, uint32_t stateAddr, Frame& frame) {
         }
     }
 
-    const float sendScale = Memory::ReadFloat32(kScaleConstantAddr);
-    const float one = Memory::ReadFloat32(kOneConstantAddr);
+    const float sendScale = kSendScale;
+    const float one = kOne;
     frame.damping = Memory::ReadFloat32(stateAddr + kFieldDamping);
     frame.oneMinusDamping = one - frame.damping;
     frame.dryScale = sendScale * Memory::ReadFloat32(stateAddr + kFieldDryPreScale);

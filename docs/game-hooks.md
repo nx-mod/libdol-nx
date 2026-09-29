@@ -70,6 +70,23 @@ the switch-thread callback and interrupt table slots, the alarm queue's r13
 offset, `OSLoadContext` - is still found by hand, and follows from the
 signature milestone ([signatures](signatures.md)).
 
+## The SDK's variables
+
+Functions move between games through `bindings.json`; the SDK's own variables
+move through `globals.json`, beside it, by the SDK's names:
+
+```json
+{ "vi.retraceCount": "0x804EECAC", "gx.__GXData": "0x804EF8E0" }
+```
+
+`tools/wiinx-translate` turns it into `native/guest_globals.cpp`, and the
+runtime looks each name up once (`src/cpu/include/guest_globals.h`). A name a
+game leaves out is 0: the native that wanted it skips the write or falls back,
+instead of writing to another game's address. Names in use: `vi.*`, `gx.*`,
+`ax.*`, `dsp.*`, `ai.*`, `os.*`, `ipc.*`, `dvd.*`, `rfl.*`, `egg.*`; grep for
+`find("` to list them. Most are found from a function that uses them - a
+small-data offset in `VIWaitForRetrace` is `retraceQueue` in every game.
+
 ## Notes
 
 - 2026-09-23: `wiinx-scan os-globals` added; New Super Mario Bros. Wii's layout

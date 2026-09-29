@@ -2,6 +2,7 @@
 
 #include "hle_stubs.h"
 #include "memory.h"
+#include "guest_globals.h"
 #include "gx_guest_write.h"
 #include "ppc_runtime.h"
 #include "aurora_events.h"
@@ -53,14 +54,38 @@ namespace aurora::gfx {
 bool is_offscreen() noexcept;
 }
 
-// --- Constants ---
-constexpr uint32_t kGXDataPtrAddr = 0x803886C8;
-constexpr uint32_t kDlFifoAddr = 0x80344090;
-constexpr uint32_t kDlWritePtrAddr = 0x803440A4;
-constexpr uint32_t kDlCountAddr = 0x803440AC;
-constexpr uint32_t kDlWrapFlagOffset = 0x20;
+// --- This game's GX variables and handlers (guest_globals.h); 0 where unknown ---
+struct GxGlobals {
+    uint32_t gxDataPtr;         // __GXData: the GXData the SDK works on
+    uint32_t gxData;            // gxData: the GXData itself (0x600 bytes)
+    uint32_t fifoObj;           // FifoObj: GXInit's FIFO
+    uint32_t cpuFifo, gpFifo;   // CPUFifo, GPFifo
+    uint32_t cpuFifoReady, gpFifoReady;
+    uint32_t overflowSuspend;   // GXOverflowSuspendInProgress
+    uint32_t currentThread;     // __GXCurrentThread
+    uint32_t finishQueue;       // FinishQueue
+    uint32_t drawDone;          // DrawDone
+    uint32_t displayListFifo;   // DisplayListFifo
+    uint32_t savedGxData;       // __savedGXdata
+    uint32_t oldCpuFifo;        // OldCPUFifo
+    uint32_t cpInterruptHandler, tokenInterruptHandler, finishInterruptHandler;
+};
+const GxGlobals& Gx();
+
+// The guest's current GXData, or 0 when this game did not name __GXData.
+inline uint32_t GuestGxData() {
+    const uint32_t ptr = Gx().gxDataPtr;
+    return ptr ? Memory::Read32(ptr) : 0;
+}
+
+// GXFifoObj fields, as the display-list path uses them.
+constexpr uint32_t kFifoTop = 0x04;
+constexpr uint32_t kFifoSize = 0x08;
+constexpr uint32_t kFifoReadPtr = 0x14;
+constexpr uint32_t kFifoWritePtr = 0x18;
+constexpr uint32_t kFifoCount = 0x1C;
+constexpr uint32_t kFifoWrap = 0x20;
 constexpr uint32_t kMaxTluts = 20;
-constexpr uint32_t kGxDrawDoneFlagAddr = 0x803867d8;
 
 // --- External Declarations ---
 extern "C" void GXInitTexObjTlut(GXTexObj* obj, u32 tlut);

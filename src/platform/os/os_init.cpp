@@ -12,6 +12,7 @@
 
 #include "abi_bridge.h"
 #include "memory.h"
+#include "guest_globals.h"
 #include "hle_stubs.h"
 #include "ppc_runtime.h"
 #include "recomp_mod_loader.h"
@@ -123,22 +124,21 @@ extern "C" uint32_t __OSInitSTM_HLE_801ab848(CpuContext* ctx)
 
     RT_LOG(RT_TAG_OS) << "__OSInitSTM_HLE_801ab848 called: initializing STM state" << std::endl;
 
-    // R13 (SDA2) holds the base for small data variables
-    const uint32_t r13 = cpu->gpr[13];
-    if (r13 == 0) {
-         RT_LOG(RT_TAG_OS) << "__OSInitSTM: Warning - R13 is 0, cannot write state." << std::endl;
-         return 0;
+    // This game's OSStateTM variables (guest_globals.h).
+    const uint32_t stmReady = RuntimeGuestGlobals::find("os.StmReady");
+    const uint32_t stmImDesc = RuntimeGuestGlobals::find("os.StmImDesc");
+    const uint32_t stmEhDesc = RuntimeGuestGlobals::find("os.StmEhDesc");
+    if (stmReady == 0 || stmImDesc == 0 || stmEhDesc == 0) {
+        RT_LOG(RT_TAG_OS) << "__OSInitSTM: os.StmReady/StmImDesc/StmEhDesc not named for this game"
+                          << std::endl;
+        return 0;
     }
-
-    // Offsets from disassembly: r13-0x62cc=STM_Initialized, r13-0x62c8=/dev/stm/immediate,
-    // r13-0x62c4=/dev/stm/eventhook.
     try {
-        // Mark STM as initialized
-        ::Memory::Write32(r13 - 0x62ccu, 1);
+        ::Memory::Write32(stmReady, 1);
 
         // Fake non-zero handles so callers' zero-checks pass.
-        ::Memory::Write32(r13 - 0x62c8u, 0x00535401); // "ST\x01"
-        ::Memory::Write32(r13 - 0x62c4u, 0x00535402); // "ST\x02"
+        ::Memory::Write32(stmImDesc, 0x00535401); // "ST\x01"
+        ::Memory::Write32(stmEhDesc, 0x00535402); // "ST\x02"
 
         // Default Power/Reset callback pointers are left unset; safe since we never fire
         // the STM hardware interrupt that would invoke them.

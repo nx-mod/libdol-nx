@@ -6016,6 +6016,15 @@
    "registration": "VIConfigure_HLE_801b9f6c"
   },
   {
+   "name": "VIConfigure",
+   "build": "rvl.vi@2007-08-08",
+   "size": 1764,
+   "start": "94d9cc6bf795124c",
+   "body": "9e88794ffe10f211",
+   "signed_from": "WR9E",
+   "registration": "VIConfigure_HLE_801b9f6c"
+  },
+  {
    "name": "VIFlush",
    "build": "any",
    "size": 276,

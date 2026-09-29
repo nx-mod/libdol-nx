@@ -32,7 +32,7 @@ extern "C" void GX_HLE_FIFO_Write8(uint8_t val) { HleFifoWrite(static_cast<u32>(
 
 extern "C" void GX__SetDrawSync_8016ed08(uint32_t token) {
     (void)token;
-    try { uint32_t gd = Memory::Read32(kGXDataPtrAddr); if (gd) {
+    try { uint32_t gd = GuestGxData(); if (gd) {
         if (Memory::Read32(gd + 0x5FCu)) GX__SetDirtyState_8016ee78();
         Memory::Write16(gd + 2, 0);
     } } catch (...) {}
@@ -43,15 +43,15 @@ PPC_NATIVE_OVERRIDE_VOID(8016e9fc, GX__SetDrawSync_8016e9fc, (uint32_t token), (
 
 extern "C" void GX__FinishInterruptHandler_8016ed94() {
     try {
-        uint32_t gd = Memory::Read32(kGXDataPtrAddr);
+        uint32_t gd = GuestGxData();
         if (gd) Memory::Write16(gd + 0x0Au, static_cast<uint16_t>(Memory::Read16(gd + 0x0Au) | 0x0008u));
-        Memory::Write8(kGxDrawDoneFlagAddr, 1);
+        if (Gx().drawDone) Memory::Write8(Gx().drawDone, 1);
     } catch (...) {}
 }
 PPC_NATIVE_OVERRIDE_VOID(8016ed94, GX__FinishInterruptHandler_8016ed94, (), ());
 
 extern "C" void GX__DrawDone_8016eab0() {
-    try { Memory::Write8(kGxDrawDoneFlagAddr, 0); } catch (...) {}
+    if (Gx().drawDone) try { Memory::Write8(Gx().drawDone, 0); } catch (...) {}
     SWITCH_PHASE("GX__DrawDone");
 #if defined(__SWITCH__)
     const auto drawDoneStart = std::chrono::steady_clock::now();
@@ -70,7 +70,7 @@ extern "C" void GX__DrawDone_8016eab0() {
 PPC_NATIVE_OVERRIDE_VOID(8016eab0, GX__DrawDone_8016eab0, (), ());
 
 extern "C" void GX__PixModeSync_8016eb70() {
-    try { uint32_t gd = Memory::Read32(kGXDataPtrAddr); if (gd) Memory::Write16(gd + 2, 0); } catch (...) {}
+    try { uint32_t gd = GuestGxData(); if (gd) Memory::Write16(gd + 2, 0); } catch (...) {}
     GXPixModeSync();
 }
 PPC_NATIVE_OVERRIDE_VOID(8016eb70, GX__PixModeSync_8016eb70, (), ());
@@ -88,7 +88,7 @@ PPC_NATIVE_OVERRIDE_VOID(8016b720, __GX__InitRevisionBits_8016b720, (), ());
 
 extern "C" void __GX__SetSUTexRegs_801712f0() {
     __GXSetSUTexRegs();
-    try { uint32_t gd = Memory::Read32(kGXDataPtrAddr); if (gd) Memory::Write16(gd + 2, 0); } catch (...) {}
+    try { uint32_t gd = GuestGxData(); if (gd) Memory::Write16(gd + 2, 0); } catch (...) {}
 }
 PPC_NATIVE_OVERRIDE_VOID(801712f0, __GX__SetSUTexRegs_801712f0, (), ());
 
@@ -100,7 +100,7 @@ PPC_NATIVE_OVERRIDE_VOID(80171458, __GX__SetTmemConfig_80171458, (uint32_t mode)
 
 extern "C" void __GX__FlushTextureState_80171c28() {
     // BP texture state flush - Aurora handles via API
-    try { uint32_t gd = Memory::Read32(kGXDataPtrAddr); if (gd) Memory::Write16(gd + 2, 0); } catch (...) {}
+    try { uint32_t gd = GuestGxData(); if (gd) Memory::Write16(gd + 2, 0); } catch (...) {}
 }
 PPC_NATIVE_OVERRIDE_VOID(80171c28, __GX__FlushTextureState_80171c28, (), ());
 
@@ -111,7 +111,7 @@ PPC_NATIVE_OVERRIDE_VOID(80171c28, __GX__FlushTextureState_80171c28, (), ());
 extern "C" void GX__SetDispCopyFrame2Field_8016f5f8(uint32_t f) {
     GXSetDispCopyFrame2Field(f);
     try {
-        const uint32_t gd = Memory::Read32(kGXDataPtrAddr);
+        const uint32_t gd = GuestGxData();
         if (gd) {
             Memory::Write32(gd + 0x23Cu, (Memory::Read32(gd + 0x23Cu) & 0xFFFFCFFFu) | ((f & 3u) << 12));
             Memory::Write32(gd + 0x24Cu, Memory::Read32(gd + 0x24Cu) & 0xFFFFCFFFu);
@@ -123,7 +123,7 @@ PPC_NATIVE_OVERRIDE_VOID(8016f5f8, GX__SetDispCopyFrame2Field_8016f5f8, (uint32_
 extern "C" void GX__SetCopyClamp_8016f618(uint32_t c) {
     GXSetCopyClamp(static_cast<GXFBClamp>(c));
     try {
-        const uint32_t gd = Memory::Read32(kGXDataPtrAddr);
+        const uint32_t gd = GuestGxData();
         if (gd) {
             const uint32_t clamp = c & 3u;
             Memory::Write32(gd + 0x23Cu, (Memory::Read32(gd + 0x23Cu) & 0xFFFFFFFCu) | clamp);
@@ -136,7 +136,7 @@ PPC_NATIVE_OVERRIDE_VOID(8016f618, GX__SetCopyClamp_8016f618, (uint32_t c), (c))
 extern "C" void GX__ClearBoundingBox_8016fecc() {
     GXClearBoundingBox();
     try {
-        const uint32_t gd = Memory::Read32(kGXDataPtrAddr);
+        const uint32_t gd = GuestGxData();
         if (gd) Memory::Write16(gd + 2, 0);
     } catch (...) {}
 }
@@ -147,7 +147,7 @@ PPC_NATIVE_OVERRIDE_VOID(8016fecc, GX__ClearBoundingBox_8016fecc, (), ());
 // ============================================================================
 
 extern "C" void GX__SetDirtyState_8016ee78() {
-    try { uint32_t gd = Memory::Read32(kGXDataPtrAddr); if (gd) Memory::Write32(gd + 0x5FCu, 0); } catch (...) {}
+    try { uint32_t gd = GuestGxData(); if (gd) Memory::Write32(gd + 0x5FCu, 0); } catch (...) {}
 }
 PPC_NATIVE_OVERRIDE_VOID(8016ee78, GX__SetDirtyState_8016ee78, (), ());
 

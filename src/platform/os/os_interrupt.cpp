@@ -12,6 +12,7 @@
 
 #include "abi_bridge.h"
 #include "memory.h"
+#include "guest_globals.h"
 #include "hle_stubs.h"
 #include "ppc_runtime.h"
 #include "runtime_log.h"
@@ -279,14 +280,16 @@ extern "C" uint32_t OSSetPowerCallback_801ab75c(CpuContext* ctx)
     if (!cpu) return 0;
 
     const uint32_t newCallback = cpu->gpr[3];
-    const uint32_t r13 = cpu->gpr[13];
 
-    // Assembly defines the default callback address as (0x801b0000 - 0x43f4)
-    constexpr uint32_t kDefaultCallbackAddr = 0x801b0000u - 0x43f4u; // 0x801abc0c
-
-    // Offsets from R13 (SDA2)
-    const uint32_t kCallbackPtrAddr = r13 - 0x62b8u;
-    const uint32_t kHandlerActiveAddr = r13 - 0x62c0u;
+    // This game's OSStateTM variables (guest_globals.h).
+    const uint32_t kDefaultCallbackAddr = RuntimeGuestGlobals::find("os.__OSDefaultPowerCallback");
+    const uint32_t kCallbackPtrAddr = RuntimeGuestGlobals::find("os.PowerCallback");
+    const uint32_t kHandlerActiveAddr = RuntimeGuestGlobals::find("os.StmEhRegistered");
+    if (kCallbackPtrAddr == 0 || kHandlerActiveAddr == 0) {
+        RT_LOG(RT_TAG_OS) << "OSSetPowerCallback: os.PowerCallback/os.StmEhRegistered not named "
+                             "for this game; callback not stored" << std::endl;
+        return 0;
+    }
 
     RT_LOG(RT_TAG_OS) << "OSSetPowerCallback_801ab75c called: newCB=0x"
               << std::hex << newCallback << std::dec << std::endl;
@@ -396,8 +399,12 @@ static bool GuestFunctionStartsHere(uint32_t address)
 extern "C" int32_t IPCCltInit_80193478(CpuContext* ctx)
 {
     // Sets the IPC buffer lo/hi and the init flag from __OSGetIPCBufferLo/Hi.
+    // The game's own IPCInit when it names one; otherwise where the module layout puts it.
     const uint32_t cltInit = ::NativeBindings::Resolve(kIpcCltInitReference);
-    const uint32_t ipcInit = cltInit != 0 ? cltInit - kIpcInitBackFromCltInit : 0;
+    uint32_t ipcInit = RuntimeGuestGlobals::find("ipc.IPCInit");
+    if (ipcInit == 0 && cltInit != 0) {
+        ipcInit = cltInit - kIpcInitBackFromCltInit;
+    }
     if (ipcInit == 0 || !GuestFunctionStartsHere(ipcInit)) {
         RT_LOG(RT_TAG_OS) << "IPCCltInit: this game's IPCInit is not where the module layout puts"
                              " it (derived 0x" << std::hex << ipcInit << std::dec
@@ -409,17 +416,16 @@ extern "C" int32_t IPCCltInit_80193478(CpuContext* ctx)
                       << std::dec << " for buffer setup" << std::endl;
     InvokeIndirectCpu(ipcInit, ctx);
 
-    // Advance the buffer lo pointer by 0x1000 (iosHeap size), matching real IPCCltInit.
-    // The pointer is named by a small-data offset, which every game chooses for
-    // itself, so this is only safe where the offset is the one it was read from.
-    if (ipcInit != kIpcInitReference) {
-        RT_LOG(RT_TAG_OS) << "IPCCltInit: iosHeap reserve skipped; this game keeps its IPC buffer"
-                             " pointer somewhere else" << std::endl;
+    // Advance IPCBufferLo by 0x1000 (iosHeap size), matching real IPCCltInit.
+    const uint32_t bufferLoAddr = RuntimeGuestGlobals::find("ipc.IPCBufferLo");
+    if (bufferLoAddr == 0) {
+        RT_LOG(RT_TAG_OS) << "IPCCltInit: iosHeap reserve skipped; ipc.IPCBufferLo not named"
+                             " for this game" << std::endl;
         return 0;
     }
-    uint32_t bufferLo = Memory::Read32(ctx->gpr[13] + -25620); // 0x803867EC at r13-0x6414
+    uint32_t bufferLo = Memory::Read32(bufferLoAddr);
     uint32_t newBufLo = bufferLo + 0x1000; // Advance by 4KB for iosHeap
-    Memory::Write32(ctx->gpr[13] + -25620, newBufLo);
+    Memory::Write32(bufferLoAddr, newBufLo);
 
     RT_LOG(RT_TAG_OS) << "IPCCltInit: IPC buffer lo advanced from 0x" << std::hex << bufferLo
               << " to 0x" << newBufLo << std::dec << std::endl;

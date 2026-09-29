@@ -69,7 +69,7 @@ PPC_NATIVE_OVERRIDE_VOID(801733e0, GX__GetViewportv_801733e0, (uint32_t oa), (oa
 extern "C" void GX__SetZScaleOffset_80173400(float s, float o) {
     GXSetZScaleOffset(s, o);
     try {
-        const uint32_t gd = Memory::Read32(kGXDataPtrAddr);
+        const uint32_t gd = GuestGxData();
         if (gd) {
             constexpr float kZ24Scale = 16777215.0f;
             Memory::WriteFloat32(gd + 0x55Cu, kZ24Scale * o);
@@ -83,7 +83,7 @@ PPC_NATIVE_OVERRIDE_VOID(80173400, GX__SetZScaleOffset_80173400, (float s, float
 extern "C" void GX__SetScissorBoxOffset_801734e0(int32_t xo, int32_t yo) {
     GXSetScissorBoxOffset(xo, yo);
     try {
-        const uint32_t gd = Memory::Read32(kGXDataPtrAddr);
+        const uint32_t gd = GuestGxData();
         if (gd) Memory::Write16(gd + 2, 0);
     } catch (...) {}
 }
@@ -95,7 +95,7 @@ PPC_NATIVE_OVERRIDE_VOID(801734e0, GX__SetScissorBoxOffset_801734e0, (int32_t xo
 
 extern "C" void GX__SetScissor_80173430(uint32_t l, uint32_t t, uint32_t w, uint32_t h) {
     g_scissorLeft=(int32_t)l; g_scissorTop=(int32_t)t; g_scissorWidth=(int32_t)w; g_scissorHeight=(int32_t)h;
-    try { uint32_t gd=Memory::Read32(kGXDataPtrAddr); if(gd){
+    try { uint32_t gd=GuestGxData(); if(gd){
         uint32_t r148=Memory::Read32(gd+0x148), r14c=Memory::Read32(gd+0x14c);
         uint32_t sx=g_scissorLeft+0x156, sy=g_scissorTop+0x156, ex=sx+g_scissorWidth-1, ey=sy+g_scissorHeight-1;
         Memory::Write32(gd+0x148, ((sx<<12)&0x7ff000u)|(sy&0x7ffu)|(r148&0xff800800u));

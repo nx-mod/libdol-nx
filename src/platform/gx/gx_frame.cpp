@@ -18,12 +18,11 @@ void EndDisplayListRecording() {
         return;
     }
     g_dlRecordState.active = false;
-    // Publish the shadow cursor/count so the guest-visible fifo object at
-    // kDlFifoAddr matches exactly what the per-write guest updates produced
-    // before the state was cached runtime-side.
-    try {
-        Memory::Write32(kDlWritePtrAddr, g_dlRecordState.writePtr);
-        Memory::Write32(kDlCountAddr, g_dlRecordState.count);
+    // Publish the shadow cursor/count to the guest's DisplayListFifo, as the
+    // per-write guest updates would have left it.
+    if (const uint32_t fifo = Gx().displayListFifo) try {
+        Memory::Write32(fifo + kFifoReadPtr, g_dlRecordState.writePtr);
+        Memory::Write32(fifo + kFifoCount, g_dlRecordState.count);
     } catch (const Memory::AccessViolation&) {
     }
 }
@@ -54,7 +53,7 @@ void WriteDisplayListData(uint32_t val, uint32_t sizeBytes) {
             // The wrap flag is read straight out of guest memory by
             // GX__EndDisplayList_80172eb4, so keep writing it through. Wrapping
             // is a once-per-overflow event, not a per-write cost.
-            Memory::Write8(kDlFifoAddr + kDlWrapFlagOffset, 1);
+            if (Gx().displayListFifo) Memory::Write8(Gx().displayListFifo + kFifoWrap, 1);
             nextPtr = dl.base + (nextPtr - end);
         }
 

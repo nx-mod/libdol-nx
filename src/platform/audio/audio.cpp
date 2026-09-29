@@ -4,6 +4,7 @@
 #include "ppc_runtime.h"
 #include "audio_backend.h"
 #include "ax_dsp.h"
+#include "ax_internal.h"
 #include "music_attenuation.h"
 #include "runtime_log.h"
 #include "mkw_thread_local.h"
@@ -46,10 +47,6 @@ namespace {
 constexpr uint32_t kDefaultSampleRate = 32000u;
 constexpr uint32_t kAudioChannels = 2u;
 constexpr uint32_t kBytesPerSample = 2u;
-constexpr uint32_t kAIInitializedAddr = 0x80386448u;
-constexpr uint32_t kAICallbackBusyAddr = 0x8038644Cu;
-constexpr uint32_t kAICallbackStackSwitchAddr = 0x8038647Cu;
-constexpr uint32_t kAIDmaCallbackAddr = 0x80386480u;
 
 // Max completed 3 ms DMA blocks delivered per tick. This has to cover a whole frame:
 // in a race the game rarely idles, so the tick runs about once per frame, and at the
@@ -207,7 +204,7 @@ extern "C" void AIInit_801240b0(uint32_t callback_stack_switch)
 {
     const uint32_t rate = kDefaultSampleRate;
     uint32_t initialized = 0;
-    const bool alreadyInitialized = Memory::TryRead32(kAIInitializedAddr, initialized) && initialized == 1u;
+    const bool alreadyInitialized = AxDspHle::TryReadNamed32(AxDspHle::Audio().aiInitFlag) == 1u;
     {
         std::lock_guard<std::mutex> lock(g_ai.mutex);
         g_ai.sampleRate = rate;
@@ -218,10 +215,11 @@ extern "C" void AIInit_801240b0(uint32_t callback_stack_switch)
         }
     }
     if (!alreadyInitialized) {
-        Memory::TryWrite32(kAIDmaCallbackAddr, 0);
-        Memory::TryWrite32(kAICallbackBusyAddr, 0);
-        Memory::TryWrite32(kAICallbackStackSwitchAddr, callback_stack_switch);
-        Memory::TryWrite32(kAIInitializedAddr, 1);
+        const auto& a = AxDspHle::Audio();
+        AxDspHle::TryWriteNamed32(a.aidCallback, 0);
+        AxDspHle::TryWriteNamed32(a.aidActive, 0);
+        AxDspHle::TryWriteNamed32(a.aiCallbackStack, callback_stack_switch);
+        AxDspHle::TryWriteNamed32(a.aiInitFlag, 1);
     }
     if (!EnsureAudioBackend(rate)) {
         ReportAudioProblem("AIInit", "audio backend init failed");
@@ -235,7 +233,7 @@ PPC_NATIVE_OVERRIDE_VOID(801240b0, AIInit_801240b0, (uint32_t callback_stack_swi
 extern "C" uint32_t AICheckInit_80124094()
 {
     uint32_t initialized = 0;
-    Memory::TryRead32(kAIInitializedAddr, initialized);
+    initialized = AxDspHle::TryReadNamed32(AxDspHle::Audio().aiInitFlag);
     return initialized;
 }
 REGISTER_NATIVE_FUNCTION(0x80124094, AICheckInit_80124094);
@@ -295,13 +293,13 @@ PPC_NATIVE_OVERRIDE_VOID(80123fcc, AIInitDMA_80123fcc, (uint32_t start_addr, uin
 
 
 
-// AIRegisterDMACallback stores the callback in the guest global at 0x80386480.
+// AIRegisterDMACallback stores the callback in the guest's __AID_Callback.
 // Returns the old callback pointer.
 extern "C" uint32_t AIRegisterDMACallback_80123f88(uint32_t callback)
 {
     uint32_t old_callback = 0;
-    Memory::TryRead32(kAIDmaCallbackAddr, old_callback);
-    Memory::TryWrite32(kAIDmaCallbackAddr, callback);
+    old_callback = AxDspHle::TryReadNamed32(AxDspHle::Audio().aidCallback);
+    AxDspHle::TryWriteNamed32(AxDspHle::Audio().aidCallback, callback);
     {
         std::lock_guard<std::mutex> lock(g_ai.mutex);
         g_ai.callback = callback;
@@ -511,9 +509,9 @@ void Audio_HLE_Tick(CpuContext* ctx, uint32_t deltaMicros)
                     ReportAudioProblem("Audio", "AI DMA callback not registered; skipping");
                 }
             } else {
-                Memory::TryWrite32(kAICallbackBusyAddr, 1);
+                AxDspHle::TryWriteNamed32(AxDspHle::Audio().aidActive, 1);
                 AUDIO_PHASE(g_audioGuestUs, InvokeIndirectCpu(callback, cpu));
-                Memory::TryWrite32(kAICallbackBusyAddr, 0);
+                AxDspHle::TryWriteNamed32(AxDspHle::Audio().aidActive, 0);
                 AUDIO_PHASE(g_audioDeferredUs, AxDspHle::ServiceDeferredCallbacks());
                 g_audioBlocks.fetch_add(1, std::memory_order_relaxed);
             }

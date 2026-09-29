@@ -6,6 +6,7 @@
 #include "aurora_events.h"
 #include "settings_overlay.h"
 #include "fiber_manager.h"
+#include "guest_globals.h"
 #include "platform/host_platform.h"
 #include "runtime_log.h"
 
@@ -232,23 +233,33 @@ std::mutex g_viMutex;
 ViState g_vi;
 
 
-// Guest-side state addresses used by the SDK's VI globals.
-constexpr uint32_t kViInitializedFlagAddr   = 0x80386b38;
-constexpr uint32_t kViTvFormatAddr          = 0x80386ba8;
-constexpr uint32_t kViRenderWidthAddr       = 0x80350864;
-constexpr uint32_t kViRenderHeightAddr      = 0x80350866;
-constexpr uint32_t kViXfbWidthAddr          = 0x80350872;
-constexpr uint32_t kViXfbHeightAddr         = 0x8035087c;
-constexpr uint32_t kViRetraceCountAddr      = 0x80386be4; // matches VIWaitForRetrace/handler
-constexpr uint32_t kViTimingGuardAddr       = 0x80386b44;
-constexpr uint32_t kViPreRetraceCallback    = 0x80386bb8;
-constexpr uint32_t kViPostRetraceCallback   = 0x80386bb4;
-constexpr uint32_t kViNextFrameBufferAddr   = 0x80386ba0;
-constexpr uint32_t kViNextFrameBufferHwAddr = 0x80350890;
-constexpr uint32_t kViRetraceQueueAddr      = 0x80386bc0; // Thread queue for VIWaitForRetrace
+// This game's copy of the SDK's VI variables (guest_globals.h). 0 where the
+// game did not say: the runtime keeps its own state and skips the mirror.
+struct ViGlobals {
+    uint32_t isInitialized = RuntimeGuestGlobals::find("vi.IsInitialized");
+    uint32_t timingGuard = RuntimeGuestGlobals::find("vi.timingGuard");
+    uint32_t currTvMode = RuntimeGuestGlobals::find("vi.CurrTvMode");
+    uint32_t horVer = RuntimeGuestGlobals::find("vi.HorVer");
+    uint32_t nextFrameBuffer = RuntimeGuestGlobals::find("vi.NextBufAddr");
+    uint32_t preCB = RuntimeGuestGlobals::find("vi.PreCB");
+    uint32_t postCB = RuntimeGuestGlobals::find("vi.PostCB");
+    uint32_t retraceQueue = RuntimeGuestGlobals::find("vi.retraceQueue");
+    uint32_t retraceCount = RuntimeGuestGlobals::find("vi.retraceCount");
+    // EGG::BaseSystem::sSystem: EGG games' post-retrace callback reads it, so
+    // it must be set before that callback runs. Games without EGG have none.
+    uint32_t eggSystem = RuntimeGuestGlobals::find("egg.BaseSystem_sSystem");
+};
+const ViGlobals& Vi() {
+    static const ViGlobals globals;
+    return globals;
+}
 
-// EGG::BaseSystem::sSystem pointer - must be non-null before post-retrace callback is valid
-constexpr uint32_t kEggSSystemAddr = 0x80386F60;
+// Fields of the SDK's HorVer struct.
+constexpr uint32_t kHorVerDispSizeX = 0x04;
+constexpr uint32_t kHorVerDispSizeY = 0x06;
+constexpr uint32_t kHorVerFbSizeX = 0x12;
+constexpr uint32_t kHorVerFbSizeY = 0x1C;
+constexpr uint32_t kHorVerNextBuffer = 0x30;
 
 std::chrono::microseconds IntervalForFormat(uint32_t tvFormat) {
     // NTSC-ish defaults to 60 Hz; PAL uses 50 Hz.
@@ -320,19 +331,22 @@ void ViSetR3(CpuContext* ctx, uint32_t value)
 
 void WriteGuestStateLocked() {
     try {
-        Memory::Write8(kViInitializedFlagAddr, 1);
-        Memory::Write8(kViTimingGuardAddr, 1);
-        Memory::Write32(kViTvFormatAddr, g_vi.tvFormat);
-        Memory::Write16(kViRenderWidthAddr, static_cast<uint16_t>(g_vi.renderWidth));
-        Memory::Write16(kViRenderHeightAddr, static_cast<uint16_t>(g_vi.renderHeight));
-        Memory::Write16(kViXfbWidthAddr, static_cast<uint16_t>(g_vi.xfbWidth));
-        Memory::Write16(kViXfbHeightAddr, static_cast<uint16_t>(g_vi.xfbHeight));
-        Memory::Write32(kViRetraceCountAddr, g_vi.retraceCount);
-        Memory::Write32(kViPreRetraceCallback, g_vi.preRetraceCallback);
-        Memory::Write32(kViPostRetraceCallback, g_vi.postRetraceCallback);
+        const ViGlobals& vi = Vi();
+        if (vi.isInitialized) Memory::Write8(vi.isInitialized, 1);
+        if (vi.timingGuard) Memory::Write8(vi.timingGuard, 1);
+        if (vi.currTvMode) Memory::Write32(vi.currTvMode, g_vi.tvFormat);
+        if (vi.horVer) {
+            Memory::Write16(vi.horVer + kHorVerDispSizeX, static_cast<uint16_t>(g_vi.renderWidth));
+            Memory::Write16(vi.horVer + kHorVerDispSizeY, static_cast<uint16_t>(g_vi.renderHeight));
+            Memory::Write16(vi.horVer + kHorVerFbSizeX, static_cast<uint16_t>(g_vi.xfbWidth));
+            Memory::Write16(vi.horVer + kHorVerFbSizeY, static_cast<uint16_t>(g_vi.xfbHeight));
+            Memory::Write32(vi.horVer + kHorVerNextBuffer, g_vi.pendingNextFrameBuffer);
+        }
+        if (vi.retraceCount) Memory::Write32(vi.retraceCount, g_vi.retraceCount);
+        if (vi.preCB) Memory::Write32(vi.preCB, g_vi.preRetraceCallback);
+        if (vi.postCB) Memory::Write32(vi.postCB, g_vi.postRetraceCallback);
         // Write PENDING frame buffer to guest memory so SDK code sees the queued value
-        Memory::Write32(kViNextFrameBufferAddr, g_vi.pendingNextFrameBuffer);
-        Memory::Write32(kViNextFrameBufferHwAddr, g_vi.pendingNextFrameBuffer);
+        if (vi.nextFrameBuffer) Memory::Write32(vi.nextFrameBuffer, g_vi.pendingNextFrameBuffer);
     } catch (const ::Memory::AccessViolation& e) {
         LogMemoryError(RT_TAG_VI, "WriteGuestStateLocked", e);
     }
@@ -485,8 +499,8 @@ void AdvanceRetrace(CpuContext* ctx, Clock::time_point retraceStamp, bool servic
         }
     }
 #endif
-    if (ctx) {
-        ctx->gpr[3] = kViRetraceQueueAddr;
+    if (ctx && Vi().retraceQueue) {
+        ctx->gpr[3] = Vi().retraceQueue;
         OSWakeupThread_HLE_801aaaa4(ctx);
     }
 
@@ -516,10 +530,9 @@ void AdvanceRetrace(CpuContext* ctx, Clock::time_point retraceStamp, bool servic
 #endif
         }
         if (postCb) {
-            // Guard: only invoke callback if sSystem is initialized
-            // The callback dereferences sSystem which must be non-null
-            uint32_t sSystemPtr = Memory::Read32(kEggSSystemAddr);
-            if (sSystemPtr != 0) {
+            // An EGG game's callback dereferences sSystem: wait until it is set.
+            const uint32_t eggSystem = Vi().eggSystem;
+            if (eggSystem == 0 || Memory::Read32(eggSystem) != 0) {
 #if defined(__SWITCH__)
                 SwitchRetraceCallbackTrace("postCb enter", postCb);
             SwitchGuardCallback(postCb);
@@ -1269,17 +1282,14 @@ extern "C" void VIFlush_HLE_801ba9a4(CpuContext* ctx)
         EnsureInitializedLocked();
 
         if (g_vi.pendingNextFrameBuffer == 0) {
+            const ViGlobals& vi = Vi();
             try {
-                guestNextFb = Memory::Read32(kViNextFrameBufferAddr);
+                if (vi.nextFrameBuffer) guestNextFb = Memory::Read32(vi.nextFrameBuffer);
+                if (guestNextFb == 0 && vi.horVer) {
+                    guestNextFb = Memory::Read32(vi.horVer + kHorVerNextBuffer);
+                }
             } catch (const Memory::AccessViolation&) {
                 guestNextFb = 0;
-            }
-            if (guestNextFb == 0) {
-                try {
-                    guestNextFb = Memory::Read32(kViNextFrameBufferHwAddr);
-                } catch (const Memory::AccessViolation&) {
-                    guestNextFb = 0;
-                }
             }
             if (guestNextFb != 0) {
                 g_vi.pendingNextFrameBuffer = guestNextFb;
@@ -1413,8 +1423,10 @@ PPC_NATIVE_OVERRIDE_VOID(801BAC48, VIGetCurrentLine_HLE_801bac48, (CpuContext* c
 extern "C" void VIWaitForRetrace_HLE_801b99ec(CpuContext* ctx)
 {
     CpuContext* cpu = ctx ? ctx : &GetPersistentCpuContext();
-    
-    if (Fiber::GuestFiberManager::IsInitialized()) {
+
+    // Sleeping the guest thread needs the game's retrace queue; without it,
+    // wait on the host clock below instead.
+    if (Fiber::GuestFiberManager::IsInitialized() && Vi().retraceQueue) {
         const int32_t irqState = OS__DisableInterrupts_801a65ac();
         uint32_t retraceCount = 0;
         {
@@ -1450,7 +1462,7 @@ extern "C" void VIWaitForRetrace_HLE_801b99ec(CpuContext* ctx)
         }
 
         do {
-            cpu->gpr[3] = kViRetraceQueueAddr;
+            cpu->gpr[3] = Vi().retraceQueue;
             OSSleepThread_HLE_801aa9b8(cpu);
 #if defined(__SWITCH__)
             {

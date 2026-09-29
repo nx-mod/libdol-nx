@@ -20,7 +20,24 @@ std::atomic<bool> g_loggedMixAddressOutOfRange{false};
 
 } // namespace
 
-uint32_t g_axTaskPtr = kAxDspTaskAddr;
+uint32_t g_axTaskPtr = 0;
+
+const AudioGlobals& Audio() {
+    using RuntimeGuestGlobals::find;
+    static const AudioGlobals globals{
+        find("ax.__AXDSPTask"), find("ax.axDspSlave"), find("ax.__AXDramImage"),
+        find("ax.__AXDSPInitCallback"), find("ax.__AXDSPResumeCallback"),
+        find("ax.__AXDSPDoneCallback"), find("ax.__AXDSPRequestCallback"),
+        find("ax.axDspInitVector"), find("ax.axDspResumeVector"), find("ax.axDspSlaveLength"),
+        find("ax.__AXDSPInitFlag"), find("ax.__AXDSPDoneFlag"),
+        find("dsp.__DSP_init_flag"), find("dsp.__DSP_rude_task_pending"),
+        find("dsp.__DSP_rude_task"), find("dsp.__DSP_tmp_task"),
+        find("dsp.__DSP_last_task"), find("dsp.__DSP_first_task"), find("dsp.__DSP_curr_task"),
+        find("ai.__AI_init_flag"), find("ai.__AID_Active"), find("ai.__CallbackStack"),
+        find("ai.__AID_Callback"),
+    };
+    return globals;
+}
 
 // The state the worker-safe accessors in ax_internal.h resolve against; the
 // invariant they preserve is documented there.
@@ -66,16 +83,17 @@ uint32_t ReadGuestU32OrZero(uint32_t addr) {
 }
 
 void MarkDspInitialized() {
-    Memory::TryWrite32(kDspInitializedAddr, 1);
+    TryWriteNamed32(Audio().dspInitFlag, 1);
 }
 
 void ResetDspTaskGlobals() {
-    Memory::TryWrite32(kDspAssertPendingAddr, 0);
-    Memory::TryWrite32(kDspAssertTaskAddr, 0);
-    Memory::TryWrite32(0x80386618u, 0);
-    Memory::TryWrite32(kDspCurrentTaskAddr, 0);
-    Memory::TryWrite32(kDspFirstTaskAddr, 0);
-    Memory::TryWrite32(kDspRunningTaskAddr, 0);
+    const AudioGlobals& a = Audio();
+    TryWriteNamed32(a.dspRudeTaskPending, 0);
+    TryWriteNamed32(a.dspRudeTask, 0);
+    TryWriteNamed32(a.dspTmpTask, 0);
+    TryWriteNamed32(a.dspLastTask, 0);
+    TryWriteNamed32(a.dspFirstTask, 0);
+    TryWriteNamed32(a.dspCurrTask, 0);
 }
 
 void LinkSingleDspTask(uint32_t taskPtr) {
@@ -83,9 +101,9 @@ void LinkSingleDspTask(uint32_t taskPtr) {
         return;
     }
     g_axTaskPtr = taskPtr;
-    Memory::TryWrite32(kDspCurrentTaskAddr, taskPtr);
-    Memory::TryWrite32(kDspFirstTaskAddr, taskPtr);
-    Memory::TryWrite32(kDspRunningTaskAddr, taskPtr);
+    TryWriteNamed32(Audio().dspLastTask, taskPtr);
+    TryWriteNamed32(Audio().dspFirstTask, taskPtr);
+    TryWriteNamed32(Audio().dspCurrTask, taskPtr);
     Memory::TryWrite32(taskPtr + 0x38u, 0);
     Memory::TryWrite32(taskPtr + 0x3cu, 0);
 }

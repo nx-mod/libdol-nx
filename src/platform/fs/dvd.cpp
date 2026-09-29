@@ -789,9 +789,20 @@ extern "C" const char* DVDResolveHostPathForTest(const char* dvdPath)
 // High-Level DVD API
 // ============================================================================
 
+// Write to one of this game's DVD variables (guest_globals.h), if it named it.
+static void WriteDvd32(const char* name, uint32_t value)
+{
+    if (const uint32_t addr = RuntimeGuestGlobals::find(name)) Memory::Write32(addr, value);
+}
+static void WriteDvd8(const char* name, uint8_t value)
+{
+    if (const uint32_t addr = RuntimeGuestGlobals::find(name)) Memory::Write8(addr, value);
+}
+
 static void InitDvdWaitingQueues()
 {
-    constexpr uint32_t kQueueBase = 0x80343230;
+    const uint32_t kQueueBase = RuntimeGuestGlobals::find("dvd.WaitingQueue");
+    if (kQueueBase == 0) return;
     for (uint32_t i = 0; i < 4; ++i) {
         const uint32_t queue = kQueueBase + (i * 8);
         Memory::Write32(queue + 0, queue);
@@ -805,12 +816,12 @@ static void CompleteDvdCancelState()
 
     // These are the SDK DVD globals used by DVDCancelAll/__DVDPrepareReset.
     // The actual drive work is HLE'd, so complete pending cancel/reset waits.
-    Memory::Write32(0x80386664, 0); // Canceling
-    Memory::Write32(0x80386668, 0); // ResumeFromHere
-    Memory::Write32(0x80386670, 0); // PausingFlag
-    Memory::Write32(0x8038667C, 1); // CancelAllSync complete
-    Memory::Write32(0x803866A8, 1); // PrepareReset complete
-    Memory::Write32(0x803866F0, 0); // executing command block
+    WriteDvd32("dvd.PauseFlag", 0);
+    WriteDvd32("dvd.PausingFlag", 0);
+    WriteDvd32("dvd.Canceling", 0);
+    WriteDvd32("dvd.cancelAllSyncDone", 1);
+    WriteDvd32("dvd.prepareResetDone", 1);
+    WriteDvd32("dvd.executing", 0);
 }
 
 // 0x8015EA1C -> DVDInit
@@ -846,16 +857,16 @@ extern "C" void DVDInit_8015EA1C()
 
     // 1. Initialize Global Flags (Emulate OS state)
     // These addresses are standard OS globals for DVD context
-    Memory::Write8(0x80386724, 1);   // Contexts initialized
-    Memory::Write8(0x80386725, 1);   // LowInit called
-    Memory::Write32(0x80386720, 0);  // Current context index
-    Memory::Write8(0x803866a0, 1);   // DVDInit called flag
+    WriteDvd8("dvd.contextsInitialized", 1);
+    WriteDvd8("dvd.lowInitCalled", 1);
+    WriteDvd32("dvd.freeDvdContext", 0);
+    WriteDvd8("dvd.DVDInitialized", 1);
     CompleteDvdCancelState();
 
     // 2. Initialize DVD Context structures (prevent crashes in callbacks)
-    constexpr uint32_t kContextBase = 0x803434e0;
+    const uint32_t kContextBase = RuntimeGuestGlobals::find("dvd.dvdContexts");
     constexpr uint32_t kMagicValue = 0xFEEBDAED;
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; kContextBase != 0 && i < 4; i++) {
         uint32_t ctx = kContextBase + i * 0x20;
         Memory::Write32(ctx + 0x0C, kMagicValue);
         Memory::Write32(ctx + 0x10, i);
@@ -915,8 +926,8 @@ extern "C" void DVDInit_8015EA1C()
     BuildAndPublishRuntimeFst();
 
     // Initialize the translated DVD filesystem so it can use the published FST.
-    constexpr uint32_t kDvdFsInitAddress = 0x8015DF1C;
-    if (TranslatedFunctionRegistry::FindByAddressPtr(kDvdFsInitAddress)) {
+    const uint32_t kDvdFsInitAddress = RuntimeGuestGlobals::find("dvd.__DVDFSInit");
+    if (kDvdFsInitAddress != 0 && TranslatedFunctionRegistry::FindByAddressPtr(kDvdFsInitAddress)) {
         InvokeIndirectCpu(kDvdFsInitAddress, &GetPersistentCpuContext());
     }
 

@@ -19,6 +19,7 @@
 
 #include "abi_bridge.h"
 #include "memory.h"
+#include "generated/RuntimeConfig.h"
 #include "ppc_runtime.h"
 #include "recomp_mod_loader.h"
 #include "runtime_config.h"
@@ -492,7 +493,7 @@ void SystemBridge::SeedLowMemDefaults(const Memory::Config& config) {
     };
 
     std::vector<SeedEntry> entries;
-    constexpr uint32_t kMem1ArenaLoDefault = 0x80399180u;
+    constexpr uint32_t kMem1ArenaLoDefault = RuntimeConfig::ARENA_LO;
     uint32_t mem1ArenaHiDefault = 0x817f0520u;
     constexpr uint32_t kBusClockHz =
         static_cast<uint32_t>(TimeBaseContract::kBusClockHz);

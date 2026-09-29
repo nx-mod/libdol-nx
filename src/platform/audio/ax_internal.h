@@ -5,6 +5,7 @@
 
 #include "isa/big_endian.h"
 #include "memory.h"
+#include "guest_globals.h"
 
 #include <algorithm>
 #include <array>
@@ -78,21 +79,30 @@ constexpr uint32_t kMailReset = kTaskMailToDsp | 0x0002u;
 constexpr size_t kResamplingCoefficientCount = 0x800;
 constexpr uint32_t kMailContinue = kTaskMailToDsp | 0x0003u;
 constexpr uint32_t kAxSamplesPerFrame = 96u;
-constexpr uint32_t kAxDspTaskAddr = 0x802F81A0u;
-constexpr uint32_t kDspInitializedAddr = 0x80386608u;
-constexpr uint32_t kDspAssertPendingAddr = 0x80386610u;
-constexpr uint32_t kDspAssertTaskAddr = 0x80386614u;
-constexpr uint32_t kDspCurrentTaskAddr = 0x8038661Cu;
-constexpr uint32_t kDspFirstTaskAddr = 0x80386620u;
-constexpr uint32_t kDspRunningTaskAddr = 0x80386624u;
-constexpr uint32_t kAxIramMmemAddr = 0x8027F820u;
-constexpr uint32_t kAxDramMmemAddr = 0x802F8200u;
 constexpr uint32_t kAxDramLength = 64u;
 constexpr uint32_t kAxDramDspAddr = 3282u;
-constexpr uint32_t kAxInitCallback = 0x80126948u;
-constexpr uint32_t kAxResumeCallback = 0x80126954u;
-constexpr uint32_t kAxDoneCallback = 0x801269A8u;
-constexpr uint32_t kAxRequestCallback = 0x801269B8u;
+
+// This game's AX, DSP and AI variables (guest_globals.h); 0 where unknown.
+struct AudioGlobals {
+    uint32_t axDspTask, axDspSlave, axDramImage;
+    uint32_t axInitCallback, axResumeCallback, axDoneCallback, axRequestCallback;
+    uint32_t axDspInitVector, axDspResumeVector, axDspSlaveLength;
+    uint32_t axDspInitFlag, axDspDoneFlag;
+    uint32_t dspInitFlag, dspRudeTaskPending, dspRudeTask, dspTmpTask;
+    uint32_t dspLastTask, dspFirstTask, dspCurrTask;
+    uint32_t aiInitFlag, aidActive, aiCallbackStack, aidCallback;
+};
+const AudioGlobals& Audio();
+
+// Guest writes and reads to a variable this game may not have named.
+inline void TryWriteNamed32(uint32_t addr, uint32_t value) {
+    if (addr) Memory::TryWrite32(addr, value);
+}
+inline uint32_t TryReadNamed32(uint32_t addr) {
+    uint32_t value = 0;
+    if (addr) Memory::TryRead32(addr, value);
+    return value;
+}
 
 extern uint32_t g_axTaskPtr;
 
