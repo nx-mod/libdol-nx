@@ -12,7 +12,7 @@
 #include <mutex>
 #include <unordered_map>
 
-#include <SDL3/SDL_gamepad.h>
+#include <aurora/gamepad.h>
 
 namespace InputBindings {
 namespace {
@@ -31,85 +31,85 @@ bool g_inputBlocked = false;
 // Dolphin input names, mapped onto SDL. XInput-style names are exact; DInput
 // "Button <n>" indices follow the common PlayStation layout, which is what
 // DInput reports for a DualShock/DualSense. Other pads may number differently.
-const std::unordered_map<std::string, SDL_GamepadButton>& ButtonNames() {
-    static const std::unordered_map<std::string, SDL_GamepadButton> table = {
-        {"Button A", SDL_GAMEPAD_BUTTON_SOUTH},      {"Button B", SDL_GAMEPAD_BUTTON_EAST},
-        {"Button X", SDL_GAMEPAD_BUTTON_WEST},       {"Button Y", SDL_GAMEPAD_BUTTON_NORTH},
-        {"Shoulder L", SDL_GAMEPAD_BUTTON_LEFT_SHOULDER},
-        {"Shoulder R", SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER},
-        {"Thumb L", SDL_GAMEPAD_BUTTON_LEFT_STICK},  {"Thumb R", SDL_GAMEPAD_BUTTON_RIGHT_STICK},
-        {"Start", SDL_GAMEPAD_BUTTON_START},         {"Back", SDL_GAMEPAD_BUTTON_BACK},
-        {"Guide", SDL_GAMEPAD_BUTTON_GUIDE},
-        {"Pad N", SDL_GAMEPAD_BUTTON_DPAD_UP},       {"Pad S", SDL_GAMEPAD_BUTTON_DPAD_DOWN},
-        {"Pad W", SDL_GAMEPAD_BUTTON_DPAD_LEFT},     {"Pad E", SDL_GAMEPAD_BUTTON_DPAD_RIGHT},
-        {"Hat 0 N", SDL_GAMEPAD_BUTTON_DPAD_UP},     {"Hat 0 S", SDL_GAMEPAD_BUTTON_DPAD_DOWN},
-        {"Hat 0 W", SDL_GAMEPAD_BUTTON_DPAD_LEFT},   {"Hat 0 E", SDL_GAMEPAD_BUTTON_DPAD_RIGHT},
-        {"Button 0", SDL_GAMEPAD_BUTTON_WEST},       {"Button 1", SDL_GAMEPAD_BUTTON_SOUTH},
-        {"Button 2", SDL_GAMEPAD_BUTTON_EAST},       {"Button 3", SDL_GAMEPAD_BUTTON_NORTH},
-        {"Button 4", SDL_GAMEPAD_BUTTON_LEFT_SHOULDER},
-        {"Button 5", SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER},
-        {"Button 8", SDL_GAMEPAD_BUTTON_BACK},       {"Button 9", SDL_GAMEPAD_BUTTON_START},
-        {"Button 10", SDL_GAMEPAD_BUTTON_LEFT_STICK},
-        {"Button 11", SDL_GAMEPAD_BUTTON_RIGHT_STICK},
-        {"Button 12", SDL_GAMEPAD_BUTTON_GUIDE},     {"Button 13", SDL_GAMEPAD_BUTTON_TOUCHPAD},
+const std::unordered_map<std::string, AuroraGamepadButton>& ButtonNames() {
+    static const std::unordered_map<std::string, AuroraGamepadButton> table = {
+        {"Button A", AURORA_GAMEPAD_BUTTON_SOUTH},      {"Button B", AURORA_GAMEPAD_BUTTON_EAST},
+        {"Button X", AURORA_GAMEPAD_BUTTON_WEST},       {"Button Y", AURORA_GAMEPAD_BUTTON_NORTH},
+        {"Shoulder L", AURORA_GAMEPAD_BUTTON_LEFT_SHOULDER},
+        {"Shoulder R", AURORA_GAMEPAD_BUTTON_RIGHT_SHOULDER},
+        {"Thumb L", AURORA_GAMEPAD_BUTTON_LEFT_STICK},  {"Thumb R", AURORA_GAMEPAD_BUTTON_RIGHT_STICK},
+        {"Start", AURORA_GAMEPAD_BUTTON_START},         {"Back", AURORA_GAMEPAD_BUTTON_BACK},
+        {"Guide", AURORA_GAMEPAD_BUTTON_GUIDE},
+        {"Pad N", AURORA_GAMEPAD_BUTTON_DPAD_UP},       {"Pad S", AURORA_GAMEPAD_BUTTON_DPAD_DOWN},
+        {"Pad W", AURORA_GAMEPAD_BUTTON_DPAD_LEFT},     {"Pad E", AURORA_GAMEPAD_BUTTON_DPAD_RIGHT},
+        {"Hat 0 N", AURORA_GAMEPAD_BUTTON_DPAD_UP},     {"Hat 0 S", AURORA_GAMEPAD_BUTTON_DPAD_DOWN},
+        {"Hat 0 W", AURORA_GAMEPAD_BUTTON_DPAD_LEFT},   {"Hat 0 E", AURORA_GAMEPAD_BUTTON_DPAD_RIGHT},
+        {"Button 0", AURORA_GAMEPAD_BUTTON_WEST},       {"Button 1", AURORA_GAMEPAD_BUTTON_SOUTH},
+        {"Button 2", AURORA_GAMEPAD_BUTTON_EAST},       {"Button 3", AURORA_GAMEPAD_BUTTON_NORTH},
+        {"Button 4", AURORA_GAMEPAD_BUTTON_LEFT_SHOULDER},
+        {"Button 5", AURORA_GAMEPAD_BUTTON_RIGHT_SHOULDER},
+        {"Button 8", AURORA_GAMEPAD_BUTTON_BACK},       {"Button 9", AURORA_GAMEPAD_BUTTON_START},
+        {"Button 10", AURORA_GAMEPAD_BUTTON_LEFT_STICK},
+        {"Button 11", AURORA_GAMEPAD_BUTTON_RIGHT_STICK},
+        {"Button 12", AURORA_GAMEPAD_BUTTON_GUIDE},     {"Button 13", AURORA_GAMEPAD_BUTTON_TOUCHPAD},
     };
     return table;
 }
 
 // Signed axis names: SDL axis plus the direction that counts as positive.
 struct AxisRef {
-    SDL_GamepadAxis axis;
+    AuroraGamepadAxis axis;
     int sign;
 };
 
 const std::unordered_map<std::string, AxisRef>& AxisNames() {
     static const std::unordered_map<std::string, AxisRef> table = {
-        {"Axis X-", {SDL_GAMEPAD_AXIS_LEFTX, -1}},  {"Axis X+", {SDL_GAMEPAD_AXIS_LEFTX, 1}},
-        {"Axis Y-", {SDL_GAMEPAD_AXIS_LEFTY, -1}},  {"Axis Y+", {SDL_GAMEPAD_AXIS_LEFTY, 1}},
-        {"Axis Z-", {SDL_GAMEPAD_AXIS_RIGHTX, -1}}, {"Axis Z+", {SDL_GAMEPAD_AXIS_RIGHTX, 1}},
-        {"Axis Zr-", {SDL_GAMEPAD_AXIS_RIGHTY, -1}},{"Axis Zr+", {SDL_GAMEPAD_AXIS_RIGHTY, 1}},
-        {"Left X-", {SDL_GAMEPAD_AXIS_LEFTX, -1}},  {"Left X+", {SDL_GAMEPAD_AXIS_LEFTX, 1}},
-        {"Left Y-", {SDL_GAMEPAD_AXIS_LEFTY, 1}},   {"Left Y+", {SDL_GAMEPAD_AXIS_LEFTY, -1}},
-        {"Right X-", {SDL_GAMEPAD_AXIS_RIGHTX, -1}},{"Right X+", {SDL_GAMEPAD_AXIS_RIGHTX, 1}},
-        {"Right Y-", {SDL_GAMEPAD_AXIS_RIGHTY, 1}}, {"Right Y+", {SDL_GAMEPAD_AXIS_RIGHTY, -1}},
-        {"Full Axis Xr+", {SDL_GAMEPAD_AXIS_LEFT_TRIGGER, 1}},
-        {"Full Axis Yr+", {SDL_GAMEPAD_AXIS_RIGHT_TRIGGER, 1}},
-        {"Trigger L", {SDL_GAMEPAD_AXIS_LEFT_TRIGGER, 1}},
-        {"Trigger R", {SDL_GAMEPAD_AXIS_RIGHT_TRIGGER, 1}},
+        {"Axis X-", {AURORA_GAMEPAD_AXIS_LEFTX, -1}},  {"Axis X+", {AURORA_GAMEPAD_AXIS_LEFTX, 1}},
+        {"Axis Y-", {AURORA_GAMEPAD_AXIS_LEFTY, -1}},  {"Axis Y+", {AURORA_GAMEPAD_AXIS_LEFTY, 1}},
+        {"Axis Z-", {AURORA_GAMEPAD_AXIS_RIGHTX, -1}}, {"Axis Z+", {AURORA_GAMEPAD_AXIS_RIGHTX, 1}},
+        {"Axis Zr-", {AURORA_GAMEPAD_AXIS_RIGHTY, -1}},{"Axis Zr+", {AURORA_GAMEPAD_AXIS_RIGHTY, 1}},
+        {"Left X-", {AURORA_GAMEPAD_AXIS_LEFTX, -1}},  {"Left X+", {AURORA_GAMEPAD_AXIS_LEFTX, 1}},
+        {"Left Y-", {AURORA_GAMEPAD_AXIS_LEFTY, 1}},   {"Left Y+", {AURORA_GAMEPAD_AXIS_LEFTY, -1}},
+        {"Right X-", {AURORA_GAMEPAD_AXIS_RIGHTX, -1}},{"Right X+", {AURORA_GAMEPAD_AXIS_RIGHTX, 1}},
+        {"Right Y-", {AURORA_GAMEPAD_AXIS_RIGHTY, 1}}, {"Right Y+", {AURORA_GAMEPAD_AXIS_RIGHTY, -1}},
+        {"Full Axis Xr+", {AURORA_GAMEPAD_AXIS_LEFT_TRIGGER, 1}},
+        {"Full Axis Yr+", {AURORA_GAMEPAD_AXIS_RIGHT_TRIGGER, 1}},
+        {"Trigger L", {AURORA_GAMEPAD_AXIS_LEFT_TRIGGER, 1}},
+        {"Trigger R", {AURORA_GAMEPAD_AXIS_RIGHT_TRIGGER, 1}},
     };
     return table;
 }
 
-double ReadInput(SDL_Gamepad* gamepad, const std::string& name) {
+double ReadInput(AuroraGamepad* gamepad, const std::string& name) {
     if (gamepad == nullptr) {
         return 0.0;
     }
     if (const auto it = ButtonNames().find(name); it != ButtonNames().end()) {
-        return SDL_GetGamepadButton(gamepad, it->second) ? 1.0 : 0.0;
+        return aurora_gamepad_button(gamepad, it->second) ? 1.0 : 0.0;
     }
     if (const auto it = AxisNames().find(name); it != AxisNames().end()) {
-        const double raw = SDL_GetGamepadAxis(gamepad, it->second.axis) / 32767.0;
+        const double raw = aurora_gamepad_axis(gamepad, it->second.axis) / 32767.0;
         return std::clamp(raw * it->second.sign, 0.0, 1.0);
     }
     // Fall back to this project's own positional names, so a binding written
     // here does not have to use Dolphin vocabulary.
     if (const auto* native = ControllerNames::FindNativeButton(name)) {
         if (PADIsAxisButton(native->nativeButton)) {
-            const auto axis = static_cast<SDL_GamepadAxis>(PADAxisButtonAxis(native->nativeButton));
+            const auto axis = static_cast<AuroraGamepadAxis>(PADAxisButtonAxis(native->nativeButton));
             const double sign = PADAxisButtonNegative(native->nativeButton) ? -1.0 : 1.0;
-            return std::clamp(SDL_GetGamepadAxis(gamepad, axis) / 32767.0 * sign, 0.0, 1.0);
+            return std::clamp(aurora_gamepad_axis(gamepad, axis) / 32767.0 * sign, 0.0, 1.0);
         }
-        if (native->nativeButton < SDL_GAMEPAD_BUTTON_COUNT) {
-            return SDL_GetGamepadButton(gamepad, static_cast<SDL_GamepadButton>(native->nativeButton)) ? 1.0
+        if (native->nativeButton < AURORA_GAMEPAD_BUTTON_COUNT) {
+            return aurora_gamepad_button(gamepad, static_cast<AuroraGamepadButton>(native->nativeButton)) ? 1.0
                                                                                                       : 0.0;
         }
     }
     return 0.0;
 }
 
-SDL_Gamepad* GamepadForPort(uint32_t port) {
+AuroraGamepad* GamepadForPort(uint32_t port) {
     const s32 index = PADGetIndexForPort(port);
-    return index < 0 ? nullptr : PADGetSDLGamepadForIndex(static_cast<u32>(index));
+    return index < 0 ? nullptr : PADGetGamepadForIndex(static_cast<u32>(index));
 }
 
 size_t ControlIndexForDolphinName(const std::string& name) {
@@ -184,7 +184,7 @@ void Apply(PADStatus* statuses) noexcept {
         if (statuses[port].err != PAD_ERR_NONE) {
             continue;
         }
-        SDL_Gamepad* gamepad = GamepadForPort(port);
+        AuroraGamepad* gamepad = GamepadForPort(port);
         const InputExpr::InputSource source = [gamepad](const std::string& name) {
             return ReadInput(gamepad, name);
         };
