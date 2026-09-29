@@ -30,7 +30,7 @@ target=$1; shift
 # `dawn`. Guessing one name each meant the defaults never resolved and every
 # working invocation passed --aurora/--dawn by hand.
 find_tree() {
-    for product in "" wiicompiled gccompiled-nx wii-nx; do
+    for product in "" wiicompiled wiicompiled-nx gccompiled-nx wii-nx; do
         for name in "$@"; do
             candidate="$libwiinx/..${product:+/$product}/$name"
             if [ -f "$candidate/CMakeLists.txt" ]; then

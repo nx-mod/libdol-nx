@@ -160,6 +160,10 @@ if(WIINX_RUNTIME AND NOT WIINX_AURORA_FROM)
         "Looked in: ${WIINX_AURORA_DIR_SEARCHED}")
 elseif(WIINX_RUNTIME)
     message(STATUS "wiinx: runtime on (Aurora from ${WIINX_AURORA_FROM})")
+elseif(WIINX_AURORA_FROM)
+    message(STATUS
+        "wiinx: runtime OFF by request, though Aurora is at ${WIINX_AURORA_FROM} - "
+        "the cpu, the platform and the app are not built. Libraries only.")
 else()
     message(STATUS
         "wiinx: runtime OFF - no Aurora found, so the cpu, the platform and the app "
