@@ -28,10 +28,6 @@
     <ProjectReference Include="..\..\src\Translator.Cli\Translator.Cli.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Content Include="TestAssets\RetroWfcPayload\binary\payload.RMCPD00.bin" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-
   <!--
     The default suite is intentionally binary-free and host-compiler-free. These
     files need either MKWii game data or a working host C++ toolchain, so they are

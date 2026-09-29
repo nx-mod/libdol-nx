@@ -26,6 +26,8 @@ public sealed class GenericProjectTests
                 inputs:
                   dol:
                     path: main.dol
+                runtime:
+                  native_bindings: registered
                 """;
 
             File.WriteAllText(
@@ -110,6 +112,8 @@ public sealed class GenericProjectTests
                 translation:
                   entry_points: [0x80001000]
                   allow_unsupported_instructions: true
+                runtime:
+                  native_bindings: registered
                 output:
                   root: out
                 """);

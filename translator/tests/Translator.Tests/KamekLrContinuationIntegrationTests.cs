@@ -196,6 +196,7 @@ public sealed class KamekLrContinuationIntegrationTests
                     load_address: 0x80008000
                 runtime:
                   native_registration_root: native
+                  native_bindings: registered
                 output:
                   root: generated
                 """);

@@ -160,8 +160,7 @@ internal static class ProjectPathsForTests
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir is not null)
         {
-            if (File.Exists(Path.Combine(dir.FullName, "translator", "Translator.sln")) &&
-                File.Exists(Path.Combine(dir.FullName, "projects", "mkwii", "recomp.yml")))
+            if (File.Exists(Path.Combine(dir.FullName, "translator", "Translator.sln")))
             {
                 return dir.FullName;
             }

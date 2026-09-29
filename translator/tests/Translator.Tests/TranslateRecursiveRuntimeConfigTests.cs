@@ -40,6 +40,8 @@ public sealed class TranslateRecursiveRuntimeConfigTests
                     path: main.dol
                 translation:
                   entry_points: [0x80001000]
+                runtime:
+                  native_bindings: registered
                 output:
                   root: generated
                 """);
@@ -94,6 +96,8 @@ public sealed class TranslateRecursiveRuntimeConfigTests
                     path: main.dol
                 translation:
                   entry_points: [0x80001000]
+                runtime:
+                  native_bindings: registered
                 output:
                   root: generated
                 """);
