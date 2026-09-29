@@ -30,6 +30,11 @@ if (NOT CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
         "  -DCMAKE_TOOLCHAIN_FILE=\$DEVKITPRO/cmake/Switch.cmake")
 endif ()
 
+# Horizon has no dynamic loader and devkitA64 ships no libdl, but CMake's
+# default CMAKE_DL_LIBS is "dl", which Dawn links through - so every link
+# failed on -ldl unless a stray libdl.a happened to be in portlibs.
+set(CMAKE_DL_LIBS "")
+
 get_filename_component(WIINX_ROOT "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
 set(WIINX_GAME_DIR "" CACHE PATH "The game project to build")
 include("${WIINX_ROOT}/cmake/DependencyTrees.cmake")

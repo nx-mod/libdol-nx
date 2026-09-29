@@ -68,13 +68,20 @@ std::optional<TranslatedFunctionInfo> FindNearestTranslatedFunction(uint32_t add
     return std::nullopt;
 }
 
+} // namespace
+
 // generated/guest_symbol_table.cpp (or the stub when it is absent): the
 // project's function-map names, sorted by address, for crash symbolization.
+// Declared outside the unnamed namespace: GCC gives a variable declared in one
+// internal linkage even under extern "C", so the Switch build could not link
+// to the generated table at all.
 extern "C" {
 extern const uint32_t kGuestMapSymbolCount;
 extern const uint32_t kGuestMapSymbolAddresses[];
 extern const char* const kGuestMapSymbolNames[];
 }
+
+namespace {
 
 // Floor lookup into the function-map name table with the same gap cap as the
 // registry heuristic above. Returns nullptr when no named symbol is close.
