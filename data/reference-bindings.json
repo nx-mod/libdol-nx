@@ -2864,6 +2864,11 @@
     "library": "libwii-nx",
     "native": "WUDGetStatus_HLE"
   },
+  "0x8020FF9C": {
+    "file": "libdol-nx/src/accel/egg/display_bind.cpp",
+    "library": "libdol-nx",
+    "native": "EGG__AsyncDisplay__endRender_HLE_8020ff9c"
+  },
   "0x80218C2C": {
     "file": "libdol-nx/src/accel/egg/egg_bind.cpp",
     "library": "libdol-nx",
