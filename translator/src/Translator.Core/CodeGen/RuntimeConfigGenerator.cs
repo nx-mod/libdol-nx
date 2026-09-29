@@ -31,7 +31,8 @@ public sealed class RuntimeConfigGenerator
         string outputPath,
         string projectName = "PowerPC DOL",
         uint? entryPoint = null,
-        uint? arenaLo = null)
+        uint? arenaLo = null,
+        ulong? titleId = null)
     {
         var sb = new StringBuilder();
         sb.AppendLine($"// AUTO-GENERATED for {projectName}");
@@ -76,6 +77,15 @@ public sealed class RuntimeConfigGenerator
             sb.AppendLine("// OSInit rounds the linker's __ArenaLo.");
             sb.AppendLine($"constexpr uint32_t ARENA_LO = 0x{arena:X8}u;");
             sb.AppendLine("#define RUNTIME_CONFIG_HAS_ARENA_LO 1");
+        }
+        if (titleId is { } title)
+        {
+            sb.AppendLine();
+            sb.AppendLine("// The title ES reports as running (project.title_id): where its saves and");
+            sb.AppendLine("// its own NAND contents are.");
+            sb.AppendLine($"constexpr uint32_t TITLE_ID_HI = 0x{(uint)(title >> 32):X8}u;");
+            sb.AppendLine($"constexpr uint32_t TITLE_ID_LO = 0x{(uint)title:X8}u;");
+            sb.AppendLine("#define RUNTIME_CONFIG_HAS_TITLE_ID 1");
         }
         sb.AppendLine();
         sb.AppendLine("} // namespace RuntimeConfig");

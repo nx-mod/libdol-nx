@@ -2940,7 +2940,8 @@ int RunGenerateDataInit()
     RuntimeConfigGenerator.GenerateConfigHeader(
         dataInitSda1Base, dataInitSda2Base, runtimeConfigOutput, loadedProject.Identity.DisplayName,
         loadedProject.Translation.EntryPoints.Count > 0 ? loadedProject.Translation.EntryPoints[0] : null,
-        RuntimeConfigGenerator.ArenaLoFor(dol.MemoryRange.End));
+        RuntimeConfigGenerator.ArenaLoFor(dol.MemoryRange.End),
+        loadedProject.Identity.TitleId);
 
     // Load the REL file for runtime embedding (apply relocations since runtime does not OSLink)
     RelImage? relImage = null;
@@ -3835,7 +3836,8 @@ ProgramImage LoadImage()
         loadedProject.Output.RuntimeConfig,
         loadedProject.Identity.DisplayName,
         loadedProject.Translation.EntryPoints.Count > 0 ? loadedProject.Translation.EntryPoints[0] : null,
-        RuntimeConfigGenerator.ArenaLoFor(dol.MemoryRange.End));
+        RuntimeConfigGenerator.ArenaLoFor(dol.MemoryRange.End),
+        loadedProject.Identity.TitleId);
     Console.WriteLine(
         $"[translator] SDA bases: r13 (_SDA_BASE_) 0x{sda1Base:X8}, r2 (_SDA2_BASE_) 0x{sda2Base:X8} " +
         $"(entry 0x{dol.EntryPoint:X8}).");
