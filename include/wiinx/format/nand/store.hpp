@@ -64,6 +64,21 @@ std::vector<InstalledTitle> InstalledTitles(const Store& store);
 // Whether a title is there at all, which is what a launcher asks first.
 bool TitleInstalled(const Store& store, TitleId id);
 
+// Where each of a title's contents is, from its TMD: its own folder, or
+// /shared1 through the map. `present` is whether that file is really there.
+struct ContentLocation {
+    std::uint32_t id = 0;
+    std::uint16_t index = 0;
+    bool shared = false;
+    std::string path;      // empty when a shared content is not in the map
+    bool present = false;
+};
+
+// A title installed without all of its contents does not start, and says
+// nothing about why. Everything is here when every entry is `present`; an empty
+// result means there is no TMD to go by.
+std::vector<ContentLocation> ResolveContents(const Store& store, TitleId id);
+
 enum class InstallResult {
     Installed,
     NotAWad,
