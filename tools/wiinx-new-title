@@ -101,8 +101,9 @@ def main(argv):
 
     # Unpacking does not print the title; wiinx-wad's summary does.
     summary = run("wiinx-wad", wad, quiet=True)
-    title = re.search(r"^\s*title\s+\S+\s+\((\w{4})\)", summary, re.MULTILINE)
-    identifier = title.group(1) if title else "unknown"
+    title = re.search(r"^\s*title\s+(\w{8})/(\w{8})\s+\((\w{4})\)", summary, re.MULTILINE)
+    identifier = title.group(3) if title else "unknown"
+    title_id = (title.group(1) + title.group(2)).lower() if title else None
 
     # Everything else is read out of the executable.
     layout = run("wiinx-inspect-dol", executable, "--yaml", quiet=True)
@@ -138,7 +139,7 @@ project:
   id: {stem}-{identifier.lower()}
   display_name: {stem}
   game_id: {identifier}
-  region: {identifier[3] if len(identifier) == 4 else 'E'}
+{f"  title_id: {title_id}" + chr(10) if title_id else ""}  region: {identifier[3] if len(identifier) == 4 else 'E'}
   base_manifest_format: mkwii-recomp-base-manifest
   base_manifest_stem: {stem}_base
 

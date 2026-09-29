@@ -65,7 +65,8 @@ internal sealed class TranslationProjectConfig
             dto.Project?.GameId,
             dto.Project?.Region,
             dto.Project?.BaseManifestFormat ?? "recomp-base-manifest",
-            dto.Project?.BaseManifestStem ?? "base");
+            dto.Project?.BaseManifestStem ?? "base",
+            ParseTitleId(dto.Project?.TitleId));
         var memory = new ProjectMemory(
             ParseUInt32(dto.Memory?.Base, MemoryLayout.RamBase, "memory.base"),
             ParseInt32(dto.Memory?.Size, MemoryLayout.RamSize, "memory.size"),
@@ -367,6 +368,24 @@ internal sealed class TranslationProjectConfig
     private static uint? ParseOptionalUInt32(string? value, string field) =>
         string.IsNullOrWhiteSpace(value) ? null : ParseUInt32(value, null, field);
 
+    // A title id is sixteen hex digits, written without 0x as Nintendo writes it
+    // (0001000248414341); a 0x prefix is accepted too.
+    private static ulong? ParseTitleId(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+        var text = value.Trim();
+        if (text.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+        {
+            text = text[2..];
+        }
+        return text.Length == 16 && ulong.TryParse(text, System.Globalization.NumberStyles.HexNumber, null, out var id)
+            ? id
+            : throw new InvalidDataException($"project.title_id '{value}' is not sixteen hex digits.");
+    }
+
     private static int ParseInt32(string? value, int fallback, string field)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -504,7 +523,8 @@ internal sealed record ProjectIdentity(
     string? GameId,
     string? Region,
     string BaseManifestFormat,
-    string BaseManifestStem);
+    string BaseManifestStem,
+    ulong? TitleId = null);
 internal sealed record ProjectMemory(uint Base, int Size, uint? SdaBase = null, uint? Sda2Base = null);
 internal record ProjectBinaryInput(string Path, string? Sha256);
 internal sealed record ProjectRelInput(string Path, string? Sha256, uint LoadAddress) : ProjectBinaryInput(Path, Sha256);
