@@ -2864,34 +2864,9 @@
     "library": "libwii-nx",
     "native": "WUDGetStatus_HLE"
   },
-  "0x8020FF9C": {
-    "file": "libdol-nx/src/platform/gx/gx_egg.cpp",
-    "library": "libdol-nx",
-    "native": "EGG__AsyncDisplay__endRender_HLE_8020ff9c"
-  },
   "0x80218C2C": {
     "file": "libdol-nx/src/accel/egg/egg_bind.cpp",
     "library": "libdol-nx",
     "native": "EGG_Decomp_decodeSZS_80218c2c"
-  },
-  "0x8021B344": {
-    "file": "libdol-nx/src/platform/gx/gx_egg.cpp",
-    "library": "libdol-nx",
-    "native": "EGG__DrawGX__SetVtxState_HLE"
-  },
-  "0x8021B688": {
-    "file": "libdol-nx/src/platform/gx/gx_egg.cpp",
-    "library": "libdol-nx",
-    "native": "EGG__DrawGX__SetVtxState_HLE"
-  },
-  "0x8022E2BC": {
-    "file": "libdol-nx/src/platform/gx/gx_egg.cpp",
-    "library": "libdol-nx",
-    "native": "EGG__LightTexture__SetupTevFinish_HLE_8022e2bc"
-  },
-  "0x80242D7C": {
-    "file": "libdol-nx/src/platform/os/task_thread.cpp",
-    "library": "libdol-nx",
-    "native": "TaskThread_run_HLE_80242d7c"
   }
 }

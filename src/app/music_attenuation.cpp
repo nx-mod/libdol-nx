@@ -1,6 +1,7 @@
 #include "music_attenuation.h"
 
 #include "memory.h"
+#include "guest_globals.h"
 
 #include <array>
 #include <atomic>
@@ -26,7 +27,13 @@
 namespace MusicAttenuation {
 namespace {
 
-constexpr uint32_t kSoundManagerPointer = 0x809C2898u;
+// The game's sound manager pointer (guest_globals.h), and where that manager
+// keeps its nw4r::snd::SoundArchivePlayer. The offsets are Mario Kart Wii's
+// class layout: a game names game.soundManager only if its manager matches.
+uint32_t SoundManagerPointer() {
+    static const uint32_t address = RuntimeGuestGlobals::find("game.soundManager");
+    return address;
+}
 constexpr uint32_t kArchivePlayerOffset = 0x5BCu;
 constexpr uint32_t kSoundPlayersOffset = 0x34u;
 constexpr uint32_t kSoundPlayerVolumeOffset = 0x2Cu;
@@ -83,7 +90,9 @@ uint32_t ResolveSoundPlayerArray() noexcept {
     uint32_t soundManager = 0;
     uint32_t archivePlayer = 0;
     uint32_t soundPlayers = 0;
-    if (!Memory::TryRead32(kSoundManagerPointer, soundManager) || soundManager == 0 ||
+    const uint32_t kSoundManagerPointer = SoundManagerPointer();
+    if (kSoundManagerPointer == 0 ||
+        !Memory::TryRead32(kSoundManagerPointer, soundManager) || soundManager == 0 ||
         !Memory::TryRead32(soundManager + kArchivePlayerOffset, archivePlayer) || archivePlayer == 0 ||
         !Memory::TryRead32(archivePlayer + kSoundPlayersOffset, soundPlayers)) {
         return 0;

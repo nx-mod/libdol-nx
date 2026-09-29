@@ -3,6 +3,7 @@
 #include "hle/dvd_contract.h"
 #include "hle/runtime_parse_helpers.h"
 #include "memory.h"
+#include "guest_globals.h"
 
 // Defined in hle/gx/gx_objects.cpp. DVD reads are DMA-class writes to guest
 // RAM: the game brackets them with DCInvalidateRange (not a flush), so the GX

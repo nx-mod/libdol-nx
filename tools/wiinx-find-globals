@@ -1,0 +1,406 @@
+#!/usr/bin/env python3
+"""Find where a game keeps the SDK's variables, from its own code.
+
+    tools/wiinx-find-globals <game folder> [--out globals.json] [--bind] [--why]
+
+Reads <game>/recomp.yml (the executable and its r13/r2), <game>/bindings.json
+and <game>/functions.map. Each variable is read out of a function the bindings
+already located - the retrace queue is what VIWaitForRetrace sleeps on, the
+FIFO is what GXInit hands to GXSetCPUFifo - so nothing is guessed from one
+game's addresses. A few follow from a neighbour by a layout the SDK has kept
+across builds; those are marked, and every one is checked where the code allows.
+
+--out writes globals.json (see docs/game-hooks.md); --bind adds the functions
+it identified by what they touch (VIInit, the retrace-callback setters) to
+bindings.json where they are missing; --why prints the evidence.
+Names it cannot find are left out, which the runtime treats as unknown.
+"""
+import json
+import re
+import struct
+import sys
+from pathlib import Path
+
+
+# --- the executable ----------------------------------------------------------
+
+class Dol:
+    def __init__(self, path):
+        self.data = Path(path).read_bytes()
+        h = struct.unpack(">18I18I18I", self.data[:0xD8])
+        self.sections = [(o, a, s) for o, a, s in zip(h[:18], h[18:36], h[36:54]) if s]
+        self.text = [(a, s) for a, s in zip(h[18:25], h[36:43]) if s]
+
+    def is_code(self, address):
+        return any(base <= address < base + size for base, size in self.text)
+
+    def word(self, address):
+        for offset, base, size in self.sections:
+            if base <= address < base + size:
+                i = offset + address - base
+                return struct.unpack(">I", self.data[i:i + 4])[0]
+        return None
+
+
+def s16(x):
+    return x - 0x10000 if x & 0x8000 else x
+
+
+LOADS = {32: 4, 34: 1, 40: 2, 48: 4, 50: 8}          # lwz lbz lhz lfs lfd
+STORES = {36: 4, 38: 1, 44: 2, 52: 4, 37: 4}         # stw stb sth stfs stwu
+
+
+def trace(dol, start, count=400):
+    """Walk a function once, tracking lis/addi/ori/mr register values.
+
+    Returns events: ('addr', value, reg) for addresses built, ('load'|'store',
+    address, size, base_reg) for memory touched, ('call', target) for bl.
+    """
+    reg, events = {}, []
+    for i in range(count):
+        a = start + 4 * i
+        w = dol.word(a)
+        if w is None:
+            break
+        op, rt, ra, im = w >> 26, (w >> 21) & 31, (w >> 16) & 31, w & 0xFFFF
+        if w == 0x4E800020 and i > 1:
+            break
+        if op == 15:                                            # lis / addis
+            reg[rt] = (im << 16) & 0xFFFFFFFF if ra == 0 else None
+        elif op == 14:                                          # li / addi
+            if ra == 0:
+                reg[rt] = s16(im) & 0xFFFFFFFF
+            elif ra in (2, 13):
+                events.append(("addr", (ra, s16(im)), rt))
+                reg[rt] = None
+            elif reg.get(ra) is not None:
+                value = (reg[ra] + s16(im)) & 0xFFFFFFFF
+                events.append(("addr", value, rt))
+                reg[rt] = value
+            else:
+                reg[rt] = None
+        elif op == 24 and reg.get(rt) is not None:              # ori
+            reg[ra] = reg[rt] | im
+        elif op in LOADS or op in STORES:
+            kind = "load" if op in LOADS else "store"
+            if ra in (2, 13):
+                events.append((kind, (ra, s16(im)), LOADS.get(op) or STORES[op], rt))
+            elif reg.get(ra) is not None:
+                events.append((kind, (reg[ra] + s16(im)) & 0xFFFFFFFF,
+                               LOADS.get(op) or STORES[op], rt))
+            if op in LOADS:
+                reg[rt] = None
+        elif op == 18 and w & 1:                                # bl
+            li = w & 0x3FFFFFC
+            li = li - 0x4000000 if li & 0x2000000 else li
+            events.append(("call", (a + li) & 0xFFFFFFFF))
+            for r in range(0, 13):
+                reg.pop(r, None)
+        elif op == 31 and ((w >> 1) & 0x3FF) == 444:            # mr
+            reg[ra] = reg.get(rt)
+        elif op not in (16, 18, 19, 11, 10):
+            reg.pop(rt, None)
+    return events
+
+
+# --- finding -----------------------------------------------------------------
+
+class Finder:
+    def __init__(self, folder):
+        self.folder = Path(folder)
+        project = (self.folder / "recomp.yml").read_text()
+        self.r13 = int(re.search(r"sda_base:\s*(0x[0-9A-Fa-f]+)", project).group(1), 16)
+        self.r2 = int(re.search(r"sda2_base:\s*(0x[0-9A-Fa-f]+)", project).group(1), 16)
+        dol = re.search(r"dol:\s*\n\s*path:\s*(\S+)", project).group(1)
+        self.dol = Dol(self.folder / dol)
+        self.bindings = json.loads((self.folder / "bindings.json").read_text())
+        self.names = {}
+        for line in (self.folder / "functions.map").read_text().splitlines():
+            if line.strip():
+                parts = line.split()
+                self.names[parts[1] if len(parts) > 1 else parts[0]] = int(parts[0], 16)
+        self.functions = sorted(self.names.values())
+        self.found, self.why = {}, {}
+
+    def bound(self, prefix):
+        for name, address in self.bindings.items():
+            if name.startswith(prefix):
+                return int(address, 16)
+        return None
+
+    def absolute(self, value):
+        if isinstance(value, tuple):
+            base, offset = value
+            return ((self.r13 if base == 13 else self.r2) + offset) & 0xFFFFFFFF
+        return value
+
+    def put(self, name, address, why):
+        if address and 0x80000000 <= address < 0x94000000:
+            self.found[name] = address
+            self.why[name] = why
+
+    def events(self, prefix, count=400):
+        start = self.bound(prefix)
+        return (start, trace(self.dol, start, count)) if start else (None, [])
+
+    def sda(self, events, kinds=("load", "store", "addr"), base=13):
+        return [(e[0], self.absolute(e[1])) for e in events
+                if e[0] in kinds and isinstance(e[1], tuple) and e[1][0] == base]
+
+    def is_function(self, address):
+        return self.dol.is_code(address)
+
+    # VI -----------------------------------------------------------------
+    def vi(self):
+        start, ev = self.events("VIWaitForRetrace_HLE")
+        if not start:
+            return
+        queue = [a for k, a in self.sda(ev, ("addr",))]
+        count = [a for k, a in self.sda(ev, ("load",))]
+        if len(queue) == 1 and count:
+            self.put("vi.retraceQueue", queue[0], f"VIWaitForRetrace {start:08X} sleeps on it")
+            self.put("vi.retraceCount", count[0], f"VIWaitForRetrace {start:08X} reads it")
+        else:
+            return
+        q = self.found["vi.retraceQueue"]
+        # The setters: two small functions each swapping one word just below the queue.
+        setters = {}
+        for f in self.functions:
+            ev2 = trace(self.dol, f, 24)
+            touched = {a for k, a in self.sda(ev2, ("load", "store"))}
+            if len(touched) == 1 and len(self.sda(ev2, ("store",))) == 1:
+                slot = touched.pop()
+                if slot in (q - 0x8, q - 0xC):
+                    setters[slot] = f
+        if len(setters) == 2:
+            self.put("vi.PreCB", q - 0x8, f"swapped by {setters[q - 0x8]:08X} (VISetPreRetraceCallback)")
+            self.put("vi.PostCB", q - 0xC, f"swapped by {setters[q - 0xC]:08X} (VISetPostRetraceCallback)")
+            self.setters = (setters[q - 0x8], setters[q - 0xC])
+        # VIInit is bound, or else it is the function after __VIInit in vi.c.
+        init = self.bound("VIInit_HLE")
+        low = self.bound("__VIInit_HLE")
+        if not init and low:
+            later = [f for f in self.functions if f > low]
+            if later:
+                first = [a for k, a in self.sda(trace(self.dol, later[0]), ("load",))]
+                if first and first[0] == q - 0x88:
+                    init = later[0]
+                    self.hints.append(f"VIInit_HLE_801b94a4 0x{init:08X}")
+        if init:
+            ev = trace(self.dol, init)
+            first = [a for k, a in self.sda(ev, ("load",))]
+            if first and first[0] == q - 0x88:
+                self.put("vi.IsInitialized", first[0], f"VIInit {init:08X} tests it first")
+                self.put("vi.timingGuard", first[0] + 0xC, "IsInitialized + 0xC (layout)")
+                self.put("vi.CurrTvMode", q - 0x18, "retraceQueue - 0x18 (layout)")
+                self.put("vi.NextBufAddr", q - 0x20, "retraceQueue - 0x20 (layout)")
+        start, ev = self.events("VIConfigure_HLE")
+        if start:
+            bases = {}
+            for e in ev:
+                if e[0] == "addr" and isinstance(e[1], int) and 0x80200000 <= e[1] < 0x81800000:
+                    bases[e[1]] = bases.get(e[1], 0) + 1
+            if bases:
+                horver = max(bases, key=bases.get)
+                self.put("vi.HorVer", horver, f"VIConfigure {start:08X}'s most-used base ({bases[horver]}x)")
+
+    # GX -----------------------------------------------------------------
+    def gx(self):
+        start, ev = self.events("GX__Init_")
+        if not start:
+            return
+        ptr = [a for k, a in self.sda(ev, ("load",), base=2)]
+        fifo = [e[1] for e in ev if e[0] == "addr" and isinstance(e[1], int) and e[1] >= 0x80200000]
+        if ptr:
+            gxdata = self.dol.word(ptr[0])
+            self.put("gx.__GXData", ptr[0], f"GXInit {start:08X} loads it from r2")
+            if gxdata:
+                self.put("gx.gxData", gxdata, "*__GXData in the DOL")
+                self.put("gx.GPFifo", gxdata + 0x600, "gxData + 0x600 (layout)")
+                self.put("gx.CPUFifo", gxdata + 0x624, "gxData + 0x624 (layout)")
+        if fifo:
+            common = max(set(fifo), key=fifo.count)
+            if fifo.count(common) >= 3:
+                self.put("gx.FifoObj", common, f"GXInit hands it to the FIFO setup {fifo.count(common)}x")
+        start, ev = self.events("__GX__PEInit")
+        if start:
+            code = [e[1] for e in ev if e[0] == "addr" and isinstance(e[1], int) and self.is_function(e[1])]
+            if len(code) == 2:
+                self.put("gx.GXTokenInterruptHandler", code[0], f"__GXPEInit {start:08X} installs it")
+                self.put("gx.GXFinishInterruptHandler", code[1], f"__GXPEInit {start:08X} installs it")
+            queue = [a for k, a in self.sda(ev, ("addr",))]
+            if queue:
+                q = queue[0]
+                self.put("gx.FinishQueue", q, f"__GXPEInit {start:08X} initialises it")
+                self.put("gx.DrawDone", q + 0x8, "FinishQueue + 0x8 (layout)")
+                self.put("gx.__GXCurrentThread", q - 0xC, "FinishQueue - 0xC (layout)")
+                self.put("gx.GXOverflowSuspendInProgress", q - 0x10, "FinishQueue - 0x10 (layout)")
+                self.put("gx.CPUFifoReady", q - 0x20, "FinishQueue - 0x20 (layout)")
+                self.put("gx.GPFifoReady", q - 0x1F, "FinishQueue - 0x1F (layout)")
+        done = self.bound("GX__DrawDone")
+        if done and "gx.DrawDone" in self.found:
+            touched = {a for k, a in self.sda(trace(self.dol, done))}
+            if self.found["gx.DrawDone"] not in touched:
+                for key in ("gx.DrawDone",):
+                    self.found.pop(key, None)
+        # __GXFifoInit is GXInit's callee that installs the CP handler.
+        start = self.bound("GX__Init_")
+        for target in [e[1] for e in trace(self.dol, start) if e[0] == "call"]:
+            ev = trace(self.dol, target, 60)
+            code = [e[1] for e in ev if e[0] == "addr" and isinstance(e[1], int) and self.is_function(e[1])]
+            thread = [a for k, a in self.sda(ev, ("store",))]
+            if len(code) == 1 and self.found.get("gx.__GXCurrentThread") in thread:
+                self.put("gx.GXCPInterruptHandler", code[0], f"__GXFifoInit {target:08X} installs it")
+                break
+
+    # Audio ----------------------------------------------------------------
+    def audio(self):
+        start, ev = self.events("__AXOutInitDSP")
+        if start:
+            code = [e[1] for e in ev if e[0] == "addr" and isinstance(e[1], int) and self.is_function(e[1])]
+            data = [e[1] for e in ev if e[0] == "addr" and isinstance(e[1], int)
+                    and e[1] >= 0x80200000 and not self.is_function(e[1])]
+            if len(code) == 4:
+                for name, address in zip(("Init", "Resume", "Done", "Request"), code):
+                    self.put(f"ax.__AXDSP{name}Callback", address, f"__AXOutInitDSP {start:08X} puts it in the task")
+            stores = {}
+            for e in ev:
+                if e[0] == "store" and isinstance(e[1], int):
+                    stores.setdefault(e[1] & ~0x3F, 0)
+            written = [e[1] for e in ev if e[0] == "store" and isinstance(e[1], int)]
+            if written:
+                task = min(written) & ~0x1F
+                for d in data:
+                    if d <= min(written) < d + 0x60:
+                        task = d
+                self.put("ax.__AXDSPTask", task, f"__AXOutInitDSP {start:08X} fills it")
+                if task + 0x60 in data:
+                    self.put("ax.__AXDramImage", task + 0x60, "the task's DRAM image, right after it")
+                others = [d for d in data if d not in (task, task + 0x60)]
+                if len(others) == 1:
+                    self.put("ax.axDspSlave", others[0], "the task's IRAM image")
+            halves = [a for k, a in self.sda(ev, ("load",))]
+            if len(halves) >= 3:
+                h = sorted(halves[:3])
+                if h[1] - h[0] == 2 and h[2] - h[1] == 2:
+                    self.put("ax.axDspInitVector", h[0], "three halfwords the task copies")
+                    self.put("ax.axDspResumeVector", h[1], "")
+                    self.put("ax.axDspSlaveLength", h[2], "")
+            flags = sorted({a for k, a in self.sda(ev, ("store",))})
+            if len(flags) >= 2 and flags[-1] - flags[-2] == 4:
+                self.put("ax.__AXDSPDoneFlag", flags[-2], "__AXOutInitDSP clears it")
+                self.put("ax.__AXDSPInitFlag", flags[-1], "__AXOutInitDSP sets it")
+        start, ev = self.events("AIInit_")
+        if start:
+            first = [a for k, a in self.sda(ev, ("load",))]
+            stores = {a for k, a in self.sda(ev, ("store",))}
+            if first and first[0] + 0x34 in stores and first[0] + 0x38 in stores:
+                f = first[0]
+                self.put("ai.__AI_init_flag", f, f"AIInit {start:08X} tests it first")
+                self.put("ai.__AID_Active", f + 0x4, "init flag + 4 (layout)")
+                self.put("ai.__CallbackStack", f + 0x34, "AIInit sets it")
+                self.put("ai.__AID_Callback", f + 0x38, "AIInit clears it")
+        start, ev = self.events("DSPInit_")
+        if start:
+            first = [a for k, a in self.sda(ev, ("load",))]
+            stores = {a for k, a in self.sda(ev, ("store",))}
+            if first and {first[0] + 0x10, first[0] + 0x14, first[0] + 0x18, first[0] + 0x1C} <= stores:
+                f = first[0]
+                self.put("dsp.__DSP_init_flag", f, f"DSPInit {start:08X} tests it first")
+                for off, name in ((0x8, "rude_task_pending"), (0xC, "rude_task"), (0x10, "tmp_task"),
+                                  (0x14, "last_task"), (0x18, "first_task"), (0x1C, "curr_task")):
+                    self.put(f"dsp.__DSP_{name}", f + off, "DSPInit clears it" if off >= 0x10 else "layout")
+
+    # OS, IPC, DVD -----------------------------------------------------------
+    def os(self):
+        start, ev = self.events("__OSInitSTM_HLE")
+        if start:
+            code = [e[1] for e in ev if e[0] == "addr" and isinstance(e[1], int) and self.is_function(e[1])]
+            first = [a for k, a in self.sda(ev, ("load",))]
+            stores = {a for k, a in self.sda(ev, ("store",))}
+            if first and {first[0] + 4, first[0] + 8, first[0] + 0x14} <= stores:
+                f = first[0]
+                self.put("os.StmReady", f, f"__OSInitSTM {start:08X} tests it first")
+                self.put("os.StmImDesc", f + 4, "__OSInitSTM stores IOS_Open's handle")
+                self.put("os.StmEhDesc", f + 8, "__OSInitSTM stores IOS_Open's handle")
+                self.put("os.StmEhRegistered", f + 0xC, "StmReady + 0xC (layout)")
+                self.put("os.PowerCallback", f + 0x14, "__OSInitSTM sets it to the default")
+                if len(code) >= 2:
+                    self.put("os.__OSDefaultPowerCallback", max(code[:2]), "the default it installs")
+        start, ev = self.events("OSCreateThread_HLE")
+        if start:
+            for e in ev:
+                if e[0] == "load" and isinstance(e[1], int) and e[1] >= 0x80200000:
+                    self.put("os.__OSErrorTable", e[1] - 0x40, f"OSCreateThread {start:08X} reads [OS_ERROR_FPE]")
+                    break
+            loads = [a for k, a in self.sda(ev, ("load",))]
+            if loads:
+                self.put("os.__OSFpscrEnableBits", loads[0], "OSCreateThread reads it for the FPSCR")
+        start, ev = self.events("IPCCltInit")
+        if start:
+            calls = [e[1] for e in ev if e[0] == "call"]
+            if calls:
+                self.put("ipc.IPCInit", calls[0], f"IPCCltInit {start:08X} calls it first")
+            for target in calls[1:]:
+                ev2 = trace(self.dol, target, 3)
+                loads = [a for k, a in self.sda(ev2, ("load",))]
+                if len(loads) == 1:
+                    self.put("ipc.IPCBufferLo", loads[0], f"IPCGetBufferLo {target:08X} returns it")
+                    break
+        clear = self.names.get("__DVDClearWaitingQueue")
+        if clear:
+            built = [e[1] for e in trace(self.dol, clear, 20) if e[0] == "addr" and isinstance(e[1], int)]
+            if built:
+                self.put("dvd.WaitingQueue", built[0], f"__DVDClearWaitingQueue {clear:08X} links it")
+        start, ev = self.events("DVDLowInit")
+        if start:
+            words = [e[1] for e in ev if e[0] == "store" and isinstance(e[1], int)]
+            for base in sorted({w & ~0x1F for w in words}):
+                if {base + 0xC, base + 0x2C, base + 0x4C, base + 0x6C} <= set(words):
+                    self.put("dvd.dvdContexts", base, f"DVDLowInit {start:08X} stamps its four contexts")
+                    break
+
+    def run(self):
+        self.setters, self.hints = None, []
+        for step in (self.vi, self.gx, self.audio, self.os):
+            step()
+        return self
+
+
+def main():
+    args = sys.argv[1:]
+    if not args or args[0].startswith("-"):
+        print(__doc__.strip(), file=sys.stderr)
+        return 2
+    finder = Finder(args[0]).run()
+    for name in sorted(finder.found):
+        line = f"{name:34} 0x{finder.found[name]:08X}"
+        if "--why" in args and finder.why[name]:
+            line += f"  {finder.why[name]}"
+        print(line)
+    if finder.setters:
+        finder.hints += [f"VISetPreRetraceCallback_HLE_801b90f4 0x{finder.setters[0]:08X}",
+                         f"VISetPostRetraceCallback_HLE_801b9138 0x{finder.setters[1]:08X}"]
+    for hint in finder.hints:
+        print(f"bind by hand (found by what it touches): {hint}")
+    if "--bind" in args and finder.hints:
+        path = finder.folder / "bindings.json"
+        raw = path.read_text()
+        table = json.loads(raw)
+        for hint in finder.hints:
+            name, address = hint.split()
+            table.setdefault(name, address)
+        indent = 1 if raw.startswith('{\n "') else 2
+        path.write_text(json.dumps(dict(sorted(table.items())), indent=indent) + "\n")
+        print(f"bound {len(finder.hints)} in {path}")
+    if "--out" in args:
+        out = Path(args[args.index("--out") + 1])
+        existing = json.loads(out.read_text()) if out.exists() else {}
+        existing.update({k: f"0x{v:08X}" for k, v in finder.found.items()})
+        out.write_text(json.dumps(dict(sorted(existing.items())), indent=1) + "\n")
+        print(f"wrote {out}: {len(existing)} names")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

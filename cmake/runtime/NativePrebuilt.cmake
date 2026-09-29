@@ -95,7 +95,7 @@ endforeach()
 # toolchain its archive is identical for every user, so compiling ~150 of its
 # translation units locally buys nothing. Only the archive is consumed here -
 # the vendored headers still ship in the workspace because first-party TUs
-# include them directly (runtime/include/wii_es_crypto.h).
+# include them directly (libwii-nx src/nand/wii_es_crypto.h).
 if(NOT MKW_CRYPTOPP_INTERFACE_DEFINITIONS)
     message(FATAL_ERROR
         "The prebuilt consumer requires MKW_CRYPTOPP_INTERFACE_DEFINITIONS from "

@@ -6157,6 +6157,15 @@
    "registration": "VIInit_HLE_801b94a4"
   },
   {
+   "name": "VIInit",
+   "build": "rvl.vi@2009-02-27",
+   "size": 1172,
+   "start": "28dfbd2b4b7f3dec",
+   "body": "e0467c2c7327b4a1",
+   "signed_from": "WRXE",
+   "registration": "VIInit_HLE_801b94a4"
+  },
+  {
    "name": "VISetBlack",
    "build": "any",
    "size": 120,
