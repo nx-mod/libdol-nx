@@ -881,9 +881,16 @@ int RunTranslateRecursive(string[] argsTail)
             callTargets.ExceptWith(residentTranslationExclusions);
             if (callTargets.Count != 0)
             {
+                // Why, when the map seeded it and it failed: the reason is the
+                // one thing that says what to fix.
+                var skipReasons = speculativeSkips
+                    .GroupBy(static skip => skip.Address)
+                    .ToDictionary(static group => group.Key, static group => group.First().Reason);
                 foreach (var target in callTargets.Order().Take(20))
                 {
-                    Console.WriteLine($"[translator]   direct call to 0x{target:X8} has no translated body");
+                    Console.WriteLine(skipReasons.TryGetValue(target, out var reason)
+                        ? $"[translator]   direct call to 0x{target:X8} has no translated body: {reason}"
+                        : $"[translator]   direct call to 0x{target:X8} has no translated body");
                 }
                 Console.WriteLine(
                     $"[translator] WARNING: {callTargets.Count:N0} direct call target(s) have neither a " +

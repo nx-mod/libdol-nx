@@ -25,8 +25,11 @@ namespace Translator.Core.Translation;
 /// </summary>
 public sealed record TranslationOptions(
     string? PreferredName = null,
-    int MaxInstructions = 8192,
-    int MaxBytes = 0x10000,
+    // Room for the largest functions a title has: the Wii Menu has one of
+    // 10,676 instructions (42 KB) before its first return, and the old 8,192
+    // left it untranslated.
+    int MaxInstructions = 32768,
+    int MaxBytes = 0x40000,
     bool AllowUnsupportedInstructions = false,
     bool EmitModRegistration = false,
     uint ModRegistrationPriority = 100,
