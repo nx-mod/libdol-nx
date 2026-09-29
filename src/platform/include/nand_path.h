@@ -175,9 +175,9 @@ inline bool SeedMissingBootstrapFiles(const std::filesystem::path& root, std::st
     const auto payload = BootstrapPayloadPath();
     if (!payload) {
         if (outError) {
-            *outError = "no bootstrap payload found (checked executable-adjacent wii_bootstrap"
+            *outError = std::string("no bootstrap payload found (checked executable-adjacent wii_bootstrap")
 #if defined(__SWITCH__)
-                        " and " + RuntimeConfigFile::PathToUtf8(RuntimeConfigFile::ApplicationDataDirectory() / "wii_bootstrap")
+                        + " and " + RuntimeConfigFile::PathToUtf8(RuntimeConfigFile::ApplicationDataDirectory() / "wii_bootstrap")
 #endif
                         + ")";
         }
