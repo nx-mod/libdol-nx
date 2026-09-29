@@ -42,3 +42,14 @@ add_test(NAME archive_cx COMMAND archive_cx_check)
 add_test(NAME archive_ash COMMAND archive_ash_check)
 add_test(NAME nand_store COMMAND nand_store_check)
 add_test(NAME media_banner COMMAND media_banner_check)
+
+# A game with no Nintendo code, translated end to end (needs the .NET 8 SDK).
+find_program(WIINX_DOTNET dotnet)
+if(WIINX_DOTNET)
+    set(synthetic "${CMAKE_CURRENT_BINARY_DIR}/synthetic")
+    add_test(NAME synthetic_translate COMMAND sh -c
+        "rm -rf '${synthetic}' && '${CMAKE_CURRENT_SOURCE_DIR}/synthetic/make-game' '${synthetic}' \
+         && '${WIINX_ROOT}/tools/wiinx-translate' '${synthetic}' \
+         && test -s '${synthetic}/generated/build_shards/shards.cmake'")
+    set_tests_properties(synthetic_translate PROPERTIES TIMEOUT 600)
+endif()

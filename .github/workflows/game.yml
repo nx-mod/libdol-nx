@@ -1,0 +1,66 @@
+# The synthetic game (tests/synthetic), built to an NRO: translate, compile the
+# whole runtime with Aurora, Dawn and the console libraries, link against NVK.
+# The one full build that needs no disc.
+name: game
+
+on:
+  push:
+    branches: [main, switch]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: game-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  nro:
+    runs-on: ubuntu-24.04
+    container: devkitpro/devkita64:latest
+    timeout-minutes: 180
+    env:
+      DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: 1
+    steps:
+      - name: Free disk space
+        run: rm -rf /__t/CodeQL /usr/share/dotnet /usr/local/lib/android /opt/ghc || true
+
+      # Siblings, as cmake/game finds them: ../libwii-nx, ../wiicompiled-nx/aurora-main, ../dawn-nx.
+      - uses: actions/checkout@v4
+        with: { path: libdol-nx }
+      - uses: actions/checkout@v4
+        with: { repository: nx-mod/libwii-nx, path: libwii-nx }
+      - uses: actions/checkout@v4
+        with: { repository: nx-mod/libgc-nx, path: libgc-nx }
+      - uses: actions/checkout@v4
+        with: { repository: nx-mod/wiicompiled-nx, ref: switch, path: wiicompiled-nx }
+      - uses: actions/checkout@v4
+        with: { repository: nx-mod/dawn-nx, ref: switch, path: dawn-nx, submodules: recursive }
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: nxvk portlib
+        run: |
+          set -eu
+          url=$(curl -fsSL https://api.github.com/repos/nx-mod/nxvk/releases/latest \
+                | grep -o 'https://[^"]*nxvk-switch-portlib[^"]*\.tar\.xz' | head -1)
+          curl -fsSL "$url" -o /tmp/nxvk.tar.xz
+          tar -xJf /tmp/nxvk.tar.xz -C "$DEVKITPRO/portlibs/switch" --strip-components=1
+
+      # Translated output records absolute paths, so it is built where it was made.
+      - name: Translate
+        run: libdol-nx/tests/synthetic/make-game synthetic && libdol-nx/tools/wiinx-translate synthetic
+
+      - name: Build
+        run: |
+          cmake -S libdol-nx/cmake/game -B build -G Ninja \
+                -DCMAKE_TOOLCHAIN_FILE="$DEVKITPRO/cmake/Switch.cmake" \
+                -DWIINX_GAME_DIR="$PWD/synthetic"
+          cmake --build build -j2 --target synthetic_nro
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: synthetic-nro
+          path: build/**/*.nro
+          if-no-files-found: error
