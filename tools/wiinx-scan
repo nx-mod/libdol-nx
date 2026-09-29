@@ -353,6 +353,44 @@ def mask(word):
     return word
 
 
+def touching(dol, address, register):
+    """The function at or beside `address` that reads hardware register `register`.
+
+    Masking blanks the low half of every lis-built address, and a hardware
+    register's is one of them - so AIGetDMABytesLeft (0xCC00503A) and
+    AIGetDMALength (0xCC005036) hash the same, and a signature that spans
+    several of them lands on whichever the window fits. A signature carrying
+    `touches` is settled by the register itself: the first function within
+    sixteen instructions either side whose first four read it.
+    """
+    wanted = int(register, 16)
+    def reads(at):
+        bases = set()  # registers holding 0xCC000000 (or its 0xCD mirror's upper half)
+        for i in range(4):
+            code = dol.read(at + 4 * i, 4)
+            if code is None:
+                return False
+            word = struct.unpack(">I", code)[0]
+            if (word >> 26) == 15 and ((word >> 16) & 31) == 0:  # lis rD, imm
+                if (word & 0xFFFF) == (wanted >> 16):
+                    bases.add((word >> 21) & 31)
+                continue
+            if ((word >> 26) in (32, 40, 42) and ((word >> 16) & 31) in bases
+                    and (word & 0xFFFF) == (wanted & 0xFFFF)):  # lwz, lhz, lha from it
+                return True
+            if word == 0x4E800020:  # blr: the function ended first
+                return False
+        return False
+    def starts_function(at):
+        previous = dol.read(at - 4, 4)
+        return previous is not None and struct.unpack(">I", previous)[0] == 0x4E800020
+    for delta in sorted(range(-64, 68, 4), key=abs):
+        at = address + delta
+        if (delta == 0 or starts_function(at)) and reads(at):
+            return at
+    return None
+
+
 def masked_hash(code):
     """Hash a function with everything that legitimately moves blanked out.
 
@@ -537,6 +575,8 @@ def scan_with(dol, signatures):
     for sig in masked:
         hits = [a for a in by_window.get(sig["start"], [])
                 if (code := dol.read(a, sig["size"])) is not None and masked_hash(code) == sig["body"]]
+        if "touches" in sig and len(hits) == 1:
+            hits = [h for h in [touching(dol, hits[0], sig["touches"])] if h]
         if len(hits) == 1:
             matched.append((sig, hits[0]))
         elif sig.get("siblings"):
