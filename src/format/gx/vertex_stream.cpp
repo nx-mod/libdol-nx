@@ -147,11 +147,17 @@ std::size_t ConvertVertices(const VertexFormat& format, const std::uint8_t* src,
             } else {
                 const CompType type = static_cast<CompType>(f.type);
                 const std::size_t comp = CompSize(type);
-                // normals: s8 with 6 fractional bits, s16 with 14, whatever the
-                // table says (GX ignores it for them)
+                // normals: a fixed scale whatever the table says (GX ignores it
+                // for them): u8 7 fractional bits, s8 6, u16 15, s16 14
                 float scale = 1.0f / static_cast<float>(1u << (f.frac & 31));
                 if (attr == VaNrm) {
-                    scale = comp == 1 ? 1.0f / 64.0f : 1.0f / 16384.0f;
+                    switch (type) {
+                    case CompType::U8: scale = 1.0f / 128.0f; break;
+                    case CompType::S8: scale = 1.0f / 64.0f; break;
+                    case CompType::U16: scale = 1.0f / 32768.0f; break;
+                    case CompType::S16: scale = 1.0f / 16384.0f; break;
+                    case CompType::F32: scale = 1.0f; break;
+                    }
                 }
                 const unsigned n = Components(attr, f.count);
                 float* target = attr == VaPos ? v + 0 : attr == VaNrm ? v + 3 : v + 14 + (attr - VaTex0) * 2;

@@ -117,6 +117,16 @@ int main() {
         Check("the normal is the first three, at 1/16384", ConvertVertices(f, src.data(), src.size(), 1, out.data()) == 1 &&
                                                             Near(out[3], 1.0f));
         Check("a short buffer converts what it holds", ConvertVertices(f, src.data(), src.size(), 2, out.data()) == 1);
+        VertexFormat u;
+        u.present[VaNrm] = true;
+        u.format[VaNrm] = {0, static_cast<std::uint8_t>(CompType::U8), 0};
+        const std::uint8_t u8n[3] = {128, 64, 0};
+        Check("a u8 normal at 1/128", ConvertVertices(u, u8n, 3, 1, out.data()) == 1 && Near(out[3], 1.0f) &&
+                                         Near(out[4], 0.5f));
+        u.format[VaNrm].type = static_cast<std::uint8_t>(CompType::U16);
+        const std::uint8_t u16n[6] = {0x80, 0x00, 0x40, 0x00, 0, 0};
+        Check("a u16 normal at 1/32768", ConvertVertices(u, u16n, 6, 1, out.data()) == 1 && Near(out[3], 1.0f) &&
+                                            Near(out[4], 0.5f));
         f.format[VaNrm].type = 7;
         Check("an unknown component type is no format", PackedVertexSize(f) == 0);
     }
