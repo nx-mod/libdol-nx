@@ -13,7 +13,7 @@ Tint, no NVK.
 | `dk_resources_switch.cpp` | buffers, textures, views, writes into them |
 | `dk_frame_switch.cpp` | passes, copies, the screen (1920x1080 images, cropped to 720p in handheld) |
 | `dk_shader_switch.cpp` | shaders: GLSL compiled by UAM on the console, loaded into code memory, kept for the run |
-| `dk_gx_renderer_switch.cpp` | GX draws: the state's shaders, uniforms, converted vertices, pixel state and viewport, drawn (`draw_gx`); textures not yet bound |
+| `dk_gx_renderer_switch.cpp` | GX draws: the state's shaders, uniforms, converted vertices, pixel state and viewport, and its textures - decoded from guest memory, mips and palettes, cached by a sampled hash, with their samplers (`draw_gx`) |
 | `dk_gx_state_switch.cpp` | GX's pixel state (`wiinx/format/gx/pixel.hpp`: blending, logic op, depth, culling, write masks) as deko3d state objects |
 
 UAM is built for the console as Halo's port builds it (meson, bison, flex,

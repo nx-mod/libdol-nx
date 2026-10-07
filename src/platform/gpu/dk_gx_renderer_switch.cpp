@@ -3,8 +3,9 @@
 // A draw from wiinx::gx::CommandProcessor, with the State it was made in:
 // the shaders the state describes (tev.hpp, vertex.hpp), its two uniform
 // blocks, its vertices in the shaders' layout (vertex_stream.hpp), its pixel
-// state and viewport - all through the frame's staging memory. Textures are
-// not bound yet.
+// state and viewport - all through the frame's staging memory - and the
+// textures it samples, decoded from guest memory and kept while their contents
+// (a sampled hash) stay the same.
 //
 // The shaders are generated for each draw and found again by their source
 // (dk_shader_switch.cpp compiles each once); keeping them by configuration
@@ -17,6 +18,8 @@
 #include "wiinx/format/gx/vertex_stream.hpp"
 
 #include <cstring>
+#include <memory>
+#include <unordered_map>
 #include <vector>
 
 namespace dol::dk {
@@ -90,15 +93,154 @@ DkViewport viewport_of(const State& state, uint32_t width, uint32_t height) {
   return out;
 }
 
+// ---------- textures
+
+struct CachedTexture {
+  Texture texture;
+  TextureView view;
+  uint64_t contents = 0;
+};
+
+// keyed by what names the image (address, size, format, levels, palette)
+std::unordered_map<uint64_t, std::unique_ptr<CachedTexture>> g_textures;
+std::unordered_map<uint32_t, std::unique_ptr<Sampler>> g_samplers;
+
+uint64_t mix(uint64_t h, uint64_t v) { return (h ^ v) * 0x100000001b3ull; }
+
+// a sampled hash of `size` bytes: at most 4096 points, so a big texture is not
+// read whole every draw (a rewrite that touches none of them goes unseen)
+uint64_t sample_hash(const uint8_t* data, size_t size) {
+  uint64_t h = 0xcbf29ce484222325ull ^ size;
+  const size_t step = size / 4096 + 1;
+  for (size_t i = 0; i < size; i += step) {
+    h = mix(h, data[i]);
+  }
+  return h;
+}
+
+// GX's hardware min filter: bit 2 linear, low bits the mip mode (0 none, 1 nearest, 2 linear)
+Sampler* sampler_for(const TexMap& map) {
+  const uint32_t key = map.wrapS | map.wrapT << 2 | map.magLinear << 4 | map.minFilter << 5 |
+                       static_cast<uint32_t>(static_cast<int>(map.lodBias * 32) & 0xFF) << 8 |
+                       static_cast<uint32_t>(map.minLod * 16) << 16 | static_cast<uint32_t>(map.maxLod * 16) << 24;
+  auto& slot = g_samplers[key];
+  if (!slot) {
+    slot = std::make_unique<Sampler>();
+    DkSampler& s = slot->sampler;
+    dkSamplerDefaults(&s);
+    const auto wrap = [](uint8_t gx) {
+      return gx == 1 ? DkWrapMode_Repeat : gx == 2 ? DkWrapMode_MirroredRepeat : DkWrapMode_ClampToEdge;
+    };
+    s.wrapMode[0] = wrap(map.wrapS);
+    s.wrapMode[1] = wrap(map.wrapT);
+    s.magFilter = map.magLinear ? DkFilter_Linear : DkFilter_Nearest;
+    s.minFilter = (map.minFilter & 4) ? DkFilter_Linear : DkFilter_Nearest;
+    const uint8_t mip = map.minFilter & 3;
+    s.mipFilter = mip == 1 ? DkMipFilter_Nearest : mip == 2 ? DkMipFilter_Linear : DkMipFilter_None;
+    s.lodBias = map.lodBias;
+    s.lodClampMin = map.minLod;
+    s.lodClampMax = map.maxLod;
+  }
+  return slot.get();
+}
+
+// a map's image, decoded and on the GPU; null when it cannot be read
+TextureView* texture_for(const State& state, const TexMap& map, const CommandProcessor::Memory& memory) {
+  if (!memory || map.address == 0 || !IsKnown(map.format)) {
+    return nullptr;
+  }
+  const size_t size = TextureDataSize(map.format, map.width, map.height, map.mips);
+  const uint8_t* data = size ? memory(map.address, static_cast<uint32_t>(size)) : nullptr;
+  if (!data) {
+    return nullptr;
+  }
+  uint64_t key = mix(mix(mix(0xcbf29ce484222325ull, map.address), map.width | map.height << 16),
+                     static_cast<uint32_t>(map.format) | map.mips << 8);
+  uint64_t contents = sample_hash(data, size);
+  const uint8_t* tlut = nullptr;
+  TlutLoad load;
+  if (IsPaletted(map.format)) {
+    load = state.Tlut(map.tlutTmem);
+    tlut = load.address && load.entries ? memory(load.address, load.entries * 2) : nullptr;
+    if (!tlut) {
+      return nullptr;
+    }
+    key = mix(mix(key, load.address), static_cast<uint32_t>(map.tlutFormat) | load.entries << 8);
+    contents = mix(contents, sample_hash(tlut, load.entries * 2));
+  }
+
+  auto& slot = g_textures[key];
+  if (slot && slot->contents == contents) {
+    return &slot->view;
+  }
+  const std::vector<uint8_t> rgba =
+      IsPaletted(map.format)
+          ? DecodeTexturePalette(map.format, map.width, map.height, map.mips, data, size, map.tlutFormat, load.entries,
+                                 tlut, load.entries * 2)
+          : DecodeTexture(map.format, map.width, map.height, map.mips, data, size);
+  if (rgba.empty()) {
+    return nullptr;
+  }
+  if (!slot || slot->texture.width != map.width || slot->texture.height != map.height ||
+      slot->texture.mip_levels != map.mips) {
+    if (slot) {
+      destroy(slot->view);
+      destroy(slot->texture);
+    } else {
+      slot = std::make_unique<CachedTexture>();
+    }
+    slot->texture = create_texture(DkImageFormat_RGBA8_Unorm, map.width, map.height, 1, map.mips);
+    slot->view = make_view(slot->texture);
+  }
+  // each level after the last, each half the one before
+  size_t offset = 0;
+  uint32_t w = map.width, h = map.height;
+  for (uint32_t mip = 0; mip < map.mips; ++mip) {
+    const uint32_t bytes = w * h * 4;
+    write_texture(slot->texture, mip, 0, 0, 0, w, h, rgba.data() + offset, bytes, 0);
+    offset += bytes;
+    w = w > 1 ? w / 2 : 1;
+    h = h > 1 ? h / 2 : 1;
+  }
+  slot->contents = contents;
+  return &slot->view;
+}
+
+void bind_textures(const State& state, const TevConfig& tev, const CommandProcessor::Memory& memory) {
+  bool bound[8] = {};
+  DkCmdBuf cmd = commands();
+  bind_descriptor_sets();
+  for (unsigned i = 0; i < tev.stageCount; ++i) {
+    const TevStage& stage = tev.stages[i];
+    if (stage.texMap >= 8 || stage.texCoord >= tev.texCoordCount || bound[stage.texMap]) {
+      continue;
+    }
+    bound[stage.texMap] = true;
+    const TexMap map = state.Texture(stage.texMap);
+    TextureView* view = texture_for(state, map, memory);
+    if (!view) {
+      continue;  // (the shader samples whatever was bound there before)
+    }
+    const int32_t image = image_slot(*view);
+    const int32_t sampler = sampler_slot(*sampler_for(map));
+    if (image >= 0 && sampler >= 0) {
+      dkCmdBufBindTexture(cmd, DkStage_Fragment, stage.texMap,
+                          dkMakeTextureHandle(static_cast<uint32_t>(image), static_cast<uint32_t>(sampler)));
+    }
+  }
+}
+
 } // namespace
 
-bool draw_gx(const State& state, const Draw& draw, uint32_t width, uint32_t height) {
+bool draw_gx(const State& state, const Draw& draw, uint32_t width, uint32_t height,
+             const CommandProcessor::Memory& memory) {
   DkPrimitive primitive;
   if (draw.count == 0 || !primitive_of(draw.primitive, &primitive)) {
     return false;
   }
+  const TevConfig tev = state.Tev();
   const std::string vertexGlsl = XfVertexGlsl(state.Vertex());
-  const std::string fragmentGlsl = TevFragmentGlsl(state.Tev());
+  const std::string fragmentGlsl = TevFragmentGlsl(tev);
   if (vertexGlsl.empty() || fragmentGlsl.empty()) {
     return false;
   }
@@ -130,6 +272,7 @@ bool draw_gx(const State& state, const Draw& draw, uint32_t width, uint32_t heig
   dkCmdBufBindUniformBuffer(cmd, DkStage_Fragment, 0, tevAddr, static_cast<uint32_t>(tevBlock.size()));
   dkCmdBufBindUniformBuffer(cmd, DkStage_Vertex, 1, xfAddr, static_cast<uint32_t>(xfBlock.size()));
   bind(pipeline_state(state.Pixel()));
+  bind_textures(state, tev, memory);
   bind_vertex_layout(cmd);
   dkCmdBufBindVtxBuffer(cmd, 0, vertices.gpu(), vertexBytes);
   const DkViewport viewport = viewport_of(state, width, height);

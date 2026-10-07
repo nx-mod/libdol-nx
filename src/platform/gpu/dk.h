@@ -177,10 +177,12 @@ void bind(const PipelineState& state);
 
 // What a GX command stream draws, on the pass that is open: the shaders for
 // the state, its uniforms, the draw's vertices converted, its pixel state, the
-// viewport. `width` and `height` are the target's: GX's 640-wide EFB space is
-// scaled onto it. False when the state asks for something the shaders do not
-// do yet (the draw is skipped).
-bool draw_gx(const wiinx::gx::State& state, const wiinx::gx::Draw& draw, uint32_t width, uint32_t height);
+// viewport, the textures it samples (read from guest memory through `memory`,
+// decoded, kept while their contents stay the same). `width` and `height` are
+// the target's: GX's 640-wide EFB space is scaled onto it. False when the
+// state asks for something the shaders do not do yet (the draw is skipped).
+bool draw_gx(const wiinx::gx::State& state, const wiinx::gx::Draw& draw, uint32_t width, uint32_t height,
+             const wiinx::gx::CommandProcessor::Memory& memory);
 
 // ---------- the screen
 

@@ -4,8 +4,10 @@
 // wiinx::gx::CommandProcessor and drawn by dk::draw_gx. No game, no Aurora.
 //
 // What it should show: on dark blue, a triangle shading red, green and blue,
-// and beside it a quad from orange to purple. The log says how many draws were
-// made and how many were refused. + leaves.
+// below it on the left a quad from orange to purple, and on the right a red
+// and white checkerboard (an 8x8 RGB565 texture repeated four times each way)
+// tinted by its vertex colours. The log says how many of the three draws were
+// made and how many refused. + leaves.
 #include "../../src/platform/gpu/dk.h"
 
 #include <cstdio>
@@ -99,6 +101,47 @@ int main() {
     frame.Vertex(200, 460, 140, 0, 255);
     frame.Vertex(200, 400, 140, 0, 255);
 
+    // a textured quad: an 8x8 RGB565 checkerboard at (fake) 0x00100000, repeated
+    // four times each way, modulated by the vertex colour
+    static std::vector<uint8_t> memory(0x200);
+    for (int y = 0; y < 8; ++y) {
+        for (int x = 0; x < 8; ++x) {
+            // RGB565 tiles are 4x4: tile (x/4, y/4), texel (x%4, y%4)
+            const int tile = (y / 4) * 2 + (x / 4);
+            const int at = tile * 32 + ((y % 4) * 4 + (x % 4)) * 2;
+            const uint16_t texel = ((x + y) & 1) ? 0xF800 : 0xFFFF;  // red or white
+            memory[at] = static_cast<uint8_t>(texel >> 8);
+            memory[at + 1] = static_cast<uint8_t>(texel);
+        }
+    }
+    const wiinx::gx::CommandProcessor::Memory guest = [](uint32_t address, uint32_t size) -> const uint8_t* {
+        address &= 0x3FFFFFFF;
+        return address >= 0x00100000 && address + size <= 0x00100000 + memory.size() ? memory.data() + (address - 0x00100000)
+                                                                                    : nullptr;
+    };
+    frame.CP(0x60, 1u);                                          // TEX0 direct
+    frame.CP(0x70, 1u | 4u << 1 | 1u << 13 | 5u << 14 | 1u << 21 | 4u << 22);  // + TEX0 ST f32
+    frame.XF(0x103F, {1});                                       // one texgen
+    frame.XF(0x1040, {0u | 5u << 7});                            // 2x4 from TEX0 (row 5)
+    frame.XF(0x1050, {61u});                                     // no post matrix
+    frame.XF(0x1018, {0u | 60u << 6});                           // texgen 0: the identity
+    frame.BP(0x00, 1u | 1u << 4 | 0u << 10);                     // one texgen, one channel, one stage
+    frame.BP(0xC0, 15u << 12 | 8u << 8 | 10u << 4 | 15u | 1u << 19);  // TEXC * RASC
+    frame.BP(0xC1, 7u << 13 | 4u << 10 | 5u << 7 | 7u << 4 | 1u << 19);  // TEXA * RASA
+    frame.BP(0x28, 0u | 0u << 3 | 1u << 6 | 0u << 7);            // map 0, coordinate 0, COLOR0A0
+    frame.BP(0x80, 1u | 1u << 2);                                // repeat both ways, nearest
+    frame.BP(0x84, 0);
+    frame.BP(0x88, 7u | 7u << 10 | 4u << 20);                    // 8x8 RGB565
+    frame.BP(0x94, 0x00100000u >> 5);
+    frame.U8(0x80);
+    frame.U16(4);
+    const float quad[4][4] = {{400, 200, 0, 0}, {400, 440, 0, 4}, {600, 440, 4, 4}, {600, 200, 4, 0}};
+    const uint8_t tint[4][3] = {{255, 255, 255}, {255, 255, 128}, {128, 255, 255}, {255, 255, 255}};
+    for (int v = 0; v < 4; ++v) {
+        frame.Vertex(quad[v][0], quad[v][1], tint[v][0], tint[v][1], tint[v][2]);
+        frame.F32(quad[v][2]), frame.F32(quad[v][3]);
+    }
+
     unsigned logged = 0;
     while (appletMainLoop()) {
         padUpdate(&pad);
@@ -117,8 +160,8 @@ int main() {
 
         wiinx::gx::State state;
         unsigned drawn = 0, refused = 0;
-        wiinx::gx::CommandProcessor cp(state, nullptr, [&](const wiinx::gx::Draw& d) {
-            (dol::dk::draw_gx(state, d, width, height) ? drawn : refused)++;
+        wiinx::gx::CommandProcessor cp(state, guest, [&](const wiinx::gx::Draw& d) {
+            (dol::dk::draw_gx(state, d, width, height, guest) ? drawn : refused)++;
         });
         const size_t ran = cp.Run(frame.bytes.data(), frame.bytes.size());
         if (logged++ == 0) {
