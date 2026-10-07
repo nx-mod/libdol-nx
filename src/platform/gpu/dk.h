@@ -193,5 +193,7 @@ bool initialize_screen(DkImageFormat format);
 Texture& acquire_screen();
 // that image shown, and the frame ended (frame_end)
 void present();
+// the screen's swapchain and images gone (shutdown does it first)
+void shutdown_screen();
 
 } // namespace dol::dk

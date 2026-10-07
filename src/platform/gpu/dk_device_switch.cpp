@@ -134,6 +134,7 @@ bool initialize() {
 void shutdown() {
   if (g.queue)
     dkQueueWaitIdle(g.queue);
+  shutdown_screen();
   if (g.commands)
     dkCmdBufDestroy(g.commands);
   if (g.transfer)

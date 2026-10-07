@@ -72,17 +72,20 @@ DkGpuAddr stage_bytes(const void* data, uint32_t size, uint32_t alignment) {
   return a.gpu();
 }
 
-// XF's viewport registers, in GX's 640-wide EFB space, onto the target
+// XF's viewport registers, in GX's 640x480 EFB space, onto the target
 DkViewport viewport_of(const State& state, uint32_t width, uint32_t height) {
   const auto& vp = state.Viewport();
-  const float scale = static_cast<float>(width) / 640.0f;
+  // (each axis its own scale: the EFB's 640x480 stretched to the target, as
+  // the Wii's video output stretches it - 16:9 games draw anamorphic)
+  const float scaleX = static_cast<float>(width) / 640.0f;
+  const float scaleY = static_cast<float>(height) / 480.0f;
   const float w = vp[0] * 2.0f, h = -vp[1] * 2.0f;
   constexpr float z24 = 16777216.0f;
   DkViewport out;
-  out.x = (vp[3] - 342.0f - w / 2.0f) * scale;
-  out.y = (vp[4] - 342.0f - h / 2.0f) * scale;
-  out.width = w * scale;
-  out.height = h * scale;
+  out.x = (vp[3] - 342.0f - w / 2.0f) * scaleX;
+  out.y = (vp[4] - 342.0f - h / 2.0f) * scaleY;
+  out.width = w * scaleX;
+  out.height = h * scaleY;
   out.near = (vp[5] - vp[2]) / z24;
   out.far = vp[5] / z24;
   // (a viewport never set: the whole target)

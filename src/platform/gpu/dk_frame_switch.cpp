@@ -159,6 +159,19 @@ Texture& acquire_screen() {
   return image;
 }
 
+void shutdown_screen() {
+  if (!s.swapchain) {
+    return;
+  }
+  // (the swapchain before the device and its memory: destroyed the other way
+  // round, the program does not close)
+  dkQueueWaitIdle(queue());
+  dkSwapchainDestroy(s.swapchain);
+  if (s.memory)
+    dkMemBlockDestroy(s.memory);
+  s = Screen{};
+}
+
 void present() {
   submit();
   if (s.acquired >= 0)

@@ -31,7 +31,10 @@ void main() {
 int main() {
     PadState pad;
 
-    consoleDebugInit(debugDevice_SVC);
+    // (the layer logs to stderr: into a file on the card, to be read over FTP)
+    std::freopen("sdmc:/switch/libdol-tests/triangle_test.log", "w", stderr);
+    std::setvbuf(stderr, nullptr, _IONBF, 0);
+    dol::dk::log("triangle_test: start");
     padConfigureInput(1, HidNpadStyleSet_NpadStandard);
     padInitializeDefault(&pad);
     if (!dol::dk::initialize() || !dol::dk::initialize_screen(DkImageFormat_RGBA8_Unorm)) {
@@ -52,11 +55,18 @@ int main() {
     dkColorStateDefaults(&color);
     dkColorWriteStateDefaults(&colorWrite);
 
+    unsigned frame = 0;
     while (appletMainLoop()) {
         padUpdate(&pad);
-        if (padGetButtonsDown(&pad) & HidNpadButton_Plus) {
+        // (+, - or B leaves)
+        if (padGetButtonsDown(&pad) & (HidNpadButton_Plus | HidNpadButton_Minus | HidNpadButton_B)) {
+            dol::dk::log("triangle_test: leaving at frame %u", frame);
             break;
         }
+        if (frame % 120 == 0) {
+            dol::dk::log("triangle_test: frame %u", frame);
+        }
+        ++frame;
         dol::dk::Texture& screen = dol::dk::acquire_screen();
         dol::dk::TextureView view = dol::dk::make_view(screen);
         dol::dk::ColorTarget target;

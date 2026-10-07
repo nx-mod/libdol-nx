@@ -81,7 +81,10 @@ List Setup() {
 int main() {
     PadState pad;
 
-    consoleDebugInit(debugDevice_SVC);
+    // (the layer logs to stderr: into a file on the card, to be read over FTP)
+    std::freopen("sdmc:/switch/libdol-tests/gx_test.log", "w", stderr);
+    std::setvbuf(stderr, nullptr, _IONBF, 0);
+    dol::dk::log("gx_test: start");
     padConfigureInput(1, HidNpadStyleSet_NpadStandard);
     padInitializeDefault(&pad);
     if (!dol::dk::initialize() || !dol::dk::initialize_screen(DkImageFormat_RGBA8_Unorm)) {
@@ -143,11 +146,18 @@ int main() {
     }
 
     unsigned logged = 0;
+    unsigned frameCount = 0;
     while (appletMainLoop()) {
         padUpdate(&pad);
-        if (padGetButtonsDown(&pad) & HidNpadButton_Plus) {
+        // (+, - or B leaves)
+        if (padGetButtonsDown(&pad) & (HidNpadButton_Plus | HidNpadButton_Minus | HidNpadButton_B)) {
+            dol::dk::log("gx_test: leaving at frame %u", frameCount);
             break;
         }
+        if (frameCount % 120 == 0) {
+            dol::dk::log("gx_test: frame %u", frameCount);
+        }
+        ++frameCount;
         dol::dk::Texture& screen = dol::dk::acquire_screen();
         dol::dk::TextureView view = dol::dk::make_view(screen);
         dol::dk::ColorTarget target;
