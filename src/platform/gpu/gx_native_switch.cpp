@@ -30,8 +30,12 @@ struct Renderer {
   wiinx::gx::CommandProcessor processor{state, memory, [this](const wiinx::gx::Draw& d) { draw(d); }};
   std::vector<uint8_t> pending;  // FIFO bytes not yet a whole packet
   bool passOpen = false;
+  bool framePass = false;  // the open pass is begin_frame's, on the screen
   uint32_t width = 0, height = 0;
   Counts counts;
+  dk::TextureView screenView;
+  dk::Texture depth;
+  dk::TextureView depthView;
 
   void draw(const wiinx::gx::Draw& d) {
     if (!passOpen) {
@@ -78,6 +82,51 @@ void begin_efb(uint32_t width, uint32_t height) {
 }
 
 void end_efb() { renderer().passOpen = false; }
+
+void begin_frame() {
+  Renderer& r = renderer();
+  if (r.passOpen) {
+    return;
+  }
+  dk::Texture& screen = dk::acquire_screen();
+  r.screenView = dk::make_view(screen);
+  if (r.depth.width != screen.width || r.depth.height != screen.height) {
+    if (r.depth.block) {
+      dk::destroy(r.depthView);
+      dk::destroy(r.depth);
+    }
+    r.depth = dk::create_texture(DkImageFormat_Z24S8, screen.width, screen.height, 1, 1, 1, dk::TextureRender);
+    r.depthView = dk::make_view(r.depth);
+  }
+  const auto clear = r.state.CopyClearColor();
+  dk::ColorTarget color;
+  color.view = &r.screenView;
+  color.clear = true;
+  for (int i = 0; i < 4; ++i) {
+    color.clear_color[i] = clear[i];
+  }
+  dk::DepthTarget depth;
+  depth.view = &r.depthView;
+  depth.clear_depth = true;
+  depth.depth = r.state.CopyClearDepth();
+  uint32_t width = 0, height = 0;
+  dk::begin_pass(&color, 1, &depth, &width, &height);
+  r.passOpen = true;
+  r.framePass = true;
+  r.width = width;
+  r.height = height;
+}
+
+void end_frame() {
+  Renderer& r = renderer();
+  if (!r.passOpen || !r.framePass) {
+    return;
+  }
+  dk::end_pass();
+  dk::present();
+  r.passOpen = false;
+  r.framePass = false;
+}
 
 wiinx::gx::State& state() { return renderer().state; }
 

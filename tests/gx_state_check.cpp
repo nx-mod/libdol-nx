@@ -290,6 +290,18 @@ int main() {
                                           TevFragmentGlsl(state.Tev()).find("outColor.a = tev.fogColor.w") != std::string::npos);
     }
 
+    std::printf("Copy clear\n");
+    {
+        State state;
+        state.ApplyBP(0x4Fu << 24 | 0x40u << 8 | 0x10u);   // alpha 0x40, red 0x10
+        state.ApplyBP(0x50u << 24 | 0x20u << 8 | 0x30u);   // green 0x20, blue 0x30
+        state.ApplyBP(0x51u << 24 | 0xFFFFFFu);
+        const auto c = state.CopyClearColor();
+        Check("the clear colour, RGBA", Near(c[0], 0x10 / 255.0f) && Near(c[1], 0x20 / 255.0f) && Near(c[2], 0x30 / 255.0f) &&
+                                            Near(c[3], 0x40 / 255.0f));
+        Check("the clear depth, the far plane", Near(state.CopyClearDepth(), 1.0f));
+    }
+
     std::printf("Texture registers\n");
     {
         State state;

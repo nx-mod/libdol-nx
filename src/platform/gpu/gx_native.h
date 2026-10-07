@@ -27,6 +27,13 @@ void call_list(uint32_t address, uint32_t size);
 void begin_efb(uint32_t width, uint32_t height);
 void end_efb();
 
+// A frame on the screen: the screen's next image as the EFB, with a depth
+// buffer of its size, both cleared as GX's copy clear registers say; then
+// presented. (The EFB is the screen for now - one EFB a frame, the display
+// copy implied; copies to textures come later.)
+void begin_frame();
+void end_frame();
+
 wiinx::gx::State& state();
 
 struct Counts {

@@ -652,6 +652,14 @@ TexMap State::Texture(std::uint8_t map) const {
 
 TlutLoad State::Tlut(std::uint32_t tmem) const { return mTluts[(tmem >> 9) & 1023]; }
 
+// copy clear: 0x4F holds alpha and red, 0x50 green and blue, 0x51 the depth
+std::array<float, 4> State::CopyClearColor() const {
+    const std::uint32_t ar = mBpRegs[0x4F], gb = mBpRegs[0x50];
+    return {Bits(ar, 8, 0) / 255.0f, Bits(gb, 8, 8) / 255.0f, Bits(gb, 8, 0) / 255.0f, Bits(ar, 8, 8) / 255.0f};
+}
+
+float State::CopyClearDepth() const { return Bits(mBpRegs[0x51], 24, 0) / 16777215.0f; }
+
 // the projection's six parameters as the 4x4 GXSetProjection would have
 // loaded
 void State::RebuildProjection() {

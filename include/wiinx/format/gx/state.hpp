@@ -120,6 +120,10 @@ class State {
     // texture map 0..7, and the palette load at a TMEM address
     TexMap Texture(std::uint8_t map) const;
     TlutLoad Tlut(std::uint32_t tmem) const;
+    // what an EFB copy with clearing leaves behind (GXSetCopyClear: BP 0x4F,
+    // 0x50 the colour, 0x51 the 24-bit depth), as 0..1
+    std::array<float, 4> CopyClearColor() const;
+    float CopyClearDepth() const;
     // XF's viewport registers: scale x, y, z and offset x, y, z
     const std::array<float, 6>& Viewport() const { return mViewport; }
 
