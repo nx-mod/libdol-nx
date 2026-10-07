@@ -9,6 +9,7 @@
 #include <deko3d.h>
 #include <switch.h>
 
+#include "wiinx/format/gx/command.hpp"
 #include "wiinx/format/gx/pixel.hpp"
 
 #include <cstdint>
@@ -171,6 +172,15 @@ struct PipelineState {
 PipelineState pipeline_state(const wiinx::gx::PixelState& state);
 // on the frame's commands, for the draws after
 void bind(const PipelineState& state);
+
+// ---------- GX draws (dk_gx_renderer_switch.cpp)
+
+// What a GX command stream draws, on the pass that is open: the shaders for
+// the state, its uniforms, the draw's vertices converted, its pixel state, the
+// viewport. `width` and `height` are the target's: GX's 640-wide EFB space is
+// scaled onto it. False when the state asks for something the shaders do not
+// do yet (the draw is skipped).
+bool draw_gx(const wiinx::gx::State& state, const wiinx::gx::Draw& draw, uint32_t width, uint32_t height);
 
 // ---------- the screen
 

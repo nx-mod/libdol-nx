@@ -13,6 +13,7 @@ Tint, no NVK.
 | `dk_resources_switch.cpp` | buffers, textures, views, writes into them |
 | `dk_frame_switch.cpp` | passes, copies, the screen (1920x1080 images, cropped to 720p in handheld) |
 | `dk_shader_switch.cpp` | shaders: GLSL compiled by UAM on the console, loaded into code memory, kept for the run |
+| `dk_gx_renderer_switch.cpp` | GX draws: the state's shaders, uniforms, converted vertices, pixel state and viewport, drawn (`draw_gx`); textures not yet bound |
 | `dk_gx_state_switch.cpp` | GX's pixel state (`wiinx/format/gx/pixel.hpp`: blending, logic op, depth, culling, write masks) as deko3d state objects |
 
 UAM is built for the console as Halo's port builds it (meson, bison, flex,
@@ -24,8 +25,11 @@ library into one object with every symbol renamed but `dol_dk_compile_glsl`
 NVK brings, and linked plainly they collide. Without a UAM build the link
 still succeeds and shaders do not compile.
 
-It came from the draft in aurora-nx's `deko3d` branch (where a test clears the
-screen with it) and is compiled into every Switch build, linked against
+Two console tests build alone with `tests/deko3d/build.sh`: `triangle_test.nro`
+(the layer and UAM) and `gx_test.nro` (display lists through the command
+processor and `draw_gx`, onto the screen).
+
+It came from the draft in aurora-nx's `deko3d` branch and is compiled into every Switch build, linked against
 `libdeko3d`, but nothing calls it yet: the game still draws through Aurora.
 
 The files keep file-local helpers of the same names, so they are built outside
