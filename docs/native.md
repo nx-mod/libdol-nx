@@ -15,9 +15,9 @@ turn, smallest and most self-contained first.
 | 1 | matrices | `aurora_mtx` | **gone**: nothing on the host called it; a game's matrices are its own code or libdol's natives (`accel/sdk/mtx`) |
 | 2 | input | `aurora_pad`, `aurora_si`, Aurora's gamepad layer | `aurora_pad`, `aurora_si` **gone** on the Switch: PAD and SI over native input (`pad_sdk_switch.cpp`); nothing reads Aurora's gamepads there |
 | 3 | main loop and events | `aurora_core` (window, events, the loop) | |
-| 4 | video timing and present | `aurora_vi` | |
+| 4 | video timing and present | `aurora_vi` | stays until 6: Aurora's window, GX and GPU code read its render-mode state |
 | 5 | settings overlay | `aurora_core` (ImGui) | |
-| 6 | graphics | `aurora_gx`, Dawn | GX on deko3d |
+| 6 | graphics | `aurora_gx`, Dawn | under way: the deko3d layer is in (`src/platform/gpu`, [deko3d.md](deko3d.md)), not yet drawn on |
 
 ## 2. Input
 
@@ -128,9 +128,9 @@ vertex formats, TEV stages to GLSL compiled on the console by UAM, GX texture
 decoding, EFB and XFB copies. Aurora's TEV shader generator and texture
 decoders are the reference, adapted rather than linked. Shaders are kept on the
 card in one SQLite database on nx-mod/sqlite-nx (a native libnx file layer)
-rather than a file each. The native device layer is drafted in aurora-nx's
-`deko3d` branch (`lib/deko3d`: device, memory rings, textures, passes, copies,
-the screen) and moves here.
+rather than a file each. The native device layer (device, memory rings,
+textures, passes, copies, the screen) is in `src/platform/gpu`, from aurora-nx's
+`deko3d` branch draft; [deko3d.md](deko3d.md) has what comes next.
 
 Graphics is where the time is: in a Mario Kart Wii race, Aurora building ~480
 draws and the runtime walking display lists cost ~13 ms of a 77 ms frame on the

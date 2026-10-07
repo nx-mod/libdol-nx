@@ -191,6 +191,8 @@ if (TARGET WiiCompiled)
     # The graphics path ends at NVK; dawn-nx knows how it has to be linked.
     include("${WIINX_DAWN_DIR}/switch_smoke_test/NvkLink.cmake")
     dawn_switch_link_nvk(WiiCompiled)
+    # libdol's own GPU layer (src/platform/gpu, docs/deko3d.md)
+    target_link_libraries(WiiCompiled PRIVATE deko3d)
     # Every thread gets a 4 MiB stack instead of libnx's 128 KiB default: the
     # shader compiler overflows the default.
     target_link_libraries(WiiCompiled PRIVATE -Wl,--wrap=pthread_create)

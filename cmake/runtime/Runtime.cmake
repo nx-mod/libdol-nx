@@ -310,6 +310,11 @@ endif()
 if(MKW_PLATFORM_SWITCH)
     # The mapping wizard builds SDL gamepad mappings; Switch pads need none.
     list(FILTER SOURCES EXCLUDE REGEX "/src/app/controller_mapping_wizard\\.cpp$")
+    # The deko3d layer (src/platform/gpu) keeps file-local helpers of the same
+    # names in each file; compiled on its own rather than in a unity batch.
+    set(_wiinx_dk_sources ${SOURCES})
+    list(FILTER _wiinx_dk_sources INCLUDE REGEX "/src/platform/gpu/dk_.*_switch\\.cpp$")
+    set_source_files_properties(${_wiinx_dk_sources} PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 endif()
 
 # The console's own modules. What is here is what both machines have; the
