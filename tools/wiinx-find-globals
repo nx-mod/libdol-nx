@@ -46,8 +46,14 @@ def s16(x):
     return x - 0x10000 if x & 0x8000 else x
 
 
-LOADS = {32: 4, 34: 1, 40: 2, 48: 4, 50: 8}          # lwz lbz lhz lfs lfd
-STORES = {36: 4, 38: 1, 44: 2, 52: 4, 37: 4}         # stw stb sth stfs stwu
+LOADS = {32: 4, 34: 1, 40: 2, 48: 4, 50: 8,          # lwz lbz lhz lfs lfd
+         33: 4, 35: 1, 41: 2, 49: 4, 51: 8}          # ... and their update forms
+STORES = {36: 4, 38: 1, 44: 2, 52: 4, 54: 8,         # stw stb sth stfs stfd
+          37: 4, 39: 1, 45: 2, 53: 4, 55: 8}         # ... and their update forms
+# the update forms (lwzu, stwu, ...) leave the address they used in the base
+# register: `lis r4,0x8112; stwu r5,-16000(r4)` is a store to 0x8111C180 and
+# r4 is that from then on
+UPDATES = {33, 35, 41, 49, 51, 37, 39, 45, 53, 55}
 
 
 def trace(dol, start, count=400):
@@ -88,6 +94,8 @@ def trace(dol, start, count=400):
             elif reg.get(ra) is not None:
                 events.append((kind, (reg[ra] + s16(im)) & 0xFFFFFFFF,
                                LOADS.get(op) or STORES[op], rt))
+            if op in UPDATES and ra not in (0, 1, 2, 13):
+                reg[ra] = (reg[ra] + s16(im)) & 0xFFFFFFFF if reg.get(ra) is not None else None
             if op in LOADS:
                 reg[rt] = None
         elif op == 18 and w & 1:                                # bl
