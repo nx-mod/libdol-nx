@@ -13,7 +13,8 @@
 //   in  vec4 location 0, 1      the rasterised colour channels 0 and 1
 //   in  vec3 location 2 + n     texture coordinate n (s, t, q)
 //   uniform block binding 0     vec4 tevreg[4] (PREV, REG0..2 as GXSetTevColor
-//                               sets them), vec4 kcolor[4], vec4 fogColor,
+//                               sets them), vec4 kcolor[4], vec4 fogColor
+//                               (its w the destination alpha),
 //                               vec4 fogParams (A, C, B's magnitude, B's shift)
 //   sampler2D binding 0..7      texture maps 0..7
 //   out vec4 location 0         the pixel
@@ -96,6 +97,8 @@ struct TevConfig {
     // GX_FOG_*: the function in the low three bits (0 none, 2 linear, 4 exp,
     // 5 exp2, 6 reverse exp, 7 reverse exp2), orthographic in bit 3
     std::uint8_t fogType = 0;
+    // GXSetDstAlpha: the alpha written is the constant (fogColor.w), not the TEV's
+    bool dstAlpha = false;
 };
 
 // The fragment shader for `config`, GLSL 460 for UAM. Empty when the config

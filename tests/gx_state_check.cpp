@@ -282,6 +282,12 @@ int main() {
         bp(0xF1, partial(0.0f) | 7u << 21 | 1u << 20);  // reverse exp2, orthographic
         Check("reverse exp2, orthographic", state.Tev().fogType == 15);
         Check("the orthographic fog shader compiles", Compiles(TevFragmentGlsl(state.Tev()), "frag", "fog_ortho"));
+        bp(0x42, 0x80u | 1u << 8);
+        Check("destination alpha: the constant, rides in fogColor.w", state.Tev().dstAlpha &&
+                                                                         Near(FloatAt(state.TevUniforms(), 140), 128 / 255.0f));
+        Check("it survives a fog colour write", (bp(0xF2, 0), Near(FloatAt(state.TevUniforms(), 140), 128 / 255.0f)));
+        Check("the shader writes it", Compiles(TevFragmentGlsl(state.Tev()), "frag", "dst_alpha") &&
+                                          TevFragmentGlsl(state.Tev()).find("outColor.a = tev.fogColor.w") != std::string::npos);
     }
 
     std::printf("Texture registers\n");

@@ -518,7 +518,11 @@ void State::ApplyBP(std::uint32_t value) {
         mTev.fogType = static_cast<std::uint8_t>(Bits(v, 3, 21) | Bits(v, 1, 20) << 3);
         break;
     case 0xF2:
-        mFogColor = {Bits(v, 8, 16) / 255.0f, Bits(v, 8, 8) / 255.0f, Bits(v, 8, 0) / 255.0f, 1.0f};
+        mFogColor = {Bits(v, 8, 16) / 255.0f, Bits(v, 8, 8) / 255.0f, Bits(v, 8, 0) / 255.0f, mFogColor[3]};
+        break;
+    case 0x42:  // destination alpha: the value, and whether it replaces the TEV's
+        mFogColor[3] = Bits(v, 8, 0) / 255.0f;
+        mTev.dstAlpha = Bits(v, 1, 8) != 0;
         break;
     case 0xF3:  // alpha compare
         SetAlphaCompare(static_cast<std::uint8_t>(Bits(v, 3, 16)), static_cast<std::uint8_t>(Bits(v, 8, 0)),

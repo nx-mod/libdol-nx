@@ -16,7 +16,7 @@ constexpr std::string_view kPrelude = R"(#version 460
 layout (std140, binding = 0) uniform TevBlock {
     vec4 tevreg[4];
     vec4 kcolor[4];
-    vec4 fogColor;
+    vec4 fogColor;   // (w: the destination alpha)
     vec4 fogParams;  // A, C, B's magnitude, B's shift
 } tev;
 
@@ -322,7 +322,12 @@ struct Generator {
             }
             s += "    prev.rgb = mix(clamp(prev.rgb, 0.0, 1.0), tev.fogColor.rgb, fog);\n";
         }
-        s += "\n    outColor = clamp(prev, 0.0, 1.0);\n}\n";
+        s += "\n    outColor = clamp(prev, 0.0, 1.0);\n";
+        if (config.dstAlpha) {
+            // (after the alpha test, which tested the TEV's alpha)
+            s += "    outColor.a = tev.fogColor.w;\n";
+        }
+        s += "}\n";
         return ok ? s : std::string();
     }
 };
