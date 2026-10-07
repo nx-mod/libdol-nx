@@ -10,6 +10,9 @@
 #include "ppc_runtime.h"
 #include "runtime_config.h"
 #include "runtime_log.h"
+#ifdef __SWITCH__
+#include <switch.h>
+#endif
 
 #include <algorithm>
 #include <array>
@@ -1368,6 +1371,17 @@ private:
 
     void MixWorkerMain() {
         t_onMixWorker = true;
+#ifdef __SWITCH__
+        // The game thread joins this worker every audio block (~2.5% of a race
+        // frame in driftdroid's measurements, dorPXP/driftdroid 9040d29): at
+        // libnx's time-sliced 0x3B it queued behind the other workers. 0x2D, just
+        // under the game's own 0x2C; the buffer goes to audren from the backend,
+        // so there is no output thread here for it to starve.
+        {
+            const Result rc = svcSetThreadPriority(CUR_THREAD_HANDLE, 0x2D);
+            RT_LOGF(RT_TAG_AUDIO, "AX mix worker priority 0x2D (rc 0x%x)\n", static_cast<unsigned>(rc));
+        }
+#endif
         for (;;) {
             {
                 std::unique_lock<std::mutex> lock(m_mixMutex);

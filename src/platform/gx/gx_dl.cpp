@@ -28,8 +28,6 @@ namespace aurora::gx::fifo {
 bool in_display_list();
 bool submit_raw_draw(GXPrimitive prim, GXVtxFmt fmt, const uint8_t* vertices, uint16_t vtxCount,
                      uint32_t vertexBytes);
-bool submit_draw_in_stream(GXPrimitive prim, GXVtxFmt fmt, const uint8_t* vertices, uint16_t vtxCount,
-                     uint32_t vertexBytes);
 }
 
 // See abi_bridge.h: guest code is single-host-threaded on Switch and Android, so these per-call
@@ -230,7 +228,7 @@ static bool SubmitLytDrawDirect(float x0, float y0, float x1, float y1, int texC
     uint32_t pos = 0;
     AppendLytQuadVertices(vertices.data(), pos, x0, y0, x1, y1, texCoordAddr, texCoordCount, colors);
 
-    if (!aurora::gx::fifo::submit_draw_in_stream(GX_QUADS, GX_VTXFMT0, vertices.data(), 4, pos)) {
+    if (!aurora::gx::fifo::submit_raw_draw(GX_QUADS, GX_VTXFMT0, vertices.data(), 4, pos)) {
         return false;
     }
     GXMarkFrameWork();
