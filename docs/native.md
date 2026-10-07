@@ -13,7 +13,7 @@ turn, smallest and most self-contained first.
 | # | Section | Aurora | State |
 |---|---|---|---|
 | 1 | matrices | `aurora_mtx` | **gone**: nothing on the host called it; a game's matrices are its own code or libdol's natives (`accel/sdk/mtx`) |
-| 2 | input | `aurora_pad`, `aurora_si`, Aurora's gamepad layer; SDL in libwii-nx's Wii Remote | next |
+| 2 | input | `aurora_pad`, `aurora_si`, Aurora's gamepad layer | under way: native input in, Wii Remote on it; the PAD SDK next |
 | 3 | main loop and events | `aurora_core` (window, events, the loop) | |
 | 4 | video timing and present | `aurora_vi` | |
 | 5 | settings overlay | `aurora_core` (ImGui) | |
@@ -39,11 +39,11 @@ Aurora's gamepad layer on the Switch is already libnx HID underneath
 
 ### libwii-nx's part
 
-The Wii Remote is the most layered input in the stack: libwii-nx's
-`wii_remote_input.cpp` reads it through SDL3's HIDAPI Wii driver, SDL's sensors
-and Aurora's gamepad - and on the Switch SDL has no Bluetooth access to a real
-remote, so in practice it is a Joy-Con emulated through two layers. libwii-nx's
-own TODO already waits on "an input interface in libdol first"; this is it:
+libwii-nx's `wii_remote_input.cpp` reaches real remotes through SDL3's HIDAPI
+Wii driver on the desktop; on the Switch its own branch already read libnx, as a
+Wii Remote + Classic Controller per pad, but with a HID reader of its own and no
+motion. It now reads `dol::input` (one HID reader in the program; done), and its
+own TODO's "an input interface in libdol first" is answered. Still to come:
 
 - the interface carries motion as well (libnx's six-axis sensors: accelerometer
   and gyro), not only buttons, sticks and rumble
@@ -51,7 +51,6 @@ own TODO already waits on "an input interface in libdol first"; this is it:
   the Wii Remote - buttons, its accelerometer, the pointer from its gyro with
   the stick as the fallback - and the left Joy-Con is the Nunchuk, with its own
   motion. That is also the motion libwii-nx's TODO lists as missing (Wii Sports)
-- SDL leaves the Wii builds with it
 
 The remote is filled in `WiiRemoteInput::ReadKpadSample`'s terms (WPAD button
 bits, accelerometer in g with the KPAD frame's rest at y = -1, Nunchuk stick and
