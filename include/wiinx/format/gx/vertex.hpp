@@ -93,4 +93,7 @@ struct VertexConfig {
 // range, a colour source the vertices do not carry is answered as white).
 std::string XfVertexGlsl(const VertexConfig& config);
 
+// A byte string naming `config` for a cache (see TevConfigKey).
+std::string VertexConfigKey(const VertexConfig& config);
+
 }  // namespace wiinx::gx

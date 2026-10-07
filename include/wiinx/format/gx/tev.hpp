@@ -105,4 +105,9 @@ struct TevConfig {
 // names something out of range (a stage count past 16, an unknown argument).
 std::string TevFragmentGlsl(const TevConfig& config);
 
+// A byte string naming `config` for a cache: equal configurations give equal
+// keys, and anything the shader depends on changes it. Field by field, so
+// padding never leaks in.
+std::string TevConfigKey(const TevConfig& config);
+
 }  // namespace wiinx::gx

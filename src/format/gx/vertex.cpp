@@ -255,6 +255,24 @@ struct Generator {
 
 }  // namespace xf_detail
 
+std::string VertexConfigKey(const VertexConfig& c) {
+    std::string k;
+    const auto put = [&k](unsigned v) { k.push_back(static_cast<char>(v)); };
+    put(c.hasNormal | c.hasColor0 << 1 | c.hasColor1 << 2 | c.indexedPosMtx << 3 | c.dualTexture << 4);
+    put(c.texCoords), put(c.channelCount), put(c.texGenCount);
+    for (unsigned i = 0; i < 4; ++i) {
+        const ColorChannel& ch = c.channels[i];
+        put(static_cast<unsigned>(ch.material) | static_cast<unsigned>(ch.ambient) << 1 | ch.lighting << 2 |
+            static_cast<unsigned>(ch.diffuse) << 3 | static_cast<unsigned>(ch.attenuation) << 5);
+        put(ch.lightMask);
+    }
+    for (unsigned i = 0; i < c.texGenCount && i < 8; ++i) {
+        const TexGen& t = c.texGens[i];
+        put(static_cast<unsigned>(t.type)), put(t.source), put(t.matrix), put(t.normalize), put(t.postMatrix);
+    }
+    return k;
+}
+
 std::string XfVertexGlsl(const VertexConfig& config) {
     xf_detail::Generator generator{config};
     return generator.Run();

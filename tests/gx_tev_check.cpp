@@ -194,6 +194,22 @@ int main() {
         Check("UAM compiles it", Compiles(glsl, "sixteen"));
     }
 
+    std::printf("Configuration keys\n");
+    {
+        TevConfig a, b;
+        a.stages[0].color = Color(TevColorArg::Zero, TevColorArg::TexC, TevColorArg::RasC, TevColorArg::Zero);
+        b = a;
+        Check("equal configurations, equal keys", TevConfigKey(a) == TevConfigKey(b));
+        b.stages[0].color.scale = TevScale::Two;
+        Check("a stage's scale changes it", TevConfigKey(a) != TevConfigKey(b));
+        b = a;
+        b.fogType = 5;
+        Check("fog changes it", TevConfigKey(a) != TevConfigKey(b));
+        b = a;
+        b.stages[3].color.a = 7;  // a stage past the count
+        Check("stages past the count do not", TevConfigKey(a) == TevConfigKey(b));
+    }
+
     std::printf("Refusals\n");
     {
         TevConfig config;

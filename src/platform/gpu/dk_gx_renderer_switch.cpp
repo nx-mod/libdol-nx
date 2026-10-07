@@ -7,9 +7,8 @@
 // textures it samples, decoded from guest memory and kept while their contents
 // (a sampled hash) stay the same.
 //
-// The shaders are generated for each draw and found again by their source
-// (dk_shader_switch.cpp compiles each once); keeping them by configuration
-// instead is for when a measurement asks.
+// The shaders are kept by configuration: a draw whose state matches one seen
+// before builds no GLSL at all.
 #include "dk.h"
 
 #include "wiinx/format/gx/state.hpp"
@@ -91,6 +90,31 @@ DkViewport viewport_of(const State& state, uint32_t width, uint32_t height) {
     out = {0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f, 1.0f};
   }
   return out;
+}
+
+// ---------- shaders, kept by configuration (generated and compiled once each)
+
+struct ShaderPair {
+  const DkShader* vertex = nullptr;
+  const DkShader* fragment = nullptr;
+};
+
+std::unordered_map<std::string, ShaderPair> g_shaderPairs;
+
+const ShaderPair& shaders_for(const VertexConfig& vertexConfig, const TevConfig& tev) {
+  std::string key = VertexConfigKey(vertexConfig);
+  key.push_back('|');
+  key += TevConfigKey(tev);
+  auto [it, inserted] = g_shaderPairs.try_emplace(std::move(key));
+  if (inserted) {
+    const std::string vertexGlsl = XfVertexGlsl(vertexConfig);
+    const std::string fragmentGlsl = TevFragmentGlsl(tev);
+    if (!vertexGlsl.empty() && !fragmentGlsl.empty()) {
+      it->second.vertex = shader(ShaderStage::Vertex, vertexGlsl.c_str());
+      it->second.fragment = shader(ShaderStage::Fragment, fragmentGlsl.c_str());
+    }
+  }
+  return it->second;
 }
 
 // ---------- textures
@@ -239,16 +263,13 @@ bool draw_gx(const State& state, const Draw& draw, uint32_t width, uint32_t heig
     return false;
   }
   const TevConfig tev = state.Tev();
-  const std::string vertexGlsl = XfVertexGlsl(state.Vertex());
-  const std::string fragmentGlsl = TevFragmentGlsl(tev);
-  if (vertexGlsl.empty() || fragmentGlsl.empty()) {
+  const VertexConfig vertexConfig = state.Vertex();
+  const ShaderPair& pair = shaders_for(vertexConfig, tev);
+  if (!pair.vertex || !pair.fragment) {
     return false;
   }
-  const DkShader* vertex = shader(ShaderStage::Vertex, vertexGlsl.c_str());
-  const DkShader* fragment = shader(ShaderStage::Fragment, fragmentGlsl.c_str());
-  if (!vertex || !fragment) {
-    return false;
-  }
+  const DkShader* vertex = pair.vertex;
+  const DkShader* fragment = pair.fragment;
 
   // the vertices, converted where the GPU reads them
   const uint32_t vertexBytes = static_cast<uint32_t>(draw.count * kVertexFloats * sizeof(float));

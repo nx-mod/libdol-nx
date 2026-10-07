@@ -334,6 +334,29 @@ struct Generator {
 
 }  // namespace tev_detail
 
+std::string TevConfigKey(const TevConfig& c) {
+    std::string k;
+    const auto put = [&k](unsigned v) { k.push_back(static_cast<char>(v)); };
+    put(c.stageCount), put(c.texCoordCount), put(static_cast<unsigned>(c.alphaComp0)), put(c.alphaRef0);
+    put(static_cast<unsigned>(c.alphaOp)), put(static_cast<unsigned>(c.alphaComp1)), put(c.alphaRef1);
+    put(c.fogType), put(c.dstAlpha);
+    for (const TevSwap& s : c.swapTable) {
+        put(static_cast<unsigned>(s.r) | static_cast<unsigned>(s.g) << 2 | static_cast<unsigned>(s.b) << 4 |
+            static_cast<unsigned>(s.a) << 6);
+    }
+    for (unsigned i = 0; i < c.stageCount && i < 16; ++i) {
+        const TevStage& s = c.stages[i];
+        for (const TevCombiner* k2 : {&s.color, &s.alpha}) {
+            put(k2->a), put(k2->b), put(k2->c), put(k2->d), put(static_cast<unsigned>(k2->op));
+            put(static_cast<unsigned>(k2->bias) | static_cast<unsigned>(k2->scale) << 2 | k2->clamp << 4 |
+                static_cast<unsigned>(k2->out) << 5);
+        }
+        put(s.kcolorSel), put(s.kalphaSel), put(s.texCoord), put(s.texMap), put(static_cast<unsigned>(s.channel));
+        put(s.rasSwap | s.texSwap << 2);
+    }
+    return k;
+}
+
 std::string TevFragmentGlsl(const TevConfig& config) {
     tev_detail::Generator generator{config};
     return generator.Run();
