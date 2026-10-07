@@ -166,6 +166,14 @@ set(MKW_TRANSLATED_PPC_FP_OPTIONS -fno-fast-math -ffp-contract=off)
 # ----------------------------------------------------------------------
 # Third-party: aurora-main (provides SDL3 + GPU backends)
 # ----------------------------------------------------------------------
+# What the runtime links of Aurora. The Switch has its own PAD and SI
+# (src/platform/input/pad_sdk_switch.cpp, over native_input; docs/native.md).
+if(MKW_PLATFORM_SWITCH)
+    set(WIINX_AURORA_LIBRARIES aurora::gx aurora::vi)
+else()
+    set(WIINX_AURORA_LIBRARIES aurora::gx aurora::pad aurora::si aurora::vi)
+endif()
+
 if(MKW_NATIVE_PREBUILT_DIR)
     # Precompiled aurora + third-party archives. The source trees are still
     # present (the runtime includes aurora headers directly), they are simply

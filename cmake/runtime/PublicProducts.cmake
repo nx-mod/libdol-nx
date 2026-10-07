@@ -91,7 +91,7 @@ function(wiinx_add_runtime_layer name)
         SDL_MAIN_HANDLED
         _DISABLE_STRING_ANNOTATION _DISABLE_VECTOR_ANNOTATION)
     target_link_libraries(${name} PRIVATE
-        aurora::gx aurora::pad aurora::si aurora::vi)
+        ${WIINX_AURORA_LIBRARIES})
     target_link_libraries(${name} PRIVATE mkw_platform mkw::pugixml mkw::toml11 mkw::cryptopp)
     target_link_libraries(${name} PRIVATE wiinx::core)
     if(MKW_PLATFORM_WINDOWS)
@@ -263,7 +263,7 @@ function(mkw_configure_product target)
         mkw_platform mkw_base_shared mkw::pugixml mkw::toml11 mkw::cryptopp)
 
     target_link_libraries(${target} PRIVATE
-        aurora::gx aurora::pad aurora::si aurora::vi)
+        ${WIINX_AURORA_LIBRARIES})
     if(MKW_PLATFORM_MACOS)
         target_link_libraries(${target} PRIVATE
             "${MKW_IOKIT_FRAMEWORK}" "${MKW_COREFOUNDATION_FRAMEWORK}")

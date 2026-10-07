@@ -13,7 +13,7 @@ turn, smallest and most self-contained first.
 | # | Section | Aurora | State |
 |---|---|---|---|
 | 1 | matrices | `aurora_mtx` | **gone**: nothing on the host called it; a game's matrices are its own code or libdol's natives (`accel/sdk/mtx`) |
-| 2 | input | `aurora_pad`, `aurora_si`, Aurora's gamepad layer | under way: native input in, Wii Remote on it; the PAD SDK next (scoped below) |
+| 2 | input | `aurora_pad`, `aurora_si`, Aurora's gamepad layer | `aurora_pad`, `aurora_si` **gone** on the Switch: PAD and SI over native input (`pad_sdk_switch.cpp`); the overlay still reads Aurora's gamepad (section 5) |
 | 3 | main loop and events | `aurora_core` (window, events, the loop) | |
 | 4 | video timing and present | `aurora_vi` | |
 | 5 | settings overlay | `aurora_core` (ImGui) | |
@@ -37,7 +37,18 @@ Aurora's gamepad layer on the Switch is already libnx HID underneath
    overlay and the mapping wizard.
 4. `aurora::pad` and `aurora::si` are no longer linked (`cmake/runtime`).
 
-### What the PAD port takes
+### Done: the PAD SDK on native input
+
+`src/platform/input/pad_sdk_switch.cpp` is the PAD SDK and SIProbe on the
+Switch, over `dol::input`, and `aurora_pad`/`aurora_si` are no longer linked
+there (`WIINX_AURORA_LIBRARIES`, `cmake/runtime/Runtime.cmake`). Mappings keep
+Aurora's numbering, file format and names, so saved ones carry over. Rumble
+now reaches the pads (Aurora's Switch layer never wired it), and
+PADGetSensorData answers from the six-axis sensors. Until the settings overlay
+moves (section 5), PADGetGamepadForIndex still hands out Aurora's gamepad and
+PADRead polls Aurora's pads for it.
+
+### What the PAD port took
 
 Aurora's `pad.cpp` is not generic over a thin gamepad API: it reads and writes
 Aurora's controller registry directly (`input::GameController`: the button,
