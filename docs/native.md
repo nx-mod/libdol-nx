@@ -13,7 +13,7 @@ turn, smallest and most self-contained first.
 | # | Section | Aurora | State |
 |---|---|---|---|
 | 1 | matrices | `aurora_mtx` | **gone**: nothing on the host called it; a game's matrices are its own code or libdol's natives (`accel/sdk/mtx`) |
-| 2 | input | `aurora_pad`, `aurora_si`, Aurora's gamepad layer | next |
+| 2 | input | `aurora_pad`, `aurora_si`, Aurora's gamepad layer; SDL in libwii-nx's Wii Remote | next |
 | 3 | main loop and events | `aurora_core` (window, events, the loop) | |
 | 4 | video timing and present | `aurora_vi` | |
 | 5 | settings overlay | `aurora_core` (ImGui) | |
@@ -34,10 +34,30 @@ Aurora's gamepad layer on the Switch is already libnx HID underneath
    bindings, which the Switch has no use for. The mappings keep the same file
    format, so saved mappings carry over.
 3. The callers move to it: `pad.cpp`, `input_bindings.cpp`, the settings
-   overlay and the mapping wizard here, and libwii-nx's Wii Remote input.
+   overlay and the mapping wizard.
 4. `aurora::pad` and `aurora::si` are no longer linked (`cmake/runtime`).
 
-Proven when a title rebuilt without them reads its controllers the same.
+### libwii-nx's part
+
+The Wii Remote is the most layered input in the stack: libwii-nx's
+`wii_remote_input.cpp` reads it through SDL3's HIDAPI Wii driver, SDL's sensors
+and Aurora's gamepad - and on the Switch SDL has no Bluetooth access to a real
+remote, so in practice it is a Joy-Con emulated through two layers. libwii-nx's
+own TODO already waits on "an input interface in libdol first"; this is it:
+
+- the interface carries motion as well (libnx's six-axis sensors: accelerometer
+  and gyro), not only buttons, sticks and rumble
+- WPAD/KPAD read it directly: a Joy-Con (the right one, or one held sideways) is
+  the Wii Remote - buttons, its accelerometer, the pointer from its gyro with
+  the stick as the fallback - and the left Joy-Con is the Nunchuk, with its own
+  motion. That is also the motion libwii-nx's TODO lists as missing (Wii Sports)
+- SDL leaves the Wii builds with it
+
+Real Wii Remotes over Bluetooth (libwii-nx's `wud`) need Bluetooth HID access
+libnx does not give homebrew; a later question, not this section.
+
+Proven when a title rebuilt without them reads its controllers the same, and
+a Wii Remote game reads a Joy-Con as its remote.
 
 ## 3-5. Main loop, video timing, overlay
 
