@@ -2,6 +2,7 @@
 #include "audio_backend.h"
 #include "aurora_events.h"
 #include "controller_button_names.h"
+#include "pad_native.h"
 #include "controller_mapping_wizard.h"
 #include "input_bindings.h"
 #include "game_graphics_options.h"
@@ -421,6 +422,8 @@ void DrawWiiRemoteSettings(uint32_t selectedGamePort) {
             ImGui::TextDisabled("console: its buttons mean what the game says they mean, no mapping applies.");
         }
     }
+#if !defined(__SWITCH__)
+    // (SDL's Wii U Pro Controller: a desktop pad, read through Aurora's gamepad)
     if (kind == WiiRemoteInput::Kind::WiiUPro) {
         if (AuroraGamepad* gamepad = aurora_gamepad_for_player(static_cast<int>(selectedGamePort))) {
             // SDL's Wii driver posts the D-pad as joystick buttons 11-14 (the
@@ -444,6 +447,7 @@ void DrawWiiRemoteSettings(uint32_t selectedGamePort) {
             ImGui::TextDisabled("button mapping above does not apply to it.");
         }
     }
+#endif
     if (kind == WiiRemoteInput::Kind::Remote || kind == WiiRemoteInput::Kind::RemoteWithNunchuk ||
         kind == WiiRemoteInput::Kind::RemoteWithClassic) {
         DrawWiiRemoteAccelerometer(selectedGamePort);
@@ -473,7 +477,7 @@ struct RebindState {
     uint32_t port = 0;
     uint16_t target = 0;
     bool secondary = false;
-    AuroraControllerID instance = 0;
+    uint32_t instance = 0;  // PADNativeControllerId when the capture began
     Clock::time_point deadline{};
     std::string label;
     std::array<bool, AURORA_SCANCODE_COUNT> keys{};
@@ -498,22 +502,19 @@ void BeginRebind(RebindKind kind, uint16_t target, const char* label, bool secon
     g_rebind.mouse = aurora_mouse_buttons(nullptr, nullptr);
     const int index = PADGetIndexForPort(g_rebind.port);
     if (kind == RebindKind::Controller && index >= 0) {
-        if (auto* pad = PADGetGamepadForIndex(index)) {
-            g_rebind.instance = aurora_gamepad_id(pad);
-            for (int i = 0; i < AURORA_GAMEPAD_BUTTON_COUNT; ++i)
-                g_rebind.buttons[i] = aurora_gamepad_button(pad, static_cast<AuroraGamepadButton>(i));
-            for (int i = 0; i < AURORA_GAMEPAD_AXIS_COUNT; ++i)
-                g_rebind.axesReady[i] = std::abs(static_cast<int>(aurora_gamepad_axis(pad, static_cast<AuroraGamepadAxis>(i)))) < 8000;
-        }
+        g_rebind.instance = PADNativeControllerId(g_rebind.port);
+        for (int i = 0; i < AURORA_GAMEPAD_BUTTON_COUNT; ++i)
+            g_rebind.buttons[i] = PADNativeButtonHeld(g_rebind.port, i);
+        for (int i = 0; i < AURORA_GAMEPAD_AXIS_COUNT; ++i)
+            g_rebind.axesReady[i] = std::abs(static_cast<int>(PADNativeAxisValue(g_rebind.port, i))) < 8000;
     }
 }
 
 void CompleteRebind(uint32_t value) {
     const auto& capture = g_rebind;
     if (capture.kind == RebindKind::Controller) {
-        const int index = PADGetIndexForPort(capture.port);
-        auto* pad = index >= 0 ? PADGetGamepadForIndex(index) : nullptr;
-        if (pad == nullptr || aurora_gamepad_id(pad) != capture.instance) {
+        const uint32_t instance = PADNativeControllerId(capture.port);
+        if (instance == 0 || instance != capture.instance) {
             g_rebind.active = false;
             return;
         }
@@ -586,15 +587,15 @@ void DrawRebindPrompt() {
                     (mouse & ~g_rebind.mouse & (1u << (i - 1))) != 0) CompleteRebind(static_cast<uint32_t>(-i - 1));
             g_rebind.mouse = mouse;
         } else if (g_rebind.active && aurora_keyboard_focused() && g_rebind.kind == RebindKind::Controller) {
-            auto* pad = aurora_gamepad_from_id(g_rebind.instance);
-            if (pad != nullptr) {
+            const uint32_t port = g_rebind.port;
+            if (g_rebind.instance != 0 && PADNativeControllerId(port) == g_rebind.instance) {
                 for (int i = 0; i < AURORA_GAMEPAD_BUTTON_COUNT && g_rebind.active; ++i) {
-                    const bool pressed = aurora_gamepad_button(pad, static_cast<AuroraGamepadButton>(i));
+                    const bool pressed = PADNativeButtonHeld(port, i);
                     if (pressed && !g_rebind.buttons[i]) CompleteRebind(i);
                     g_rebind.buttons[i] = pressed;
                 }
                 for (int i = 0; i < AURORA_GAMEPAD_AXIS_COUNT && g_rebind.active; ++i) {
-                    const int value = aurora_gamepad_axis(pad, static_cast<AuroraGamepadAxis>(i));
+                    const int value = PADNativeAxisValue(port, i);
                     if (std::abs(value) < 8000) g_rebind.axesReady[i] = true;
                     if (g_rebind.axesReady[i] && std::abs(value) >= 16384)
                         CompleteRebind(PADEncodeAxisButton(i, value < 0));
@@ -1449,6 +1450,7 @@ void ReleaseControllers() noexcept {
     // Aurora drives the LED white on first PADRead and never clears it, and the
     // exit paths terminate the process outright, so do it here.
     bool queued = false;
+#if !defined(__SWITCH__)
     for (uint32_t port = 0; port < PAD_MAX_CONTROLLERS; ++port) {
         const s32 index = PADGetIndexForPort(port);
         if (index < 0) continue;
@@ -1457,6 +1459,7 @@ void ReleaseControllers() noexcept {
             queued = true;
         }
     }
+#endif
     constexpr std::array<uint32_t, PAD_MAX_CONTROLLERS> stopAll{
         PAD_MOTOR_STOP_HARD, PAD_MOTOR_STOP_HARD, PAD_MOTOR_STOP_HARD, PAD_MOTOR_STOP_HARD};
     PADControlAllMotors(stopAll.data());

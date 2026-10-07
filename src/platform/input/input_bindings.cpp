@@ -2,6 +2,7 @@
 
 #include "controller_button_names.h"
 #include "input_expr.h"
+#include "pad_native.h"
 #include "runtime_config.h"
 #include "runtime_log.h"
 
@@ -80,36 +81,27 @@ const std::unordered_map<std::string, AxisRef>& AxisNames() {
     return table;
 }
 
-double ReadInput(AuroraGamepad* gamepad, const std::string& name) {
-    if (gamepad == nullptr) {
-        return 0.0;
-    }
+double ReadInput(uint32_t port, const std::string& name) {
     if (const auto it = ButtonNames().find(name); it != ButtonNames().end()) {
-        return aurora_gamepad_button(gamepad, it->second) ? 1.0 : 0.0;
+        return PADNativeButtonHeld(port, it->second) ? 1.0 : 0.0;
     }
     if (const auto it = AxisNames().find(name); it != AxisNames().end()) {
-        const double raw = aurora_gamepad_axis(gamepad, it->second.axis) / 32767.0;
+        const double raw = PADNativeAxisValue(port, it->second.axis) / 32767.0;
         return std::clamp(raw * it->second.sign, 0.0, 1.0);
     }
     // Fall back to this project's own positional names, so a binding written
     // here does not have to use Dolphin vocabulary.
     if (const auto* native = ControllerNames::FindNativeButton(name)) {
         if (PADIsAxisButton(native->nativeButton)) {
-            const auto axis = static_cast<AuroraGamepadAxis>(PADAxisButtonAxis(native->nativeButton));
             const double sign = PADAxisButtonNegative(native->nativeButton) ? -1.0 : 1.0;
-            return std::clamp(aurora_gamepad_axis(gamepad, axis) / 32767.0 * sign, 0.0, 1.0);
+            return std::clamp(PADNativeAxisValue(port, PADAxisButtonAxis(native->nativeButton)) / 32767.0 * sign,
+                              0.0, 1.0);
         }
         if (native->nativeButton < AURORA_GAMEPAD_BUTTON_COUNT) {
-            return aurora_gamepad_button(gamepad, static_cast<AuroraGamepadButton>(native->nativeButton)) ? 1.0
-                                                                                                      : 0.0;
+            return PADNativeButtonHeld(port, native->nativeButton) ? 1.0 : 0.0;
         }
     }
     return 0.0;
-}
-
-AuroraGamepad* GamepadForPort(uint32_t port) {
-    const s32 index = PADGetIndexForPort(port);
-    return index < 0 ? nullptr : PADGetGamepadForIndex(static_cast<u32>(index));
 }
 
 size_t ControlIndexForDolphinName(const std::string& name) {
@@ -184,9 +176,8 @@ void Apply(PADStatus* statuses) noexcept {
         if (statuses[port].err != PAD_ERR_NONE) {
             continue;
         }
-        AuroraGamepad* gamepad = GamepadForPort(port);
-        const InputExpr::InputSource source = [gamepad](const std::string& name) {
-            return ReadInput(gamepad, name);
+        const InputExpr::InputSource source = [port](const std::string& name) {
+            return ReadInput(port, name);
         };
         for (size_t control = 0; control < kControls.size(); ++control) {
             Binding& binding = g_bindings[port][control];

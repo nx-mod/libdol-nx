@@ -2,6 +2,7 @@
 #include "memory.h"
 #include "hle/controller_status_contract.h"
 #include "input_bindings.h"
+#include "pad_native.h"
 #include "wii_remote_input.h"
 
 #include <algorithm>
@@ -18,14 +19,6 @@ namespace {
 
 std::atomic<bool> g_rumbleEnabled{true};
 
-bool NativeButtonHeld(AuroraGamepad* gamepad, uint32_t nativeButton) {
-    if (gamepad == nullptr || nativeButton == PAD_NATIVE_BUTTON_INVALID ||
-        nativeButton >= AURORA_GAMEPAD_BUTTON_COUNT) {
-        return false;
-    }
-    return aurora_gamepad_button(gamepad, static_cast<AuroraGamepadButton>(nativeButton));
-}
-
 // A digital button bound to L or R has no analog travel of its own. On real
 // hardware the click only engages at full depression, so report a full pull.
 void FillTriggersHeldByButtons(PADStatus* statuses) {
@@ -36,12 +29,7 @@ void FillTriggersHeldByButtons(PADStatus* statuses) {
         if (statuses[port].err != PAD_ERR_NONE) {
             continue;
         }
-        const s32 index = PADGetIndexForPort(port);
-        if (index < 0) {
-            continue;
-        }
-        AuroraGamepad* gamepad = PADGetGamepadForIndex(static_cast<u32>(index));
-        if (gamepad == nullptr) {
+        if (PADGetIndexForPort(port) < 0) {
             continue;
         }
         const auto scan = [&](PADButtonMapping* mappings, u32 count) {
@@ -53,7 +41,7 @@ void FillTriggersHeldByButtons(PADStatus* statuses) {
                 if (mapping.padButton != PAD_TRIGGER_L && mapping.padButton != PAD_TRIGGER_R) {
                     continue;
                 }
-                if (!NativeButtonHeld(gamepad, mapping.nativeButton)) {
+                if (!PADNativeButtonHeld(port, mapping.nativeButton)) {
                     continue;
                 }
                 if (mapping.padButton == PAD_TRIGGER_L) {

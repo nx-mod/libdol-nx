@@ -12,6 +12,7 @@
 // file format and names ("<name>_0000_0000.controller" in the data folder), so
 // mappings saved under Aurora carry over.
 #include "native_input.h"
+#include "pad_native.h"
 #include "runtime_config.h"
 
 #include <aurora/gamepad.h>
@@ -26,13 +27,6 @@
 #include <cstring>
 #include <filesystem>
 #include <string>
-
-// Aurora's own pads are still what the settings overlay reads (through
-// PADGetGamepadForIndex) until it moves to dol::input with section 5; nothing
-// but Aurora's PADRead polled them, so this one does.
-namespace aurora::input {
-void poll() noexcept;
-}
 
 namespace {
 
@@ -504,7 +498,6 @@ void PADSetSpec(u32) {}
 void PADSetAnalogMode(u32) {}
 
 u32 PADRead(PADStatus* status) {
-    aurora::input::poll();
     const bool blocked = g_blockPAD.load(std::memory_order_acquire);
     const bool captureHeld = g_suppressHeldOnRead && !blocked;
     g_suppressHeldOnRead = false;
@@ -627,10 +620,9 @@ const char* PADGetName(u32 port) {
 
 BOOL PADIsGCAdapter(u32) { return FALSE; }
 
-AuroraGamepad* PADGetGamepadForIndex(u32 index) {
-    const int player = PlayerForIndex(index);
-    return player < 0 ? nullptr : aurora_gamepad_for_player(player);
-}
+// No Aurora gamepad stands behind a controller here: what reads a controller
+// directly goes through pad_native.h.
+AuroraGamepad* PADGetGamepadForIndex(u32) { return nullptr; }
 
 // ---------- mappings
 
@@ -890,6 +882,27 @@ PADControllerType PADGetControllerTypeForIndex(u32 index) {
 
 // (one table serves every style, so a title's own defaults have nowhere to go)
 void PADSetDefaultMapping(const PADDefaultMapping*, PADControllerType) {}
+
+// ---------- pad_native.h
+
+bool PADNativeButtonHeld(uint32_t port, uint32_t button) {
+    const int player = PlayerForPort(port);
+    return player >= 0 && NativeButton(dol::input::state(player), static_cast<int>(button));
+}
+
+int16_t PADNativeAxisValue(uint32_t port, uint32_t axis) {
+    const int player = PlayerForPort(port);
+    return player < 0 ? 0 : NativeAxis(dol::input::state(player), static_cast<int>(axis));
+}
+
+// the player and the style it holds now: a pair split or a pad swapped in
+// changes it
+uint32_t PADNativeControllerId(uint32_t port) {
+    const int player = PlayerForPort(port);
+    return player < 0 ? 0
+                      : (static_cast<uint32_t>(player) + 1) << 8 |
+                            static_cast<uint32_t>(dol::input::state(player).style);
+}
 
 // ---------- SI: which ports have a pad
 

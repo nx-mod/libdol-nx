@@ -13,7 +13,7 @@ turn, smallest and most self-contained first.
 | # | Section | Aurora | State |
 |---|---|---|---|
 | 1 | matrices | `aurora_mtx` | **gone**: nothing on the host called it; a game's matrices are its own code or libdol's natives (`accel/sdk/mtx`) |
-| 2 | input | `aurora_pad`, `aurora_si`, Aurora's gamepad layer | `aurora_pad`, `aurora_si` **gone** on the Switch: PAD and SI over native input (`pad_sdk_switch.cpp`); the overlay still reads Aurora's gamepad (section 5) |
+| 2 | input | `aurora_pad`, `aurora_si`, Aurora's gamepad layer | `aurora_pad`, `aurora_si` **gone** on the Switch: PAD and SI over native input (`pad_sdk_switch.cpp`); nothing reads Aurora's gamepads there |
 | 3 | main loop and events | `aurora_core` (window, events, the loop) | |
 | 4 | video timing and present | `aurora_vi` | |
 | 5 | settings overlay | `aurora_core` (ImGui) | |
@@ -44,9 +44,11 @@ Switch, over `dol::input`, and `aurora_pad`/`aurora_si` are no longer linked
 there (`WIINX_AURORA_LIBRARIES`, `cmake/runtime/Runtime.cmake`). Mappings keep
 Aurora's numbering, file format and names, so saved ones carry over. Rumble
 now reaches the pads (Aurora's Switch layer never wired it), and
-PADGetSensorData answers from the six-axis sensors. Until the settings overlay
-moves (section 5), PADGetGamepadForIndex still hands out Aurora's gamepad and
-PADRead polls Aurora's pads for it.
+PADGetSensorData answers from the six-axis sensors. What reads a controller
+directly - rebinding in the overlay, Dolphin-style expressions
+(`input_bindings.cpp`), an L/R binding's full pull (`pad.cpp`) - goes through
+`pad_native.h` by port, so on the Switch nothing reads Aurora's gamepads any
+more (its Wii U Pro readout, LED reset and SDL sensor code are desktop-only).
 
 ### What the PAD port took
 
