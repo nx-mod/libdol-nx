@@ -347,6 +347,274 @@ void State::SetVtxDesc(std::uint8_t attr, std::uint8_t type) {
 
 void State::SetDualTexture(bool enable) { mVertex.dualTexture = enable; }
 
+// --- the hardware's registers
+//
+// The layouts are Aurora's command processor's (lib/gx/command_processor.cpp,
+// MIT), after Dolphin's BPMemory and XFMemory.
+
+namespace {
+std::uint32_t Bits(std::uint32_t v, unsigned size, unsigned shift) { return (v >> shift) & ((1u << size) - 1u); }
+
+std::int16_t Signed11(std::uint32_t v) {
+    return static_cast<std::int16_t>((v & 0x400) ? static_cast<std::int32_t>(v | ~0x7FFu) : static_cast<std::int32_t>(v));
+}
+
+// a TEV stage's rasterised channel, from the hardware's number to the SDK's
+std::uint8_t ChannelFromHardware(std::uint32_t hw) {
+    static constexpr std::uint8_t kSdk[8] = {4, 5, 4, 5, 4, 7, 8, 6};  // COLOR0A0, COLOR1A1, ..., BUMP, BUMPN, ZERO
+    return hw < 8 ? kSdk[hw] : 0xFF;
+}
+
+Color8 ColorFromXF(std::uint32_t v) {
+    return {static_cast<std::uint8_t>(v >> 24), static_cast<std::uint8_t>(v >> 16), static_cast<std::uint8_t>(v >> 8),
+            static_cast<std::uint8_t>(v)};
+}
+
+float AsFloat(std::uint32_t v) {
+    float f;
+    std::memcpy(&f, &v, sizeof(f));
+    return f;
+}
+
+// an XF source row (0x40.. bits 7-11) as the SDK's GX_TG_* source
+std::uint8_t TexGenSourceFromRow(std::uint32_t row) {
+    static constexpr std::uint8_t kSdk[13] = {0, 1, 19, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+    return row < 13 ? kSdk[row] : 4;
+}
+
+// an XF matrix-index field (a matrix memory row) as a texture matrix slot
+std::uint8_t TexMtxSlotFromRow(std::uint32_t row) {
+    return row >= kTexMtx0 && row < kTexMtx0 + 30 ? static_cast<std::uint8_t>((row - kTexMtx0) / 3) : kIdentity;
+}
+}  // namespace
+
+void State::ApplyBP(std::uint32_t value) {
+    const std::uint32_t reg = value >> 24;
+    if (reg == 0xFE) {
+        mBpMask = value & 0x00FFFFFF;  // the next write's mask
+        return;
+    }
+    const std::uint32_t merged = (mBpRegs[reg] & ~mBpMask) | (value & mBpMask & 0x00FFFFFF);
+    mBpMask = 0x00FFFFFF;
+    mBpRegs[reg] = merged;
+    const std::uint32_t v = merged;
+
+    // TEV combiners: colour at the even registers 0xC0..0xDE, alpha at the odd
+    if (reg >= 0xC0 && reg <= 0xDF) {
+        TevStage& s = mTev.stages[(reg - 0xC0) / 2];
+        const bool alpha = (reg & 1) != 0;
+        TevCombiner& k = alpha ? s.alpha : s.color;
+        if (alpha) {
+            s.rasSwap = static_cast<std::uint8_t>(Bits(v, 2, 0));
+            s.texSwap = static_cast<std::uint8_t>(Bits(v, 2, 2));
+            k.d = static_cast<std::uint8_t>(Bits(v, 3, 4));
+            k.c = static_cast<std::uint8_t>(Bits(v, 3, 7));
+            k.b = static_cast<std::uint8_t>(Bits(v, 3, 10));
+            k.a = static_cast<std::uint8_t>(Bits(v, 3, 13));
+        } else {
+            k.d = static_cast<std::uint8_t>(Bits(v, 4, 0));
+            k.c = static_cast<std::uint8_t>(Bits(v, 4, 4));
+            k.b = static_cast<std::uint8_t>(Bits(v, 4, 8));
+            k.a = static_cast<std::uint8_t>(Bits(v, 4, 12));
+        }
+        k.clamp = Bits(v, 1, 19) != 0;
+        k.out = static_cast<TevReg>(Bits(v, 2, 22));
+        if (Bits(v, 2, 16) == 3) {
+            // a bias of 3 is a compare: the op from bit 18 and the scale bits
+            k.op = static_cast<TevOp>(8 + (Bits(v, 1, 18) | Bits(v, 2, 20) << 1));
+            k.bias = TevBias::Zero;
+            k.scale = TevScale::One;
+        } else {
+            k.op = static_cast<TevOp>(Bits(v, 1, 18));
+            k.bias = static_cast<TevBias>(Bits(v, 2, 16));
+            k.scale = static_cast<TevScale>(Bits(v, 2, 20));
+        }
+        return;
+    }
+    // TEV orders, two stages a register
+    if (reg >= 0x28 && reg <= 0x2F) {
+        for (unsigned half = 0; half < 2; ++half) {
+            const unsigned shift = half * 12;
+            const std::uint8_t stage = static_cast<std::uint8_t>((reg - 0x28) * 2 + half);
+            const bool enabled = Bits(v, 1, shift + 6) != 0;
+            SetTevOrder(stage, static_cast<std::uint8_t>(Bits(v, 3, shift + 3)),
+                        enabled ? Bits(v, 3, shift) : 0xFF, ChannelFromHardware(Bits(v, 3, shift + 7)));
+        }
+        return;
+    }
+    // konst selections, two stages a register, and the swap tables
+    if (reg >= 0xF6 && reg <= 0xFD) {
+        const unsigned index = reg - 0xF6;
+        TevSwap& swap = mTev.swapTable[index / 2];
+        if (index & 1) {
+            swap.b = static_cast<SwapChannel>(Bits(v, 2, 0));
+            swap.a = static_cast<SwapChannel>(Bits(v, 2, 2));
+        } else {
+            swap.r = static_cast<SwapChannel>(Bits(v, 2, 0));
+            swap.g = static_cast<SwapChannel>(Bits(v, 2, 2));
+        }
+        mTev.stages[index * 2].kcolorSel = static_cast<std::uint8_t>(Bits(v, 5, 4));
+        mTev.stages[index * 2].kalphaSel = static_cast<std::uint8_t>(Bits(v, 5, 9));
+        mTev.stages[index * 2 + 1].kcolorSel = static_cast<std::uint8_t>(Bits(v, 5, 14));
+        mTev.stages[index * 2 + 1].kalphaSel = static_cast<std::uint8_t>(Bits(v, 5, 19));
+        return;
+    }
+    // TEV and konst colour registers: even RA, odd BG; bit 23 picks konst
+    if (reg >= 0xE0 && reg <= 0xE7) {
+        const unsigned index = (reg - 0xE0) / 2;
+        const bool ra = (reg & 1) == 0;
+        if (Bits(v, 1, 23)) {
+            auto& k = mKColors[index];
+            k[ra ? 0 : 2] = Bits(v, 8, 0) / 255.0f;
+            k[ra ? 3 : 1] = Bits(v, 8, 12) / 255.0f;
+        } else {
+            auto& r = mTevRegs[index];
+            r[ra ? 0 : 2] = Signed11(Bits(v, 11, 0)) / 255.0f;
+            r[ra ? 3 : 1] = Signed11(Bits(v, 11, 12)) / 255.0f;
+        }
+        return;
+    }
+    switch (reg) {
+    case 0x00: {  // gen mode
+        SetNumTexGens(static_cast<std::uint8_t>(Bits(v, 4, 0)));
+        SetNumChans(static_cast<std::uint8_t>(Bits(v, 3, 4)));
+        SetNumTevStages(static_cast<std::uint8_t>(Bits(v, 4, 10) + 1));
+        // (the hardware's front and back are the SDK's back and front)
+        const std::uint32_t cull = Bits(v, 2, 14);
+        SetCullMode(static_cast<std::uint8_t>(cull == 1 ? 2 : cull == 2 ? 1 : cull));
+        break;
+    }
+    case 0x40:  // z mode
+        SetZMode(Bits(v, 1, 0) != 0, static_cast<std::uint8_t>(Bits(v, 3, 1)), Bits(v, 1, 4) != 0);
+        break;
+    case 0x41: {  // blend mode
+        const std::uint8_t type = Bits(v, 1, 11) ? 3 : Bits(v, 1, 0) ? 1 : Bits(v, 1, 1) ? 2 : 0;
+        SetBlendMode(type, static_cast<std::uint8_t>(Bits(v, 3, 8)), static_cast<std::uint8_t>(Bits(v, 3, 5)),
+                     static_cast<std::uint8_t>(Bits(v, 4, 12)));
+        SetColorUpdate(Bits(v, 1, 3) != 0);
+        SetAlphaUpdate(Bits(v, 1, 4) != 0);
+        break;
+    }
+    case 0xF3:  // alpha compare
+        SetAlphaCompare(static_cast<std::uint8_t>(Bits(v, 3, 16)), static_cast<std::uint8_t>(Bits(v, 8, 0)),
+                        static_cast<std::uint8_t>(Bits(v, 2, 22)), static_cast<std::uint8_t>(Bits(v, 3, 19)),
+                        static_cast<std::uint8_t>(Bits(v, 8, 8)));
+        break;
+    default:
+        break;  // (copies, textures, fog, indirect: not decoded here yet)
+    }
+}
+
+void State::ApplyXF(std::uint32_t address, const std::uint32_t* words, std::uint32_t count) {
+    for (std::uint32_t i = 0; i < count; ++i) {
+        const std::uint32_t a = address + i;
+        const float f = AsFloat(words[i]);
+        if (a < 0x100) {
+            // matrix memory: rows of four, position matrices then texture ones
+            const std::uint32_t row = a / 4, col = a % 4;
+            if (row < 30) {
+                mPosRows[row][col] = f;
+            } else if (row < 60) {
+                mTexRows[row - 30][col] = f;
+            }
+        } else if (a >= 0x400 && a < 0x460) {
+            // normal matrices: rows of three
+            const std::uint32_t row = (a - 0x400) / 3, col = (a - 0x400) % 3;
+            if (row < mNrmRows.size()) {
+                mNrmRows[row][col] = f;
+            }
+        } else if (a >= 0x500 && a < 0x600) {
+            const std::uint32_t row = (a - 0x500) / 4, col = (a - 0x500) % 4;
+            if (row < mPostRows.size()) {
+                mPostRows[row][col] = f;
+            }
+        } else if (a >= 0x600 && a < 0x680) {
+            Light& l = mLights[(a - 0x600) / 16];
+            switch ((a - 0x600) % 16) {
+            case 3: l.color = ColorFromXF(words[i]); break;
+            case 4: case 5: case 6: l.cosAtt[(a - 0x600) % 16 - 4] = f; break;
+            case 7: case 8: case 9: l.distAtt[(a - 0x600) % 16 - 7] = f; break;
+            case 10: case 11: case 12: l.pos[(a - 0x600) % 16 - 10] = f; break;
+            case 13: case 14: case 15: l.dir[(a - 0x600) % 16 - 13] = f; break;
+            default: break;
+            }
+        } else if (a >= 0x1000) {
+            ApplyXFRegister(a - 0x1000, words[i]);
+        }
+    }
+}
+
+void State::ApplyXFRegister(std::uint32_t reg, std::uint32_t v) {
+    switch (reg) {
+    case 0x09: SetNumChans(static_cast<std::uint8_t>(v)); return;
+    case 0x0A: case 0x0B: SetChanAmbColor(static_cast<std::uint8_t>(4 + reg - 0x0A), ColorFromXF(v)); return;
+    case 0x0C: case 0x0D: SetChanMatColor(static_cast<std::uint8_t>(4 + reg - 0x0C), ColorFromXF(v)); return;
+    case 0x0E: case 0x0F: case 0x10: case 0x11: {
+        const std::uint32_t attn = Bits(v, 2, 9);
+        SetChanCtrl(static_cast<std::uint8_t>(reg - 0x0E), Bits(v, 1, 1) != 0, static_cast<std::uint8_t>(Bits(v, 1, 6)),
+                    static_cast<std::uint8_t>(Bits(v, 1, 0)), Bits(v, 4, 2) | Bits(v, 4, 11) << 4,
+                    static_cast<std::uint8_t>(Bits(v, 2, 7)), attn == 1 ? 0 : attn == 3 ? 1 : 2);
+        return;
+    }
+    case 0x12: SetDualTexture(v != 0); return;
+    case 0x18:
+        SetCurrentMtx(Bits(v, 6, 0));
+        for (unsigned t = 0; t < 4; ++t) {
+            mVertex.texGens[t].matrix = TexMtxSlotFromRow(Bits(v, 6, 6 + t * 6));
+        }
+        return;
+    case 0x19:
+        for (unsigned t = 0; t < 4; ++t) {
+            mVertex.texGens[4 + t].matrix = TexMtxSlotFromRow(Bits(v, 6, t * 6));
+        }
+        return;
+    case 0x3F: SetNumTexGens(static_cast<std::uint8_t>(v)); return;
+    default: break;
+    }
+    if (reg >= 0x1A && reg <= 0x1F) {
+        mViewport[reg - 0x1A] = AsFloat(v);
+    } else if (reg >= 0x20 && reg <= 0x25) {
+        mProjParams[reg - 0x20] = AsFloat(v);
+        RebuildProjection();
+    } else if (reg == 0x26) {
+        mProjOrtho = v != 0;
+        RebuildProjection();
+    } else if (reg >= 0x40 && reg < 0x48) {
+        TexGen& tg = mVertex.texGens[reg - 0x40];
+        const std::uint32_t type = Bits(v, 3, 4);
+        tg.type = type == 0 ? (Bits(v, 1, 1) ? TexGenType::Mtx3x4 : TexGenType::Mtx2x4)
+                  : type == 1 ? static_cast<TexGenType>(2 + Bits(v, 3, 15))  // bump (the shaders refuse it yet)
+                              : TexGenType::SRTG;
+        tg.source = TexGenSourceFromRow(Bits(v, 5, 7));
+    } else if (reg >= 0x50 && reg < 0x58) {
+        TexGen& tg = mVertex.texGens[reg - 0x50];
+        const std::uint32_t row = Bits(v, 6, 0);
+        tg.postMatrix = row == 61 ? kIdentity : static_cast<std::uint8_t>(row / 3);  // (GX_PTIDENTITY is row 61)
+        tg.normalize = Bits(v, 1, 8) != 0;
+    }
+}
+
+// the projection's six parameters as the 4x4 GXSetProjection would have
+// loaded
+void State::RebuildProjection() {
+    const auto& p = mProjParams;
+    std::array<std::array<float, 4>, 4> m{};
+    m[0][0] = p[0];
+    m[1][1] = p[2];
+    m[2][2] = p[4];
+    m[2][3] = p[5];
+    if (mProjOrtho) {
+        m[0][3] = p[1];
+        m[1][3] = p[3];
+        m[3][3] = 1.0f;
+    } else {
+        m[0][2] = p[1];
+        m[1][2] = p[3];
+        m[3][2] = -1.0f;
+    }
+    mProj = m;
+}
+
 // --- what a draw takes
 
 TevConfig State::Tev() const {

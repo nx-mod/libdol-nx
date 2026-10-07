@@ -90,6 +90,15 @@ class State {
     void SetVtxDesc(std::uint8_t attr, std::uint8_t type);
     void SetDualTexture(bool enable);
 
+    // --- the hardware's registers, as a command stream loads them
+    // BP: one 32-bit write, the register in the top byte
+    void ApplyBP(std::uint32_t value);
+    // XF: `count` words from `address` (matrix memory below 0x1000, registers
+    // from it), already in host order
+    void ApplyXF(std::uint32_t address, const std::uint32_t* words, std::uint32_t count);
+    // XF's viewport registers: scale x, y, z and offset x, y, z
+    const std::array<float, 6>& Viewport() const { return mViewport; }
+
     // --- what a draw takes
     TevConfig Tev() const;
     VertexConfig Vertex() const;
@@ -117,6 +126,14 @@ class State {
     std::array<std::array<float, 4>, 4> mProj{};
     std::uint32_t mCurrentPosRow = 0;
     std::array<std::uint8_t, 21> mVtxDesc{};
+    std::array<std::uint32_t, 256> mBpRegs{};
+    std::uint32_t mBpMask = 0x00FFFFFF;
+    std::array<float, 6> mViewport{};
+    std::array<float, 6> mProjParams{};
+    bool mProjOrtho = false;
+
+    void ApplyXFRegister(std::uint32_t reg, std::uint32_t value);
+    void RebuildProjection();
 };
 
 }  // namespace wiinx::gx

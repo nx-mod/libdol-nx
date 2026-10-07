@@ -148,6 +148,116 @@ int main() {
                                                     Near(FloatAt(tevBlock, 64 + 2 * 16 + 12), 128 / 255.0f));
     }
 
+    std::printf("Registers, as a display list loads them\n");
+    {
+        State state;
+        const auto bp = [&](std::uint32_t reg, std::uint32_t value) { state.ApplyBP(reg << 24 | value); };
+        // colour stage 0: a CPREV, b TEXC, c RASC, d ZERO, clamped, into REG1
+        bp(0xC0, 0u << 12 | 8u << 8 | 10u << 4 | 15u | 1u << 19 | 2u << 22);
+        // colour stage 1: a compare, GR16 equal (bias 3, op bit 1, scale bits 1)
+        bp(0xC2, 2u << 12 | 4u << 8 | 12u << 4 | 15u | 3u << 16 | 1u << 18 | 1u << 20);
+        // alpha stage 0: swaps ras 1 tex 2, a APREV b TEXA c RASA d ZERO, subtract, scale 2, bias +half
+        bp(0xC1, 1u | 2u << 2 | 7u << 4 | 5u << 7 | 4u << 10 | 0u << 13 | 1u << 18 | 1u << 16 | 1u << 20);
+        // orders: stage 0 map 2 coord 1 enabled channel COLOR0A0; stage 1 disabled, channel zero
+        bp(0x28, 2u | 1u << 3 | 1u << 6 | 0u << 7 | 5u << 12 | 3u << 15 | 0u << 18 | 7u << 19);
+        // TEV register 1 (REG0) red -16, alpha 300 (11-bit signed)
+        bp(0xE2, 0x7F0u | 300u << 12);
+        // konst 3 blue 0x40 green 0x80
+        bp(0xE7, 0x40u | 0x80u << 12 | 1u << 23);
+        // konst selections: stage 0 K3, stage 1 K1 alpha; swap table 0's red and green
+        bp(0xF6, 1u | 2u << 2 | 0x0Fu << 4 | 0x1Du << 19);
+        // gen mode: two texgens, one channel, three stages, hardware cull 1 (the SDK's back)
+        bp(0x00, 2u | 1u << 4 | 2u << 10 | 1u << 14);
+        // blend: subtract wins over blend; colour on, alpha off
+        bp(0x41, 1u | 1u << 3 | 1u << 11 | 4u << 8 | 5u << 5);
+        // alpha compare: GEQUAL 10 OR LESS 200
+        bp(0xF3, 10u | 200u << 8 | 6u << 16 | 1u << 19 | 1u << 22);
+        // a masked write: only the z mode's update bit
+        bp(0x40, 1u | 3u << 1 | 1u << 4);
+        bp(0xFE, 1u << 4);
+        bp(0x40, 0u);
+
+        const TevConfig tev = state.Tev();
+        const TevStage& s0 = tev.stages[0];
+        Check("colour stage 0's inputs", s0.color.a == 0 && s0.color.b == 8 && s0.color.c == 10 && s0.color.d == 15);
+        Check("colour stage 0 writes REG1", s0.color.out == TevReg::Reg1 && s0.color.clamp);
+        Check("bias 3 decodes as a compare", tev.stages[1].color.op == TevOp::CompGR16Eq);
+        Check("alpha stage 0: subtract, +half, scale 2", s0.alpha.op == TevOp::Sub && s0.alpha.bias == TevBias::AddHalf &&
+                                                             s0.alpha.scale == TevScale::Two && s0.alpha.d == 7);
+        Check("alpha stage 0's swap selections", s0.rasSwap == 1 && s0.texSwap == 2);
+        Check("stage 0's order", s0.texMap == 2 && s0.texCoord == 1 && s0.channel == TevChannel::Color0);
+        Check("stage 1's texture disabled, channel zero", tev.stages[1].texMap == kTexNull &&
+                                                            tev.stages[1].channel == TevChannel::Zero);
+        Check("konst selections", s0.kcolorSel == 0x0F && tev.stages[1].kalphaSel == 0x1D);
+        Check("swap table 0 rewritten", tev.swapTable[0].r == SwapChannel::Green && tev.swapTable[0].g == SwapChannel::Blue);
+        Check("gen mode's counts", tev.stageCount == 3 && tev.texCoordCount == 2 && state.Vertex().channelCount == 1);
+        Check("hardware cull 1 is the SDK's back", state.Pixel().cull == CullMode::Back);
+        Check("subtract mode, alpha not written", state.Pixel().blendMode == BlendMode::Subtract && !state.Pixel().alphaWrite);
+        Check("the alpha compare", tev.alphaComp0 == Compare::GEqual && tev.alphaRef0 == 10 && tev.alphaOp == AlphaOp::Or &&
+                                       tev.alphaComp1 == Compare::Less && tev.alphaRef1 == 200);
+        Check("a masked write changes only its bits", state.Pixel().depthTest && !state.Pixel().depthWrite &&
+                                                          state.Pixel().depthCompare == 3);
+        const std::vector<std::uint8_t> tevBlock = state.TevUniforms();
+        Check("REG0's red is signed", Near(FloatAt(tevBlock, 16), -16 / 255.0f) && Near(FloatAt(tevBlock, 16 + 12), 300 / 255.0f));
+        Check("konst 3's green and blue", Near(FloatAt(tevBlock, 64 + 48 + 4), 0x80 / 255.0f) &&
+                                             Near(FloatAt(tevBlock, 64 + 48 + 8), 0x40 / 255.0f));
+
+        const auto f = [](float v) {
+            std::uint32_t bits;
+            std::memcpy(&bits, &v, sizeof(bits));
+            return bits;
+        };
+        // position matrix 1 (rows 3..5), as GXLoadPosMtxImm(m, GX_PNMTX1) loads it
+        std::uint32_t pos[12];
+        for (int i = 0; i < 12; ++i) {
+            pos[i] = f(static_cast<float>(i));
+        }
+        state.ApplyXF(12, pos, 12);
+        // light 4: colour, then position
+        const std::uint32_t color = 0x11223344u;
+        state.ApplyXF(0x600 + 4 * 16 + 3, &color, 1);
+        const std::uint32_t lpos[3] = {f(1.0f), f(2.0f), f(3.0f)};
+        state.ApplyXF(0x600 + 4 * 16 + 10, lpos, 3);
+        // channel 0: lit, material from the vertex, lights 0 and 5, clamp, spot
+        const std::uint32_t chan = 1u | 1u << 1 | 1u << 2 | 2u << 7 | 3u << 9 | 2u << 11;
+        state.ApplyXF(0x100E, &chan, 1);
+        // an orthographic projection
+        const std::uint32_t proj[7] = {f(2.0f), f(-1.0f), f(3.0f), f(1.0f), f(-0.5f), f(-0.25f), 1};
+        state.ApplyXF(0x1020, proj, 7);
+        // texgen 1: 3x4 from the normal (row 1); post matrix 2, normalised
+        const std::uint32_t tg = 1u << 1 | 1u << 2 | 0u << 4 | 1u << 7;
+        state.ApplyXF(0x1041, &tg, 1);
+        const std::uint32_t post = 6u | 1u << 8;
+        state.ApplyXF(0x1051, &post, 1);
+        const std::uint32_t dual = 1;
+        state.ApplyXF(0x1012, &dual, 1);
+
+        const std::vector<std::uint8_t> xf = state.XfUniforms();
+        Check("XF matrix memory: row 4, column 1", Near(FloatAt(xf, 4 * 16 + 4), 5.0f));
+        Check("light 4's colour, unpacked", Near(FloatAt(xf, 2528 + 4 * 80 + 32), 0x11 / 255.0f) &&
+                                               Near(FloatAt(xf, 2528 + 4 * 80 + 44), 0x44 / 255.0f));
+        Check("light 4's position", Near(FloatAt(xf, 2528 + 4 * 80 + 8), 3.0f));
+        const VertexConfig vtx = state.Vertex();
+        Check("channel control: lit, lights 0 and 5, clamp, spot", vtx.channels[0].lighting &&
+                                                                    vtx.channels[0].lightMask == 0x21 &&
+                                                                    vtx.channels[0].diffuse == DiffuseFn::Clamp &&
+                                                                    vtx.channels[0].attenuation == AttnFn::Spot &&
+                                                                    vtx.channels[0].material == ColorSrc::Vertex);
+        Check("an orthographic projection's translation column", Near(FloatAt(xf, 2400 + 12), -1.0f) &&
+                                                                    Near(FloatAt(xf, 2400 + 48 + 12), 1.0f));
+        Check("texgen 1: 3x4 from the normal", vtx.texGens[1].type == TexGenType::Mtx3x4 && vtx.texGens[1].source == 1);
+        Check("post matrix 2, normalised", vtx.texGens[1].postMatrix == 2 && vtx.texGens[1].normalize && vtx.dualTexture);
+
+        state.ClearVtxDesc();
+        state.SetVtxDesc(9, 1);
+        state.SetVtxDesc(10, 1);
+        state.SetVtxDesc(11, 1);
+        state.SetVtxDesc(13, 1);
+        state.SetVtxDesc(14, 1);
+        Check("the vertex shader compiles from registers", Compiles(XfVertexGlsl(state.Vertex()), "vert", "registers"));
+        Check("the fragment shader compiles from registers", Compiles(TevFragmentGlsl(state.Tev()), "frag", "registers"));
+    }
+
     std::printf(gFailures ? "%d FAILED\n" : "all passed\n", gFailures);
     return gFailures ? 1 : 0;
 }
