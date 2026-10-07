@@ -19,6 +19,7 @@ set(WIINX_CHECKS
     archive_ash_check   # ASH, the Wii Menu's own compression
     nand_store_check    # installing a title, listing it, removing it
     media_banner_check  # what a title calls itself, and its picture
+    gx_texture_check    # GX texture formats decoded, texel by texel
 )
 
 foreach(check IN LISTS WIINX_CHECKS)
@@ -38,6 +39,7 @@ add_test(NAME nand_title COMMAND nand_title_check)
 add_test(NAME archive_yaz0 COMMAND archive_yaz0_check)
 add_test(NAME disc COMMAND disc_check)
 add_test(NAME archive_u8 COMMAND archive_u8_check)
+add_test(NAME gx_texture COMMAND gx_texture_check)
 add_test(NAME archive_cx COMMAND archive_cx_check)
 add_test(NAME archive_ash COMMAND archive_ash_check)
 add_test(NAME nand_store COMMAND nand_store_check)
