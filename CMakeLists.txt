@@ -49,6 +49,7 @@ add_library(wiinx_format STATIC
     src/format/media/banner.cpp
     src/format/gx/texture.cpp
     src/format/gx/tev.cpp
+    src/format/gx/vertex.cpp
     src/format/archive/yaz0.cpp
     src/format/archive/u8.cpp
     src/format/archive/cx.cpp

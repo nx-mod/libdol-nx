@@ -30,6 +30,18 @@ screen with it) and is compiled into every Switch build, linked against
 The files keep file-local helpers of the same names, so they are built outside
 the runtime's unity batches (`cmake/runtime/Runtime.cmake`).
 
+## Done, portable (`wiinx::gx`, checked on any machine)
+
+| Header | What |
+|---|---|
+| `wiinx/format/gx/texture.hpp` | every GX texture format decoded to RGBA8, palettes, mips (`gx_texture_check`: texel by texel) |
+| `wiinx/format/gx/tev.hpp` | the TEV as a GLSL fragment shader: sixteen stages in the hardware's 8-bit arithmetic, compares, swaps, konst colours, the alpha test |
+| `wiinx/format/gx/vertex.hpp` | XF as a GLSL vertex shader: matrices, projection, the lit colour channels, texgens, dual texturing |
+
+`gx_tev_check` and `gx_vertex_check` compile what they generate with devkitPro's
+`uam` - the compiler the console runs - wherever it is installed. Not yet:
+indirect textures, fog, the z texture, bump texgens.
+
 ## What comes next
 
 GX is decoded by libdol already (`src/platform/gx`: display lists, vertex
