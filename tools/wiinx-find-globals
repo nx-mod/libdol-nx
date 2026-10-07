@@ -382,9 +382,39 @@ class Finder:
             self.put("gx.GXSetDrawDoneCallback", calls[1], "endRender registers the callback with it")
             self.put("egg.DrawDoneCallback", code[0], "the callback endRender registers")
 
+    # NAND ---------------------------------------------------------------------
+    def nand(self):
+        # NANDInit: s_libState is the one small-data word it both reads and
+        # sets (1 while initialising, 2 when done); the home directory is built
+        # for ESGetDataDir (r5), then copied into the current directory by
+        # strcpy(current, home) - the call that takes it as r4 with r3 beside it.
+        start, ev = self.events("NANDInit_HLE")
+        if not start:
+            return
+        loads = {a for k, a in self.sda(ev, ("load",))}
+        stores = [a for k, a in self.sda(ev, ("store",))]
+        state = [a for a in stores if a in loads]
+        if state:
+            self.put("nand.s_libState", state[0], f"NANDInit {start:08X} reads and sets it")
+        built = {}
+        home = None
+        for e in ev:
+            if e[0] == "addr" and isinstance(e[1], int):
+                built[e[2]] = e[1]
+                continue
+            if e[0] != "call":
+                continue
+            if home is None and 5 in built:
+                home = built[5]
+            elif home is not None and built.get(4) == home and 3 in built:
+                self.put("nand.s_homeDir", home, f"NANDInit {start:08X} builds it for ESGetDataDir")
+                self.put("nand.s_currentDir", built[3], f"NANDInit {start:08X} copies the home into it")
+                break
+            built = {}
+
     def run(self):
         self.setters, self.hints = None, []
-        for step in (self.vi, self.gx, self.audio, self.os, self.egg):
+        for step in (self.vi, self.gx, self.audio, self.os, self.nand, self.egg):
             step()
         return self
 
