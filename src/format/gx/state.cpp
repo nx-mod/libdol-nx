@@ -365,6 +365,13 @@ std::uint8_t ChannelFromHardware(std::uint32_t hw) {
     return hw < 8 ? kSdk[hw] : 0xFF;
 }
 
+float PartialFloat(std::uint32_t v) {
+    const std::uint32_t bits = Bits(v, 1, 19) << 31 | Bits(v, 8, 11) << 23 | Bits(v, 11, 0) << 12;
+    float f;
+    std::memcpy(&f, &bits, sizeof(f));
+    return f;
+}
+
 Color8 ColorFromXF(std::uint32_t v) {
     return {static_cast<std::uint8_t>(v >> 24), static_cast<std::uint8_t>(v >> 16), static_cast<std::uint8_t>(v >> 8),
             static_cast<std::uint8_t>(v)};
@@ -500,6 +507,19 @@ void State::ApplyBP(std::uint32_t value) {
         SetAlphaUpdate(Bits(v, 1, 4) != 0);
         break;
     }
+    // fog: A (0xEE) and C (0xF1) in GX's partial float - sign, 8-bit exponent,
+    // 11-bit mantissa - B as a 24-bit magnitude (0xEF) and a shift (0xF0), the
+    // function and projection with C, the colour (0xF2)
+    case 0xEE: mFogA = PartialFloat(v); break;
+    case 0xEF: mFogBMagnitude = Bits(v, 24, 0); break;
+    case 0xF0: mFogBShift = Bits(v, 5, 0); break;
+    case 0xF1:
+        mFogC = PartialFloat(v);
+        mTev.fogType = static_cast<std::uint8_t>(Bits(v, 3, 21) | Bits(v, 1, 20) << 3);
+        break;
+    case 0xF2:
+        mFogColor = {Bits(v, 8, 16) / 255.0f, Bits(v, 8, 8) / 255.0f, Bits(v, 8, 0) / 255.0f, 1.0f};
+        break;
     case 0xF3:  // alpha compare
         SetAlphaCompare(static_cast<std::uint8_t>(Bits(v, 3, 16)), static_cast<std::uint8_t>(Bits(v, 8, 0)),
                         static_cast<std::uint8_t>(Bits(v, 2, 22)), static_cast<std::uint8_t>(Bits(v, 3, 19)),
@@ -676,6 +696,9 @@ std::vector<std::uint8_t> State::TevUniforms() const {
     std::vector<std::uint8_t> out(kTevBlockSize, 0);
     PutRows(out, 0, mTevRegs.data(), 4);
     PutRows(out, 64, mKColors.data(), 4);
+    Put(out, 128, mFogColor.data(), 4);
+    const float fog[4] = {mFogA, mFogC, static_cast<float>(mFogBMagnitude), static_cast<float>(mFogBShift)};
+    Put(out, 144, fog, 4);
     return out;
 }
 

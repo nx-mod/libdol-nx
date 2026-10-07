@@ -258,6 +258,32 @@ int main() {
         Check("the fragment shader compiles from registers", Compiles(TevFragmentGlsl(state.Tev()), "frag", "registers"));
     }
 
+    std::printf("Fog registers\n");
+    {
+        State state;
+        const auto bp = [&](std::uint32_t reg, std::uint32_t value) { state.ApplyBP(reg << 24 | value); };
+        const auto partial = [](float f) {
+            std::uint32_t bits;
+            std::memcpy(&bits, &f, sizeof(bits));
+            return (bits >> 31) << 19 | ((bits >> 23) & 0xFF) << 11 | ((bits >> 12) & 0x7FF);
+        };
+        bp(0xEE, partial(0.75f));
+        bp(0xEF, 0x123456u);
+        bp(0xF0, 9u);
+        bp(0xF1, partial(-0.5f) | 5u << 21 | 0u << 20);  // exp2, perspective
+        bp(0xF2, 0x20u << 16 | 0x40u << 8 | 0x80u);
+        const std::vector<std::uint8_t> block = state.TevUniforms();
+        Check("the TEV block is its declared size", block.size() == State::kTevBlockSize);
+        Check("A and C from GX's partial floats", Near(FloatAt(block, 144), 0.75f) && Near(FloatAt(block, 148), -0.5f));
+        Check("B's magnitude and shift", FloatAt(block, 152) == static_cast<float>(0x123456) && FloatAt(block, 156) == 9.0f);
+        Check("the fog colour", Near(FloatAt(block, 128), 0x20 / 255.0f) && Near(FloatAt(block, 136), 0x80 / 255.0f));
+        Check("exp2, perspective", state.Tev().fogType == 5);
+        Check("the fragment shader with fog compiles", Compiles(TevFragmentGlsl(state.Tev()), "frag", "fog_persp"));
+        bp(0xF1, partial(0.0f) | 7u << 21 | 1u << 20);  // reverse exp2, orthographic
+        Check("reverse exp2, orthographic", state.Tev().fogType == 15);
+        Check("the orthographic fog shader compiles", Compiles(TevFragmentGlsl(state.Tev()), "frag", "fog_ortho"));
+    }
+
     std::printf("Texture registers\n");
     {
         State state;

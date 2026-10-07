@@ -127,11 +127,11 @@ class State {
     TevConfig Tev() const;
     VertexConfig Vertex() const;
     PixelState Pixel() const { return mPixel; }
-    // tev.hpp's TevBlock (128 bytes) and vertex.hpp's XfBlock, std140
+    // tev.hpp's TevBlock (160 bytes) and vertex.hpp's XfBlock, std140
     std::vector<std::uint8_t> TevUniforms() const;
     std::vector<std::uint8_t> XfUniforms() const;
 
-    static constexpr std::size_t kTevBlockSize = 128;
+    static constexpr std::size_t kTevBlockSize = 160;
     static constexpr std::size_t kXfBlockSize = 3184;
 
   private:
@@ -140,6 +140,9 @@ class State {
     PixelState mPixel;
     std::array<std::array<float, 4>, 4> mTevRegs{};  // PREV, REG0..2, as 0..1 of 255
     std::array<std::array<float, 4>, 4> mKColors{};
+    std::array<float, 4> mFogColor{};
+    float mFogA = 0.0f, mFogC = 0.0f;
+    std::uint32_t mFogBMagnitude = 0, mFogBShift = 0;
     std::array<Color8, 2> mChanAmb{};
     std::array<Color8, 2> mChanMat{};
     std::array<Light, 8> mLights{};

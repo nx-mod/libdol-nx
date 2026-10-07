@@ -16,6 +16,8 @@ constexpr std::string_view kPrelude = R"(#version 460
 layout (std140, binding = 0) uniform TevBlock {
     vec4 tevreg[4];
     vec4 kcolor[4];
+    vec4 fogColor;
+    vec4 fogParams;  // A, C, B's magnitude, B's shift
 } tev;
 
 float tev_wrap(float v) { float s = v * 255.0; return (s - floor(s / 256.0) * 256.0) / 255.0; }
@@ -299,6 +301,26 @@ struct Generator {
             }
             s += "\n    int alphaTest = int(round(clamp(prev.a, 0.0, 1.0) * 255.0));\n"
                  "    if (!(" + pass + ")) {\n        discard;\n    }\n";
+        }
+        const unsigned fogFn = config.fogType & 7;
+        if (fogFn >= 2) {
+            // the depth GX fogs by: the 24-bit z this fragment would write
+            s += "\n    // fog, as Dolphin computes it\n"
+                 "    uint z24 = uint(round(clamp(gl_FragCoord.z, 0.0, 1.0) * 16777215.0));\n";
+            if (config.fogType & 8) {
+                s += "    float ze = tev.fogParams.x * float(z24) / 16777216.0;\n";
+            } else {
+                s += "    float ze = (tev.fogParams.x * 16777216.0) / (tev.fogParams.z - float(z24 >> uint(tev.fogParams.w)));\n";
+            }
+            s += "    float fog = clamp(ze - tev.fogParams.y, 0.0, 1.0);\n";
+            switch (fogFn) {
+            case 4: s += "    fog = 1.0 - exp2(-8.0 * fog);\n"; break;
+            case 5: s += "    fog = 1.0 - exp2(-8.0 * fog * fog);\n"; break;
+            case 6: s += "    fog = exp2(-8.0 * (1.0 - fog));\n"; break;
+            case 7: s += "    fog = 1.0 - fog;\n    fog = exp2(-8.0 * fog * fog);\n"; break;
+            default: break;  // linear
+            }
+            s += "    prev.rgb = mix(clamp(prev.rgb, 0.0, 1.0), tev.fogColor.rgb, fog);\n";
         }
         s += "\n    outColor = clamp(prev, 0.0, 1.0);\n}\n";
         return ok ? s : std::string();
