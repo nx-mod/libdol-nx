@@ -170,6 +170,16 @@ set(MKW_BUILD_PRODUCTS ON CACHE BOOL "" FORCE)
 set(MKW_GAME_WORKSPACE_DIR "${WIINX_GAME_DIR}" CACHE PATH "" FORCE)
 add_subdirectory("${WIINX_ROOT}" libdol-nx-build)
 
+if (TARGET mkw_base_shared)
+    # The translated shards are megabytes of generated C++, and debug info
+    # (-g) more than triples the memory each cc1plus needs; on a memory-starved
+    # box -O2 -g thrashed swap for hours and died silently. -g0 drops the debug
+    # info and keeps -O2: the game's translated code is most of its frame, and
+    # -O0 ran it several times slower. Build at -j1 on such a box. The trailing
+    # flags win, and a reconfigure rebuilds only these objects.
+    target_compile_options(mkw_base_shared PRIVATE -O2 -g0)
+endif ()
+
 if (TARGET WiiCompiled)
     # The graphics path ends at NVK; dawn-nx knows how it has to be linked.
     include("${WIINX_DAWN_DIR}/switch_smoke_test/NvkLink.cmake")
