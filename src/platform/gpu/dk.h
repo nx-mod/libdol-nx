@@ -9,6 +9,8 @@
 #include <deko3d.h>
 #include <switch.h>
 
+#include "wiinx/format/gx/pixel.hpp"
+
 #include <cstdint>
 
 namespace dol::dk {
@@ -151,6 +153,24 @@ enum class ShaderStage : uint8_t { Vertex, Fragment };
 const DkShader* shader(ShaderStage stage, const char* glsl);
 
 inline uint32_t align_up(uint32_t value, uint32_t alignment) { return (value + alignment - 1) & ~(alignment - 1); }
+
+// ---------- GX's pixel state
+
+// GX's blending, logic op, depth test, culling and write masks as deko3d's
+// state objects (dk_gx_state_switch.cpp). Culling takes GX's front faces as
+// the clockwise ones, drawn without a flip (GX and the device both put the
+// origin at the top left).
+struct PipelineState {
+  DkRasterizerState rasterizer;
+  DkColorState color;
+  DkColorWriteState color_write;
+  DkBlendState blend;
+  DkDepthStencilState depth_stencil;
+};
+
+PipelineState pipeline_state(const wiinx::gx::PixelState& state);
+// on the frame's commands, for the draws after
+void bind(const PipelineState& state);
 
 // ---------- the screen
 

@@ -17,7 +17,7 @@ UAM_BUILD=${3:-$root/../haloce-nx/build/switch/uam}
 mkdir -p "$OUT"
 rm -f "$OUT"/*.o  # (only this build's objects are linked)
 
-FLAGS="-std=gnu++20 -O2 -march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE -ffunction-sections -D__SWITCH__ -I$DKP/libnx/include"
+FLAGS="-I$root/include -std=gnu++20 -O2 -march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE -ffunction-sections -D__SWITCH__ -I$DKP/libnx/include"
 for f in "$root"/src/platform/gpu/dk_*_switch.cpp "$here/triangle_test.cpp"; do
     $BIN/aarch64-none-elf-g++ $FLAGS -c "$f" -o "$OUT/$(basename "$f" .cpp).o"
 done
