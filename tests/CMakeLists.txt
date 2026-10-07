@@ -24,6 +24,7 @@ set(WIINX_CHECKS
     gx_vertex_check     # XF as GLSL, compiled by UAM where it is installed
     gx_state_check      # GX state from SDK calls: configurations and uniform bytes
     gx_vertex_stream_check  # GX vertex records to the vertex shader's layout
+    gx_command_check    # GX command streams: CP, XF, BP, indexed loads, calls, draws
 )
 
 foreach(check IN LISTS WIINX_CHECKS)
@@ -48,6 +49,7 @@ add_test(NAME gx_tev COMMAND gx_tev_check)
 add_test(NAME gx_vertex COMMAND gx_vertex_check)
 add_test(NAME gx_state COMMAND gx_state_check)
 add_test(NAME gx_vertex_stream COMMAND gx_vertex_stream_check)
+add_test(NAME gx_command COMMAND gx_command_check)
 add_test(NAME archive_cx COMMAND archive_cx_check)
 add_test(NAME archive_ash COMMAND archive_ash_check)
 add_test(NAME nand_store COMMAND nand_store_check)

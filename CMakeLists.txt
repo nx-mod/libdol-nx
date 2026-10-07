@@ -52,6 +52,7 @@ add_library(wiinx_format STATIC
     src/format/gx/vertex.cpp
     src/format/gx/state.cpp
     src/format/gx/vertex_stream.cpp
+    src/format/gx/command.cpp
     src/format/archive/yaz0.cpp
     src/format/archive/u8.cpp
     src/format/archive/cx.cpp

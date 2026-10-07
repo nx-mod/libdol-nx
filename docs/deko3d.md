@@ -40,7 +40,8 @@ the runtime's unity batches (`cmake/runtime/Runtime.cmake`).
 | `wiinx/format/gx/vertex.hpp` | XF as a GLSL vertex shader: matrices, projection, the lit colour channels, texgens, dual texturing |
 | `wiinx/format/gx/pixel.hpp` | GX's pixel engine state: blending, logic op, depth, culling, write masks |
 | `wiinx/format/gx/vertex_stream.hpp` | GX's packed vertex records (every component and colour format) to the vertex shader's float layout |
-| `wiinx/format/gx/state.hpp` | GX's state as the SDK's setters change it, and what a draw takes from it: both shader configurations, the pixel state, the uniform blocks' bytes (`gx_state_check`) |
+| `wiinx/format/gx/command.hpp` | the command stream run against the state: CP vertex tables, XF and BP loads, indexed loads, called lists, draws with indexed attributes fetched (`gx_command_check`) |
+| `wiinx/format/gx/state.hpp` | GX's state as the SDK's setters change it, and what a draw takes from it: both shader configurations, the pixel state, the uniform blocks' bytes; from the SDK's setters or the hardware's BP and XF registers (`gx_state_check`) |
 
 `gx_tev_check` and `gx_vertex_check` compile what they generate with devkitPro's
 `uam` - the compiler the console runs - wherever it is installed. Not yet:
