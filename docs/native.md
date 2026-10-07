@@ -13,7 +13,7 @@ turn, smallest and most self-contained first.
 | # | Section | Aurora | State |
 |---|---|---|---|
 | 1 | matrices | `aurora_mtx` | **gone**: nothing on the host called it; a game's matrices are its own code or libdol's natives (`accel/sdk/mtx`) |
-| 2 | input | `aurora_pad`, `aurora_si`, Aurora's gamepad layer | under way: native input in, Wii Remote on it; the PAD SDK next |
+| 2 | input | `aurora_pad`, `aurora_si`, Aurora's gamepad layer | under way: native input in, Wii Remote on it; the PAD SDK next (scoped below) |
 | 3 | main loop and events | `aurora_core` (window, events, the loop) | |
 | 4 | video timing and present | `aurora_vi` | |
 | 5 | settings overlay | `aurora_core` (ImGui) | |
@@ -36,6 +36,28 @@ Aurora's gamepad layer on the Switch is already libnx HID underneath
 3. The callers move to it: `pad.cpp`, `input_bindings.cpp`, the settings
    overlay and the mapping wizard.
 4. `aurora::pad` and `aurora::si` are no longer linked (`cmake/runtime`).
+
+### What the PAD port takes
+
+Aurora's `pad.cpp` is not generic over a thin gamepad API: it reads and writes
+Aurora's controller registry directly (`input::GameController`: the button,
+alt-button and axis mappings, dead zones, rumble intensity, VID/PID, the
+player-index registry and `persist_controller_for_player`), and its defaults
+are keyed by Aurora's gamepad enums per controller family (Pro Controller,
+Joy-Con pair, single Joy-Con, GameCube, Xbox, PlayStation). So the port is:
+
+- a registry of our own: one entry per `dol::input` player, holding what
+  `GameController` holds for PAD (mappings, dead zones, rumble, `mappingLoaded`)
+- `pad_sdk.cpp` over it: PADInit/Read/Reset/Recalibrate/Clamp/ControlMotor,
+  the mapping get/set/serialize (same file format, version 3, little-endian),
+  names, defaults for the Switch's own styles only (handheld, Pro Controller,
+  Joy-Con pair, single Joy-Con, GameCube adapter as `Other`)
+- left out: keyboard and mouse bindings (`PADSetKey*`, `g_keyboardBindings`),
+  LED colour, battery, VID/PID (answered as none)
+- the callers: `PADGetGamepadForIndex` returns an `AuroraGamepad*` that the
+  settings overlay and `input_bindings.cpp` use for names and button reads;
+  they move to the registry index instead. The overlay's SDL events go with
+  section 5
 
 ### libwii-nx's part
 
