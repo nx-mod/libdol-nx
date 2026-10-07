@@ -623,6 +623,26 @@ namespace {
            << RecompMod::CurrentTranslatedExecutionAddress() << std::dec << std::nouppercase << ")";
     throw Memory::AccessViolation(addr, length, reason.str());
 }
+
+// Read-only identification registers: a constant is the device, so they are
+// answered here rather than by a hook (a startup routine reads them inline).
+constexpr uint32_t kPiFlipperRevision = 0xCC00302Cu; // FLIPPER_REV_C, as Dolphin reports it
+
+bool ReadConstantRegister32(uint32_t addr, uint32_t* value) {
+    if (addr == kPiFlipperRevision) {
+        *value = 0x246500B1u;
+        return true;
+    }
+    return false;
+}
+
+bool ReadConstantRegister16(uint32_t addr, uint16_t* value) {
+    uint32_t word;
+    if (!ReadConstantRegister32(addr & ~3u, &word) || (addr & 1u))
+        return false;
+    *value = static_cast<uint16_t>((addr & 2u) ? word : word >> 16);
+    return true;
+}
 } // namespace
 
 uint8_t MemoryInline::Read8Slow(uint32_t addr) {
@@ -635,6 +655,9 @@ uint8_t MemoryInline::Read8Slow(uint32_t addr) {
 
 uint16_t MemoryInline::Read16Slow(uint32_t addr) {
     if (IsMmioAddress(addr)) {
+        uint16_t value;
+        if (ReadConstantRegister16(addr, &value))
+            return value;
         ThrowMmioReadBlocked(addr, sizeof(uint16_t));
     }
     ResolveDeferredReads(addr, sizeof(uint16_t));
@@ -643,6 +666,9 @@ uint16_t MemoryInline::Read16Slow(uint32_t addr) {
 
 uint32_t MemoryInline::Read32Slow(uint32_t addr) {
     if (IsMmioAddress(addr)) {
+        uint32_t value;
+        if (ReadConstantRegister32(addr, &value))
+            return value;
         ThrowMmioReadBlocked(addr, sizeof(uint32_t));
     }
     ResolveDeferredReads(addr, sizeof(uint32_t));
