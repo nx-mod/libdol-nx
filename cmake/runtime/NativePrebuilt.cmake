@@ -5,8 +5,8 @@
 # same canonical flag set the consuming build uses, which is what makes a single
 # package valid for every user. Nothing about this project's own code changes:
 # the runtime, the translated shards and the products still compile locally and
-# still link targets named aurora::gx / aurora::pad / aurora::si / aurora::vi /
-# aurora::mtx, so cmake/PublicProducts.cmake needs no prebuilt-specific branch.
+# still link targets named aurora::gx / aurora::pad / aurora::si / aurora::vi
+# so cmake/PublicProducts.cmake needs no prebuilt-specific branch.
 #
 # The aurora and dependency source trees are still present in the workspace - the
 # runtime includes aurora headers directly - so the package records include

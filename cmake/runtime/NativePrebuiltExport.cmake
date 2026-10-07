@@ -5,7 +5,7 @@
 # compiled: it adds two never-built probe targets and writes plain text files
 # describing (a) which library targets aurora produced and where their build
 # outputs land, and (b) the exact compile/link interface a consumer of
-# aurora::gx/pad/si/vi/mtx receives.
+# aurora::gx/pad/si/vi receives.
 #
 # Everything is taken from the real, fully configured project rather than
 # hand-written, so the package cannot describe a graph the build does not have.
@@ -75,7 +75,7 @@ target_compile_features(mkw_np_probe PRIVATE cxx_std_20)
 # Crypto++ does join the harvest - ~150 translation units that are identical
 # for every user under the pinned toolchain and flag set.
 target_link_libraries(mkw_np_probe PRIVATE
-    aurora::gx aurora::pad aurora::si aurora::vi aurora::mtx
+    aurora::gx aurora::pad aurora::si aurora::vi
     mkw::cryptopp)
 
 get_filename_component(_mkw_np_aurora_dir "${MKW_AURORA_DIR}" ABSOLUTE)

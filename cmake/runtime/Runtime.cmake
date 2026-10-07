@@ -234,7 +234,7 @@ else()
 
     # Keep upstream Aurora split: several sources intentionally use file-local
     # names that collide under this repo's aggressive unity build settings.
-    set(AURORA_TARGETS aurora_core aurora_gx aurora_pad aurora_si aurora_mtx aurora_vi)
+    set(AURORA_TARGETS aurora_core aurora_gx aurora_pad aurora_si aurora_vi)
     foreach(t ${AURORA_TARGETS})
         if(TARGET ${t})
             set_target_properties(${t} PROPERTIES UNITY_BUILD OFF)
@@ -531,7 +531,7 @@ else()
         target_compile_features(mkw_macos_native_compile PRIVATE cxx_std_20)
         target_compile_definitions(mkw_macos_native_compile PRIVATE SDL_MAIN_HANDLED TARGET_PC)
         target_link_libraries(mkw_macos_native_compile PRIVATE
-            aurora::gx aurora::pad aurora::si aurora::vi aurora::mtx
+            aurora::gx aurora::pad aurora::si aurora::vi
             mkw::pugixml mkw::toml11 mkw::cryptopp)
         set_target_properties(mkw_macos_native_compile PROPERTIES UNITY_BUILD OFF)
     elseif(MKW_PLATFORM_SWITCH)
