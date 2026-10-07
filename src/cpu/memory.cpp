@@ -624,13 +624,41 @@ namespace {
     throw Memory::AccessViolation(addr, length, reason.str());
 }
 
-// Read-only identification registers: a constant is the device, so they are
-// answered here rather than by a hook (a startup routine reads them inline).
+// Devices simple enough to answer here rather than by a hook (startup code and
+// a title's main touch them inline). First, read-only identification
+// registers, where a constant is the device.
 constexpr uint32_t kPiFlipperRevision = 0xCC00302Cu; // FLIPPER_REV_C, as Dolphin reports it
+
+// Hollywood's GPIO B bank, as the PowerPC sees it (0xCD8000C0-0xCD8000DC: out,
+// direction, in, interrupt level, flags, mask, input mirror, owner). It drives
+// the disc slot LED, the sensor bar and the like, none of which the Switch has:
+// written values are kept so a read-back sees them, and the inputs read 0
+// (nothing pressed, no disc ejected).
+constexpr uint32_t kGpioBBase = 0xCD8000C0u;
+constexpr uint32_t kGpioBCount = 8;
+constexpr uint32_t kGpioBIn = 2;
+std::array<std::atomic<uint32_t>, kGpioBCount> g_gpioB{};
+
+bool IsGpioB(uint32_t addr) {
+    return addr >= kGpioBBase && addr < kGpioBBase + kGpioBCount * 4 && (addr & 3u) == 0;
+}
+
+bool WriteGpioB32(uint32_t addr, uint32_t value) {
+    if (!IsGpioB(addr))
+        return false;
+    const uint32_t index = (addr - kGpioBBase) / 4;
+    if (index != kGpioBIn)
+        g_gpioB[index].store(value, std::memory_order_relaxed);
+    return true;
+}
 
 bool ReadConstantRegister32(uint32_t addr, uint32_t* value) {
     if (addr == kPiFlipperRevision) {
         *value = 0x246500B1u;
+        return true;
+    }
+    if (IsGpioB(addr)) {
+        *value = g_gpioB[(addr - kGpioBBase) / 4].load(std::memory_order_relaxed);
         return true;
     }
     return false;
@@ -734,6 +762,8 @@ void MemoryInline::Write32Slow(uint32_t addr, uint32_t val) {
         return;
     }
     if (IsMmioAddress(addr)) {
+        if (WriteGpioB32(addr, val))
+            return;
         throw Memory::AccessViolation(addr, sizeof(val), "MMIO write blocked (non-GPU)");
     }
     WriteScalar(addr, val);
