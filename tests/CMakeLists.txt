@@ -22,6 +22,7 @@ set(WIINX_CHECKS
     gx_texture_check    # GX texture formats decoded, texel by texel
     gx_tev_check        # the TEV as GLSL, compiled by UAM where it is installed
     gx_vertex_check     # XF as GLSL, compiled by UAM where it is installed
+    gx_state_check      # GX state from SDK calls: configurations and uniform bytes
 )
 
 foreach(check IN LISTS WIINX_CHECKS)
@@ -44,6 +45,7 @@ add_test(NAME archive_u8 COMMAND archive_u8_check)
 add_test(NAME gx_texture COMMAND gx_texture_check)
 add_test(NAME gx_tev COMMAND gx_tev_check)
 add_test(NAME gx_vertex COMMAND gx_vertex_check)
+add_test(NAME gx_state COMMAND gx_state_check)
 add_test(NAME archive_cx COMMAND archive_cx_check)
 add_test(NAME archive_ash COMMAND archive_ash_check)
 add_test(NAME nand_store COMMAND nand_store_check)

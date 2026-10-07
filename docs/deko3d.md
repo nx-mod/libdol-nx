@@ -38,6 +38,8 @@ the runtime's unity batches (`cmake/runtime/Runtime.cmake`).
 | `wiinx/format/gx/texture.hpp` | every GX texture format decoded to RGBA8, palettes, mips (`gx_texture_check`: texel by texel) |
 | `wiinx/format/gx/tev.hpp` | the TEV as a GLSL fragment shader: sixteen stages in the hardware's 8-bit arithmetic, compares, swaps, konst colours, the alpha test |
 | `wiinx/format/gx/vertex.hpp` | XF as a GLSL vertex shader: matrices, projection, the lit colour channels, texgens, dual texturing |
+| `wiinx/format/gx/pixel.hpp` | GX's pixel engine state: blending, logic op, depth, culling, write masks |
+| `wiinx/format/gx/state.hpp` | GX's state as the SDK's setters change it, and what a draw takes from it: both shader configurations, the pixel state, the uniform blocks' bytes (`gx_state_check`) |
 
 `gx_tev_check` and `gx_vertex_check` compile what they generate with devkitPro's
 `uam` - the compiler the console runs - wherever it is installed. Not yet:
