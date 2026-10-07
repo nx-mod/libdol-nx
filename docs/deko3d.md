@@ -51,6 +51,29 @@ the runtime's unity batches (`cmake/runtime/Runtime.cmake`).
 `uam` - the compiler the console runs - wherever it is installed. Not yet:
 indirect textures, fog, the z texture, bump texgens.
 
+## How it replaces Aurora (the plan)
+
+Not by carrying Aurora's GX library over: that would keep its design (GX calls
+encoded into a FIFO only to be decoded again, PC-side pointer extensions,
+its texture objects). The game already speaks the hardware's language, and
+libdol already reads it:
+
+1. The gather pipe. A game's FIFO words arrive at `GX_HLE_FIFO_Write*` and
+   `GX_HLE_FIFO_WriteBurst` (`src/platform/gx/gx_fifo.cpp`), which today
+   parse them and hand BP writes, XF loads and draws to Aurora
+   (`GXApplyBPReg`, `GXCallDisplayList`, `submit_raw_draw`). Natively the
+   same bytes go to one `wiinx::gx::CommandProcessor` over guest memory, and
+   its draws to `draw_gx`.
+2. libdol's replacements of the SDK's GX functions (`src/platform/gx`, the
+   ones that bypass the FIFO for speed) call `wiinx::gx::State`'s setters
+   instead of Aurora's host GX API. The ones that stand in for the hardware -
+   draw sync, the PE finish and token interrupts, the CP FIFO registers -
+   stay as they are, so no MMIO needs emulating.
+3. The EFB as a deko3d render target at the screen's scale; EFB copies to
+   textures (`GXCopyTex`) and to the XFB (`GXCopyDisp`); VI presents the XFB.
+4. A build option swaps the two: Aurora's GX and present, or these. Aurora's
+   code stays a reference for GX behaviour, as Dolphin's is.
+
 ## What comes next
 
 GX is decoded by libdol already (`src/platform/gx`: display lists, vertex
