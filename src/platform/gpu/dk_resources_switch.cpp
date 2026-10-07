@@ -11,7 +11,6 @@
 namespace dol::dk {
 namespace {
 
-uint32_t align_up(uint32_t value, uint32_t alignment) { return (value + alignment - 1) & ~(alignment - 1); }
 
 DkMemBlock memory_block(uint32_t size, uint32_t flags) {
   DkMemBlockMaker maker;

@@ -12,6 +12,16 @@ Tint, no NVK.
 | `dk_device_switch.cpp` | the device, the frame's command and staging rings, the descriptor sets |
 | `dk_resources_switch.cpp` | buffers, textures, views, writes into them |
 | `dk_frame_switch.cpp` | passes, copies, the screen (1920x1080 images, cropped to 720p in handheld) |
+| `dk_shader_switch.cpp` | shaders: GLSL compiled by UAM on the console, loaded into code memory, kept for the run |
+
+UAM is built for the console as Halo's port builds it (meson, bison, flex,
+mako; a pinned commit with `uam.patch`), found at `WIINX_UAM_BUILD_DIR` -
+beside this checkout in `haloce-nx/build/switch` unless pointed elsewhere.
+`src/uam/uam_compile.cpp` is compiled with UAM's flags and merged with its
+library into one object with every symbol renamed but `dol_dk_compile_glsl`
+(`tools/wiinx-uam-object`): UAM is Mesa's GLSL compiler, as is the Mesa that
+NVK brings, and linked plainly they collide. Without a UAM build the link
+still succeeds and shaders do not compile.
 
 It came from the draft in aurora-nx's `deko3d` branch (where a test clears the
 screen with it) and is compiled into every Switch build, linked against

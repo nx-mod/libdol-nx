@@ -193,6 +193,34 @@ if (TARGET WiiCompiled)
     dawn_switch_link_nvk(WiiCompiled)
     # libdol's own GPU layer (src/platform/gpu, docs/deko3d.md)
     target_link_libraries(WiiCompiled PRIVATE deko3d)
+    # UAM, its shader compiler, built for the console. Its build is Halo's
+    # (nx-mod/haloce-nx: meson, bison, flex and mako, at a pinned commit with
+    # uam.patch), found beside this checkout unless pointed elsewhere; without
+    # one, shaders do not compile and the build still links.
+    set(WIINX_UAM_SOURCE_DIR "${WIINX_ROOT}/../haloce-nx/build/switch/third_party/uam"
+        CACHE PATH "UAM's patched source tree")
+    set(WIINX_UAM_BUILD_DIR "${WIINX_ROOT}/../haloce-nx/build/switch/uam"
+        CACHE PATH "The folder holding UAM's Switch libuam.a and meson/")
+    if (EXISTS "${WIINX_UAM_BUILD_DIR}/libuam.a" AND EXISTS "${WIINX_UAM_SOURCE_DIR}/source/compiler_iface.h")
+        set(_wiinx_uam_object "${CMAKE_CURRENT_BINARY_DIR}/uam_compiler.o")
+        add_custom_command(
+            OUTPUT "${_wiinx_uam_object}"
+            COMMAND "${WIINX_ROOT}/tools/wiinx-uam-object" "${CMAKE_CXX_COMPILER}" "${CMAKE_LINKER}"
+                    "${CMAKE_NM}" "${CMAKE_OBJCOPY}" "${WIINX_UAM_SOURCE_DIR}" "${WIINX_UAM_BUILD_DIR}"
+                    "${_wiinx_uam_object}"
+            DEPENDS "${WIINX_ROOT}/src/uam/uam_compile.cpp" "${WIINX_ROOT}/tools/wiinx-uam-object"
+                    "${WIINX_UAM_BUILD_DIR}/libuam.a"
+            COMMENT "UAM shader compiler object"
+            VERBATIM)
+        # (built by a target of its own: WiiCompiled is made in another directory,
+        # which a generated source's rule would have to be in)
+        add_custom_target(wiinx_uam_object DEPENDS "${_wiinx_uam_object}")
+        add_dependencies(WiiCompiled wiinx_uam_object)
+        target_link_libraries(WiiCompiled PRIVATE "${_wiinx_uam_object}")
+        message(STATUS "libdol-nx: UAM from ${WIINX_UAM_BUILD_DIR}")
+    else ()
+        message(STATUS "libdol-nx: no UAM build at ${WIINX_UAM_BUILD_DIR}: shaders will not compile")
+    endif ()
     # Every thread gets a 4 MiB stack instead of libnx's 128 KiB default: the
     # shader compiler overflows the default.
     target_link_libraries(WiiCompiled PRIVATE -Wl,--wrap=pthread_create)

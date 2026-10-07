@@ -13,7 +13,6 @@ namespace {
 constexpr uint32_t kCommandSlice = 4u * 1024 * 1024;
 constexpr uint32_t kStagingSlice = 16u * 1024 * 1024;
 
-uint32_t align_up(uint32_t value, uint32_t alignment) { return (value + alignment - 1) & ~(alignment - 1); }
 
 // memory a frame writes as it goes: kFrames slices, the next taken at each
 // frame's end once its fence has passed

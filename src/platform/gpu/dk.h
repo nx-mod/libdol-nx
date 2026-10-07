@@ -142,6 +142,16 @@ void copy_texture(const Texture& from, uint32_t from_mip, const DkImageRect& fro
 void copy_texture_to_buffer(const Texture& from, uint32_t mip, const DkImageRect& rect, const Buffer& to,
                             uint32_t offset, uint32_t bytes_per_row);
 
+// ---------- shaders
+
+enum class ShaderStage : uint8_t { Vertex, Fragment };
+
+// GLSL compiled by UAM and loaded, once a run per source; null when it does
+// not compile (or the build has no UAM). Kept for the program's life.
+const DkShader* shader(ShaderStage stage, const char* glsl);
+
+inline uint32_t align_up(uint32_t value, uint32_t alignment) { return (value + alignment - 1) & ~(alignment - 1); }
+
 // ---------- the screen
 
 // the console's screen: 1280x720 in handheld, 1920x1080 docked

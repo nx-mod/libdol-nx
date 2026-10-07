@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Build the one object that carries UAM into a Switch build (docs/deko3d.md):
+# src/uam/uam_compile.cpp compiled with UAM's flags, linked with UAM's library
+# into a single relocatable object, and every symbol in it renamed but
+# dol_dk_compile_glsl - which renames the C++ COMDAT groups too, whose names are
+# what really clash with the Mesa NVK links. Halo's deko3d port does the same
+# (nx-mod/haloce-nx tools/switch_build.py).
+#
+#   tools/wiinx-uam-object <c++> <ld> <nm> <objcopy> <uam-source> <uam-build> <out.o>
+#
+# <uam-source> is UAM's patched source tree, <uam-build> the folder holding its
+# libuam.a and meson/ (Halo's build/switch/third_party/uam and build/switch/uam).
+set -euo pipefail
+
+[ $# -eq 7 ] || { sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+cxx=$1 ld=$2 nm=$3 objcopy=$4 source=$5 build=$6 out=$7
+here=$(cd "$(dirname "$0")/.." && pwd)
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+
+# (no -fPIC: UAM's library is built without it, and a thread-local variable
+# faulted under it with devkitA64's -mtp=soft)
+"$cxx" -std=c++11 -O2 -DNDEBUG -DDESKTOP -D_USE_MATH_DEFINES -D_GNU_SOURCE -DHAVE_POSIX_MEMALIGN \
+    -D__SWITCH__ -march=armv8-a -mtune=cortex-a57 -mtp=soft -fPIE \
+    -I"$source/source" -I"$source/mesa-imported" \
+    -I"$build/meson/mesa-imported" -I"$build/meson/mesa-imported/glsl" \
+    -I"$build/meson/mesa-imported/glsl/glcpp" \
+    -c "$here/src/uam/uam_compile.cpp" -o "$work/uam_compile.o"
+"$ld" -r -o "$work/combined.o" "$work/uam_compile.o" --whole-archive "$build/libuam.a" --no-whole-archive
+"$nm" --defined-only "$work/combined.o" | awk '{print $3}' \
+    | grep -v -e '^dol_dk_compile_glsl$' -e '^\$' | sort -u \
+    | awk '{print $1" uam_"$1}' > "$work/symbols.txt"
+"$objcopy" --redefine-syms="$work/symbols.txt" --keep-global-symbol=dol_dk_compile_glsl \
+    "$work/combined.o" "$out"
