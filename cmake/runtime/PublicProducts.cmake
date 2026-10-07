@@ -163,6 +163,9 @@ set_source_files_properties(${MKW_PPC_SEMANTIC_RUNTIME_SOURCES} PROPERTIES
 
 wiinx_add_runtime_layer(wiinx_cpu ${WIINX_CPU_SOURCES})
 wiinx_add_runtime_layer(wiinx_platform ${WIINX_PLATFORM_SOURCES})
+if(MKW_PLATFORM_SWITCH AND WIINX_NATIVE_GX)
+    target_compile_definitions(wiinx_platform PRIVATE WIINX_NATIVE_GX=1)
+endif()
 wiinx_add_runtime_layer(wiinx_app ${WIINX_APP_SOURCES})
 target_precompile_headers(wiinx_cpu PRIVATE "${MKW_RUNTIME_SOURCE_DIR}/src/cpu/include/mkw_pch.h")
 target_precompile_headers(wiinx_platform REUSE_FROM wiinx_cpu)

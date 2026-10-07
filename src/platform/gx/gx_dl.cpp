@@ -14,6 +14,9 @@
 // The display-list scan cache validates a cached scan against the live guest
 // bytes with a 64-bit XXH3 digest (see GxDisplayListScanCache::CanReuse).
 #include <xxhash.h>
+#if defined(WIINX_NATIVE_GX)
+#include "../gpu/gx_native.h"
+#endif
 
 // How often a display list is recognised. Measured in a race: 723 hits against
 // 864 misses a frame, and keying on the list's content instead of its address
@@ -1478,6 +1481,10 @@ struct DlSectionTimer {
 
 extern "C" void GX__CallDisplayList_80172f64(uint32_t listAddr, uint32_t nbytes) {
     if (nbytes == 0 || listAddr == 0) return;
+#if defined(WIINX_NATIVE_GX)
+    dol::gx_native::call_list(listAddr, nbytes);
+    return;
+#endif
     try {
         const uint8_t* list = static_cast<const uint8_t*>(GuestToHostPtr(listAddr, nbytes));
         if (!list) return;

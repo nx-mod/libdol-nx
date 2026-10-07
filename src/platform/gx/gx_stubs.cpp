@@ -14,6 +14,9 @@ extern std::atomic<uint64_t> g_gxDrawDoneUs;
 #define SWITCH_PHASE(name) ((void)0)
 #endif
 #include "runtime_log.h"
+#if defined(WIINX_NATIVE_GX)
+#include "../gpu/gx_native.h"
+#endif
 
 extern "C" void __GXSetSUTexRegs();
 
@@ -23,12 +26,32 @@ extern "C" void __GXSetSUTexRegs();
 
 extern "C" void GX_HLE_FIFO_WriteFloat(float val) {
     u32 raw; std::memcpy(&raw, &val, 4);
+#if defined(WIINX_NATIVE_GX)
+    const uint8_t bytes[4] = {static_cast<uint8_t>(raw >> 24), static_cast<uint8_t>(raw >> 16),
+                              static_cast<uint8_t>(raw >> 8), static_cast<uint8_t>(raw)};
+    dol::gx_native::write(bytes, 4);
+#else
     try { HleFifoWrite(raw, 4); } catch (...) { RT_LOGF(RT_TAG_GX, "FIFO write float failed\n"); }
+#endif
 }
 
+#if defined(WIINX_NATIVE_GX)
+// libdol's own renderer takes the gather pipe's bytes as they are (gx_native.h)
+extern "C" void GX_HLE_FIFO_Write32(uint32_t val) {
+    const uint8_t bytes[4] = {static_cast<uint8_t>(val >> 24), static_cast<uint8_t>(val >> 16),
+                              static_cast<uint8_t>(val >> 8), static_cast<uint8_t>(val)};
+    dol::gx_native::write(bytes, 4);
+}
+extern "C" void GX_HLE_FIFO_Write16(uint16_t val) {
+    const uint8_t bytes[2] = {static_cast<uint8_t>(val >> 8), static_cast<uint8_t>(val)};
+    dol::gx_native::write(bytes, 2);
+}
+extern "C" void GX_HLE_FIFO_Write8(uint8_t val) { dol::gx_native::write(&val, 1); }
+#else
 extern "C" void GX_HLE_FIFO_Write32(uint32_t val) { HleFifoWrite(val, 4); }
 extern "C" void GX_HLE_FIFO_Write16(uint16_t val) { HleFifoWrite(static_cast<u32>(val), 2); }
 extern "C" void GX_HLE_FIFO_Write8(uint8_t val) { HleFifoWrite(static_cast<u32>(val), 1); }
+#endif
 
 extern "C" void GX__SetDrawSync_8016ed08(uint32_t token) {
     (void)token;

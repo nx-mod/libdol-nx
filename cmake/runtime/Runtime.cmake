@@ -166,6 +166,11 @@ set(MKW_TRANSLATED_PPC_FP_OPTIONS -fno-fast-math -ffp-contract=off)
 # ----------------------------------------------------------------------
 # Third-party: aurora-main (provides SDL3 + GPU backends)
 # ----------------------------------------------------------------------
+# libdol's own GX renderer in place of Aurora's (docs/deko3d.md): the game's
+# FIFO and display lists go to src/platform/gpu/gx_native_switch.cpp. Under
+# way: Aurora still owns the screen, so with this on nothing is shown yet.
+option(WIINX_NATIVE_GX "Draw GX with libdol's deko3d renderer (Switch; in progress)" OFF)
+
 # What the runtime links of Aurora. The Switch has its own PAD and SI
 # (src/platform/input/pad_sdk_switch.cpp, over native_input; docs/native.md).
 if(MKW_PLATFORM_SWITCH)
@@ -310,10 +315,10 @@ endif()
 if(MKW_PLATFORM_SWITCH)
     # The mapping wizard builds SDL gamepad mappings; Switch pads need none.
     list(FILTER SOURCES EXCLUDE REGEX "/src/app/controller_mapping_wizard\\.cpp$")
-    # The deko3d layer (src/platform/gpu) keeps file-local helpers of the same
-    # names in each file; compiled on its own rather than in a unity batch.
+    # The GPU files (src/platform/gpu) keep file-local helpers of the same
+    # names; each is compiled on its own rather than in a unity batch.
     set(_wiinx_dk_sources ${SOURCES})
-    list(FILTER _wiinx_dk_sources INCLUDE REGEX "/src/platform/gpu/dk_.*_switch\\.cpp$")
+    list(FILTER _wiinx_dk_sources INCLUDE REGEX "/src/platform/gpu/.*_switch\\.cpp$")
     set_source_files_properties(${_wiinx_dk_sources} PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 endif()
 

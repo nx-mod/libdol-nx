@@ -2,6 +2,9 @@
 #include "gx_stream_common.h"
 #include "gx_cp_decode.h"
 #include "isa/big_endian.h"
+#if defined(WIINX_NATIVE_GX)
+#include "../gpu/gx_native.h"
+#endif
 
 // Opcode constants and the stream helpers this file shares with gx_dl.cpp /
 // gx_vertex.cpp; see gx_stream_common.h.
@@ -875,6 +878,10 @@ extern "C" void GX_HLE_FIFO_WriteBurst(const uint8_t* data, uint32_t sizeBytes) 
     if (IsDisplayListActive() && WriteDisplayListBurst(data, sizeBytes)) {
         return;
     }
+#if defined(WIINX_NATIVE_GX)
+    dol::gx_native::write(data, sizeBytes);
+    return;
+#endif
 
     const uint32_t applied = ApplyFifoPacketsDirect(data, sizeBytes);
     if (applied < sizeBytes) {
