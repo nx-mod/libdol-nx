@@ -295,6 +295,10 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
     "${WIINX_ROOT}/src/app/*.cpp"
     "${WIINX_ROOT}/src/accel/*_bind.cpp")
 list(FILTER SOURCES EXCLUDE REGEX "/src/app/(switch|product)/")
+if(NOT MKW_PLATFORM_SWITCH)
+    # *_switch.cpp under src/platform is the Switch's own (libnx), and only its
+    list(FILTER SOURCES EXCLUDE REGEX "/src/platform/.*_switch\\.cpp$")
+endif()
 if(MKW_PLATFORM_SWITCH)
     # The mapping wizard builds SDL gamepad mappings; Switch pads need none.
     list(FILTER SOURCES EXCLUDE REGEX "/src/app/controller_mapping_wizard\\.cpp$")

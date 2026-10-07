@@ -16,6 +16,9 @@
 #endif
 
 #include "game_hooks.h"
+#ifdef __SWITCH__
+#include "native_input.h"
+#endif
 
 // The newest surface size, when an event arrived at a moment a game's hook
 // could not be run yet (see below).
@@ -134,7 +137,12 @@ inline bool BeginAuroraFrame() {
     return true;
 }
 
-// Poll Aurora events and update cached window/framebuffer dimensions.
+// Poll Aurora events and update cached window/framebuffer dimensions; on the
+// Switch, the controllers read natively as well, once a frame (native_input.h,
+// docs/native.md section 2).
 inline void UpdateAuroraAndProcessEvents() {
+#ifdef __SWITCH__
+    dol::input::update();
+#endif
     ProcessAuroraEvents(aurora_update());
 }

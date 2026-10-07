@@ -112,7 +112,10 @@ elseif (WIINX_DAWN_PREBUILT)
     message(FATAL_ERROR
         "No Dawn in ${WIINX_DAWN_PREBUILT}: expected ${_wiinx_dawn_library}")
 else ()
-    add_subdirectory("${WIINX_DAWN_DIR}" dawn-build)
+    # EXCLUDE_FROM_ALL, as Aurora is below: only what a game links is built.
+    # Without it the default target also built Dawn's demo and abseil's
+    # signal handler, neither of which builds for the Switch.
+    add_subdirectory("${WIINX_DAWN_DIR}" dawn-build EXCLUDE_FROM_ALL)
 endif ()
 
 # Aurora (GX on WebGPU) reuses the Dawn added above rather than fetching its
@@ -177,7 +180,11 @@ if (TARGET mkw_base_shared)
     # info and keeps -O2: the game's translated code is most of its frame, and
     # -O0 ran it several times slower. Build at -j1 on such a box. The trailing
     # flags win, and a reconfigure rebuilds only these objects.
-    target_compile_options(mkw_base_shared PRIVATE -O2 -g0)
+    # WIINX_SHARD_FLAGS: "-O0 -g0" on a phone for quick iteration (the shards
+    # already built that way are kept), the default for a game to play
+    set(WIINX_SHARD_FLAGS "-O2 -g0" CACHE STRING "Compile flags for a game's translated shards")
+    separate_arguments(_wiinx_shard_flags UNIX_COMMAND "${WIINX_SHARD_FLAGS}")
+    target_compile_options(mkw_base_shared PRIVATE ${_wiinx_shard_flags})
 endif ()
 
 if (TARGET WiiCompiled)
