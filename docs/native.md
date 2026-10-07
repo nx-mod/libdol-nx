@@ -53,6 +53,27 @@ own TODO already waits on "an input interface in libdol first"; this is it:
   motion. That is also the motion libwii-nx's TODO lists as missing (Wii Sports)
 - SDL leaves the Wii builds with it
 
+The remote is filled in `WiiRemoteInput::ReadKpadSample`'s terms (WPAD button
+bits, accelerometer in g with the KPAD frame's rest at y = -1, Nunchuk stick and
+motion), so WPAD and KPAD themselves do not change; a Switch file fills the
+sample from `dol::input` beside the desktop's SDL one.
+
+| Wii | Joy-Con pair, handheld, Pro Controller | one right Joy-Con, sideways |
+|---|---|---|
+| A / B | A / ZR (B is a trigger on the remote) | - |
+| 1 / 2 | Y / X | Y / A (the remote sideways: 1 and 2 are its face) |
+| + / - / Home | + / - / right stick click | + / - / Home-side stick click |
+| D-pad | left D-pad | the stick |
+| remote motion | right half's accelerometer | its accelerometer, axes turned sideways |
+| pointer | right half's gyro, right stick as the fallback | gyro |
+| Nunchuk stick | left stick | - |
+| Nunchuk C / Z | L / ZL | - |
+| Nunchuk motion | left half's accelerometer | - |
+
+The accelerometer's axes are the Joy-Con's turned into the remote's (held
+upright, or sideways for the wheel games); the exact signs are measured on the
+console, a remote on a table reading y = -1.
+
 Real Wii Remotes over Bluetooth (libwii-nx's `wud`) need Bluetooth HID access
 libnx does not give homebrew; a later question, not this section.
 
@@ -80,6 +101,31 @@ the screen) and moves here.
 Graphics is where the time is: in a Mario Kart Wii race, Aurora building ~480
 draws and the runtime walking display lists cost ~13 ms of a 77 ms frame on the
 game's core (wii-nx/STATUS.md).
+
+## Others' wins to take
+
+dorPXP/driftdroid (GPL-3.0, as libdol-nx is; credited where taken) runs Mario
+Kart Wii on the Switch at ~30 fps in a stock 12-kart race and 60 in time trials,
+up from ~18, and most of what did it is in the runtime, not the renderer
+(driftdroid `runtime/`, commits of 2026-09-17 to 09-27):
+
+- [ ] native AArch64 paired-single, `psq` and single-rounding helpers
+      (`runtime/include/isa/ppc_isa_float.h`, `ppc_isa_quantized.h`): the
+      translated code itself, bit-exact against the previous build; FPCR.FZ for
+      the NI flush
+- [ ] display-list caches (from chrissotraidis/kartpad `e3cb77f`, `b435655`):
+      register-only classifications cached, a direct-mapped front for the scan
+      cache, vertex layouts rehashed only where a writer marked them stale, XF
+      loads batched in FIFO bursts (`runtime/src/hle/gx/gx_dl.cpp`)
+- [ ] the build: functions ordered from race profiles, PGO generate/use (with
+      their libgcov TLS and devkitA64 assembler workarounds), hidden visibility
+- [ ] thread placement and priorities for the GX worker, the AX mixer and audio
+      output
+- [ ] audio: the mixer's own counters (`ax_mix.cpp`) to see its cost
+- (their fewer-GX-worker-syncs work is Aurora's half; the native renderer
+  replaces it rather than taking it)
+
+These are independent of Aurora leaving, and apply to every game.
 
 ## Build notes
 
