@@ -15,6 +15,14 @@ libdol-nx is GPL-3.0-or-later. What it is built from or follows:
   copies of its `example-wii-nx/scripts/extract-dol` and `wiicrypto.py`; the
   signature masking follows its `resolve-symbols`. <https://github.com/nx-mod/wii-nx>
 
+- **driftdroid** by dorPXP - GPL-3.0. The display-list scan cache's front slot
+  and the stale-row vertex layout hashing in `src/platform/gx/gx_dl.cpp`
+  (`gx_internal.h`, `gx_cp_decode.h`, `gx_vertex.cpp`) are its, merged from its
+  `runtime/src/hle/gx`. <https://github.com/dorPXP/driftdroid>
+- **KartPad** by chrissotraidis - GPL-3.0. The display-list classification
+  caches driftdroid took from it (its `e3cb77f`, `b435655`).
+  <https://github.com/chrissotraidis/kartpad>
+
 ## Symbols these signatures were taken from
 
 A signature is a hash of masked instructions and carries no code. The names
