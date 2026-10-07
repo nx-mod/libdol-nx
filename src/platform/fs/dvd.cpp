@@ -1111,6 +1111,10 @@ PPC_NATIVE_OVERRIDE(801628CC, DVD__ReadAbsAsyncPrio_HLE_801628cc, int32_t,
 // Low-Level / Core DVD (The "Magic" Handlers)
 // ============================================================================
 
+// For libwii-nx's /dev/di: whether the title has a disc behind it at all
+// (a channel such as the Wii Menu runs with the drive empty).
+extern "C" bool DVD_HLE_DiscPresent() { return !DiscDataRootOrEmpty().empty(); }
+
 // 0x80164848 -> DVDLowInit
 extern "C" int32_t DVDLowInit_80164848() {
     // Just ensure init is done
@@ -1218,6 +1222,10 @@ PPC_NATIVE_OVERRIDE(80165708, DVDLowUnencryptedRead_80165708, int32_t, (uint32_t
 extern "C" int32_t DVDCheckDevice_801643FC() { return 1; } // Ready
 PPC_NATIVE_OVERRIDE(801643FC, DVDCheckDevice_801643FC, int32_t, (), ());
 
-extern "C" int32_t DVDLowClearCoverInterrupt_80166964(uint32_t cb) { return 1; }
+extern "C" int32_t DVDLowClearCoverInterrupt_80166964(uint32_t cb) {
+    // (the callback is the completion: a caller may wait for it)
+    InvokeDvdLowCallback(cb, 1);
+    return 1;
+}
 PPC_NATIVE_OVERRIDE(80166964, DVDLowClearCoverInterrupt_80166964, int32_t, (uint32_t cb), (cb));
 
