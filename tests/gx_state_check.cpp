@@ -258,6 +258,39 @@ int main() {
         Check("the fragment shader compiles from registers", Compiles(TevFragmentGlsl(state.Tev()), "frag", "registers"));
     }
 
+    std::printf("Texture registers\n");
+    {
+        State state;
+        const auto bp = [&](std::uint32_t reg, std::uint32_t value) { state.ApplyBP(reg << 24 | value); };
+        // map 1: 256x128 RGB5A3 at 0x00340000, repeat/mirror, linear with mips, max LOD 3, bias -0.5
+        bp(0x81, 1u | 2u << 2 | 1u << 4 | 6u << 5 | (static_cast<std::uint32_t>(-16) & 0xFF) << 9);
+        bp(0x85, 0u | (3u * 16) << 8);
+        bp(0x89, 255u | 127u << 10 | 5u << 20);
+        bp(0x95, 0x00340000u >> 5);
+        // map 5: CI8 with an RGB565 palette at line 2 of TMEM's palette half
+        bp(0xA9, 63u | 63u << 10 | 9u << 20);
+        bp(0xB5, 0x00500000u >> 5);
+        bp(0xB9, 2u | 1u << 10);
+        // the palette loaded: 256 entries from 0x00600000 into that TMEM line
+        bp(0x64, 0x00600000u >> 5);
+        bp(0x65, 2u | (256u / 16) << 10);
+
+        const TexMap t1 = state.Texture(1);
+        Check("map 1's image", t1.address == 0x00340000u && t1.width == 256 && t1.height == 128 &&
+                                   t1.format == TexFormat::RGB5A3);
+        Check("map 1 repeats and mirrors", t1.wrapS == 1 && t1.wrapT == 2);
+        Check("map 1 filters linearly with four levels", t1.magLinear && t1.minFilter == 6 && t1.mips == 4);
+        Check("map 1's LOD bias", Near(t1.lodBias, -0.5f) && Near(t1.maxLod, 3.0f));
+        const TexMap t5 = state.Texture(5);
+        Check("map 5 sits in the second register bank", t5.address == 0x00500000u && t5.width == 64 &&
+                                                            t5.format == TexFormat::C8 && t5.mips == 1);
+        Check("map 5's palette is RGB565 at its TMEM address", t5.tlutFormat == TlutFormat::RGB565 &&
+                                                                   t5.tlutTmem == 1024);
+        const TlutLoad tl = state.Tlut(t5.tlutTmem);
+        Check("the palette load says where it came from", tl.address == 0x00600000u && tl.entries == 256);
+        Check("a map never bound reads as nothing", state.Texture(7).address == 0);
+    }
+
     std::printf(gFailures ? "%d FAILED\n" : "all passed\n", gFailures);
     return gFailures ? 1 : 0;
 }

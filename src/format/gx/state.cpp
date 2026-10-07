@@ -475,6 +475,11 @@ void State::ApplyBP(std::uint32_t value) {
         return;
     }
     switch (reg) {
+    case 0x65: {  // a palette loaded from memory (0x64) into TMEM
+        const std::uint32_t line = Bits(v, 10, 0);
+        mTluts[line] = {(mBpRegs[0x64] & 0x00FFFFFF) << 5, Bits(v, 11, 10) * 16};
+        break;
+    }
     case 0x00: {  // gen mode
         SetNumTexGens(static_cast<std::uint8_t>(Bits(v, 4, 0)));
         SetNumChans(static_cast<std::uint8_t>(Bits(v, 3, 4)));
@@ -593,6 +598,35 @@ void State::ApplyXFRegister(std::uint32_t reg, std::uint32_t v) {
         tg.normalize = Bits(v, 1, 8) != 0;
     }
 }
+
+// A texture map's registers: maps 0..3 at 0x80.., 4..7 at 0xA0..; mode 0, mode
+// 1, image 0 and image 3 four apart, the palette at 0x98/0xB8.
+TexMap State::Texture(std::uint8_t map) const {
+    const std::uint32_t base = map < 4 ? 0x80 + map : 0xA0 + (map - 4);
+    const std::uint32_t mode0 = mBpRegs[base], mode1 = mBpRegs[base + 4];
+    const std::uint32_t image0 = mBpRegs[base + 8], image3 = mBpRegs[base + 0x14];
+    const std::uint32_t tlut = mBpRegs[base + 0x18];
+    TexMap t;
+    t.address = (image3 & 0x00FFFFFF) << 5;
+    t.width = static_cast<std::uint16_t>(Bits(image0, 10, 0) + 1);
+    t.height = static_cast<std::uint16_t>(Bits(image0, 10, 10) + 1);
+    t.format = static_cast<TexFormat>(Bits(image0, 4, 20));
+    t.wrapS = static_cast<std::uint8_t>(Bits(mode0, 2, 0));
+    t.wrapT = static_cast<std::uint8_t>(Bits(mode0, 2, 2));
+    t.magLinear = Bits(mode0, 1, 4) != 0;
+    t.minFilter = static_cast<std::uint8_t>(Bits(mode0, 3, 5));
+    t.lodBias = static_cast<float>(static_cast<std::int8_t>(Bits(mode0, 8, 9))) / 32.0f;
+    t.minLod = Bits(mode1, 8, 0) / 16.0f;
+    t.maxLod = Bits(mode1, 8, 8) / 16.0f;
+    // (hardware min filters 0 and 4 are the unmipped ones)
+    const bool mipmapped = t.minFilter != 0 && t.minFilter != 4;
+    t.mips = mipmapped ? static_cast<std::uint8_t>(t.maxLod) + 1 : 1;
+    t.tlutTmem = Bits(tlut, 10, 0) << 9;
+    t.tlutFormat = static_cast<TlutFormat>(Bits(tlut, 2, 10));
+    return t;
+}
+
+TlutLoad State::Tlut(std::uint32_t tmem) const { return mTluts[(tmem >> 9) & 1023]; }
 
 // the projection's six parameters as the 4x4 GXSetProjection would have
 // loaded

@@ -10,6 +10,7 @@
 
 #include "wiinx/format/gx/pixel.hpp"
 #include "wiinx/format/gx/tev.hpp"
+#include "wiinx/format/gx/texture.hpp"
 #include "wiinx/format/gx/vertex.hpp"
 
 #include <array>
@@ -29,6 +30,26 @@ struct Light {
     Color8 color;
     float cosAtt[3] = {1, 0, 0};   // a0, a1, a2
     float distAtt[3] = {1, 0, 0};  // k0, k1, k2
+};
+
+// A texture map as the BP texture registers bind it.
+struct TexMap {
+    std::uint32_t address = 0;   // physical; 0 when nothing is bound
+    std::uint16_t width = 0, height = 0;
+    TexFormat format = TexFormat::I4;
+    std::uint8_t mips = 1;       // levels the filter samples (from the max LOD when it mipmaps)
+    std::uint8_t wrapS = 0, wrapT = 0;  // GX_CLAMP, GX_REPEAT, GX_MIRROR
+    bool magLinear = false;
+    std::uint8_t minFilter = 0;  // GX_NEAR .. GX_LIN_MIP_LIN
+    float lodBias = 0.0f, minLod = 0.0f, maxLod = 0.0f;
+    TlutFormat tlutFormat = TlutFormat::IA8;
+    std::uint32_t tlutTmem = 0;  // the palette's offset into TMEM's upper (palette) half
+};
+
+// A palette loaded into TMEM: where it came from in memory.
+struct TlutLoad {
+    std::uint32_t address = 0;   // physical; 0 when nothing was loaded there
+    std::uint32_t entries = 0;
 };
 
 // the SDK's TEV presets (GXSetTevOp)
@@ -96,6 +117,9 @@ class State {
     // XF: `count` words from `address` (matrix memory below 0x1000, registers
     // from it), already in host order
     void ApplyXF(std::uint32_t address, const std::uint32_t* words, std::uint32_t count);
+    // texture map 0..7, and the palette load at a TMEM address
+    TexMap Texture(std::uint8_t map) const;
+    TlutLoad Tlut(std::uint32_t tmem) const;
     // XF's viewport registers: scale x, y, z and offset x, y, z
     const std::array<float, 6>& Viewport() const { return mViewport; }
 
@@ -131,6 +155,8 @@ class State {
     std::array<float, 6> mViewport{};
     std::array<float, 6> mProjParams{};
     bool mProjOrtho = false;
+    // TMEM's palette area by 512-byte line: what was loaded at each
+    std::array<TlutLoad, 1024> mTluts{};
 
     void ApplyXFRegister(std::uint32_t reg, std::uint32_t value);
     void RebuildProjection();
