@@ -390,6 +390,17 @@ static void SwitchGuardCallback(uint32_t address) {
 // end the freshly pre-warmed empty frame and show it as a black frame group.
 static std::atomic<bool> s_presentSequenceActive{false};
 
+// VI_HLE_AddRetraceHook's list: filled at static init, read at each retrace.
+constexpr size_t kMaxRetraceHooks = 8;
+std::array<VIRetraceHook, kMaxRetraceHooks>& RetraceHooks() {
+    static std::array<VIRetraceHook, kMaxRetraceHooks> hooks{};
+    return hooks;
+}
+size_t& RetraceHookCount() {
+    static size_t count = 0;
+    return count;
+}
+
 void AdvanceRetrace(CpuContext* ctx, Clock::time_point retraceStamp, bool serviceAurora) {
     // Prevent re-entry - this can happen if OSWakeupThread triggers SelectThread
     // which goes idle and calls ProcessTimerEvents again
@@ -543,6 +554,9 @@ void AdvanceRetrace(CpuContext* ctx, Clock::time_point retraceStamp, bool servic
             SwitchGuardCallback(0);
 #endif
             }
+        }
+        for (size_t i = 0; i < RetraceHookCount(); ++i) {
+            RetraceHooks()[i](ctx);
         }
     }
 
@@ -1527,3 +1541,9 @@ extern "C" void VIWaitForRetrace_HLE_801b99ec(CpuContext* ctx)
     ViSetR3(cpu, 0);
 }
 PPC_NATIVE_OVERRIDE_VOID(801B99EC, VIWaitForRetrace_HLE_801b99ec, (CpuContext* ctx), (ctx));
+
+void VI_HLE_AddRetraceHook(VIRetraceHook hook) {
+    if (hook != nullptr && RetraceHookCount() < kMaxRetraceHooks) {
+        RetraceHooks()[RetraceHookCount()++] = hook;
+    }
+}

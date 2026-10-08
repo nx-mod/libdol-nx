@@ -231,6 +231,20 @@ extern "C" void GX__SetTexCoordGen2_8016e37c(uint32_t dc, uint32_t f, uint32_t s
                 "GXSetTexCoordGen2 invalid src=%u dst=%u type=%u mtx=%u norm=%u post=%u PC=0x%08X LR=0x%08X\n",
                 sp, dc, f, m, n, pm, pc, lr);
     }
+#if defined(__SWITCH__)
+    {   // each distinct texgen, once
+        static uint32_t seen[32]; static int count = 0;
+        const uint32_t key = dc << 24 | (f & 0xF) << 20 | (sp & 0xFF) << 12 | (m & 0xFF) << 4 | (n & 1);
+        bool known = false;
+        for (int i = 0; i < count; ++i) known |= seen[i] == key;
+        if (!known && count < 32) {
+            seen[count++] = key;
+            char line[96];
+            std::snprintf(line, sizeof(line), "[gx] texgen dst=%u type=%u src=%u mtx=%u norm=%u post=%u", dc, f, sp, m, n, pm);
+            SwitchBootLogExternal(line);
+        }
+    }
+#endif
     GXSetTexCoordGen2((GXTexCoordID)dc, (GXTexGenType)f, (GXTexGenSrc)sp, m, (GXBool)n, pm);
 }
 PPC_NATIVE_OVERRIDE_VOID(8016e37c, GX__SetTexCoordGen2_8016e37c, (uint32_t dc, uint32_t f, uint32_t sp, uint32_t m, uint32_t n, uint32_t pm), (dc, f, sp, m, n, pm));

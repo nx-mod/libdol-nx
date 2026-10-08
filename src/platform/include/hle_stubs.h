@@ -21,6 +21,12 @@ bool VI_HLE_IsAdvancingRetrace();
 // Zero until VIInit, which is what a console reports too.
 uint32_t VI_HLE_TvFormat();
 void VI_HLE_SetXfbReady(uint32_t xfbAddr); // Called by GXCopyDisp to signal EFB→XFB copy
+// Work a console library does at each vblank, in the retrace's guest context,
+// right after the game's own pre- and post-retrace callbacks: where hardware that
+// reports itself on an interrupt reaches the game. libwii-nx's WPAD delivers its
+// connect, extension and sampling callbacks here. Registered at static init.
+using VIRetraceHook = void (*)(CpuContext* cpu);
+void VI_HLE_AddRetraceHook(VIRetraceHook hook);
 void Audio_HLE_Tick(CpuContext* ctx, uint32_t deltaMicros);
 void Audio_HLE_Poll(CpuContext* ctx);
 // Deferred twin of Audio_HLE_Poll for the long host waits that already service

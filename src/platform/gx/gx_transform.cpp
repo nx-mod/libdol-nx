@@ -231,7 +231,19 @@ PPC_NATIVE_OVERRIDE_VOID(801731e0, GX__LoadNrmMtxIndx3x3_801731e0, (uint32_t mi,
 extern "C" void GX__LoadTexMtxImm_80173234(uint32_t ma, uint32_t id, uint32_t t) {
     size_t c=(t==(uint32_t)GX_MTX3x4)?12:8;
     const uint32_t* raw=(const uint32_t*)GuestToHostPtr(ma,c*4); float l[12]={};
-    SwapBeF32ArrayToHost(raw,l,c); GXLoadTexMtxImm(l, id, (GXTexMtxType)t);
+    SwapBeF32ArrayToHost(raw,l,c);
+#if defined(__SWITCH__)
+    {   // the first texture matrices, rows 0 and 1 (s and t)
+        static int n = 0;
+        if (n++ < 30) {
+            char line[180];
+            std::snprintf(line, sizeof(line), "[gx] texmtx id=%u type=%u s: %.4g %.4g %.4g %.4g | t: %.4g %.4g %.4g %.4g",
+                          id, t, l[0], l[1], l[2], l[3], l[4], l[5], l[6], l[7]);
+            SwitchBootLogExternal(line);
+        }
+    }
+#endif
+    GXLoadTexMtxImm(l, id, (GXTexMtxType)t);
 }
 PPC_NATIVE_OVERRIDE_VOID(80173234, GX__LoadTexMtxImm_80173234, (uint32_t ma, uint32_t id, uint32_t t), (ma, id, t));
 

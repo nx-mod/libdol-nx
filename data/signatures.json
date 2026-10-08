@@ -146,6 +146,72 @@
    "registration": "NANDOpen_HLE"
   },
   {
+   "name": "WPADSetConnectCallback",
+   "build": "any",
+   "size": 104,
+   "start": "fc1e4b2be89e9206",
+   "body": "a140869a55da836e",
+   "signed_from": "RMCP01",
+   "registration": "WPADSetConnectCallback_HLE",
+   "siblings": "wpad-set-callback@RMCP01",
+   "order": 1
+  },
+  {
+   "name": "WPADSetConnectCallback",
+   "build": "any",
+   "size": 144,
+   "start": "df3d1d99f16e0ebc",
+   "body": "8bbcdcc6c8f0549b",
+   "signed_from": "SMNP01",
+   "registration": "WPADSetConnectCallback_HLE",
+   "siblings": "wpad-set-callback@SMNP01",
+   "order": 1
+  },
+  {
+   "name": "WPADSetExtensionCallback",
+   "build": "any",
+   "size": 104,
+   "start": "fc1e4b2be89e9206",
+   "body": "275278fcb27e3654",
+   "signed_from": "RMCP01",
+   "registration": "WPADSetExtensionCallback_HLE",
+   "siblings": "wpad-set-callback@RMCP01",
+   "order": 2
+  },
+  {
+   "name": "WPADSetExtensionCallback",
+   "build": "any",
+   "size": 96,
+   "start": "8b9d8717a80b5849",
+   "body": "ebbbdf29ed9f5ffb",
+   "signed_from": "SMNP01",
+   "registration": "WPADSetExtensionCallback_HLE",
+   "siblings": "wpad-set-callback@SMNP01",
+   "order": 2
+  },
+  {
+   "name": "WPADSetSamplingCallback",
+   "build": "any",
+   "size": 104,
+   "start": "fc1e4b2be89e9206",
+   "body": "c9c7f0e1996a0ddc",
+   "signed_from": "RMCP01",
+   "registration": "WPADSetSamplingCallback_HLE",
+   "siblings": "wpad-set-callback@RMCP01",
+   "order": 0
+  },
+  {
+   "name": "WPADSetSamplingCallback",
+   "build": "any",
+   "size": 144,
+   "start": "df3d1d99f16e0ebc",
+   "body": "7f11ea0e4031a8d0",
+   "signed_from": "SMNP01",
+   "registration": "WPADSetSamplingCallback_HLE",
+   "siblings": "wpad-set-callback@SMNP01",
+   "order": 0
+  },
+  {
    "name": "__AIClockInit",
    "build": "any",
    "size": 544,
