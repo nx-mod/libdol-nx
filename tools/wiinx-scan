@@ -301,9 +301,46 @@ def os_globals(dol):
         address = (queue + distance) & 0xFFFFFFFF
         return address if address in materialised else 0
 
+    def unique(found):
+        return found.pop() if len(found) == 1 else 0
+
+    # The rest are found by the SDK functions that own them, each a short run
+    # of instructions every RVL OS build compiles the same way (checked on
+    # Mario Kart Wii and the Wii Menu). A run that is missing or ambiguous
+    # leaves its field at 0, which libdol-nx reports at startup.
+    #
+    #   __OSSetInterruptHandler  lwz r5,d(r13); slwi r0,r3,2; lwzx r3,r5,r0;
+    #                            stwx r4,r5,r0; blr       -> the handler table
+    #   OSSetSwitchThreadCallback  mr r30,r3; bl OSDisableInterrupts;
+    #                            cmpwi r30,0; lwz r31,d(r13) -> its slot
+    #   InsertAlarm              stw r6,12(r30); stw r5,8(r30); lwz r7,d(r13)
+    #                            -> the alarm queue's head, below r13
+    #   OSLoadContext            hand-written: lis r4; lwz r6,0x198(r3); addi;
+    #                            cmplw r6,r5; ble +0x18 ...
+    handler_table, switch_callback, alarm_queue, load_context = set(), set(), set(), set()
+    for start, blob in text:
+        words = struct.unpack(">%dI" % (len(blob) // 4), blob[:len(blob) & ~3])
+        for k in range(len(words) - 8):
+            w = words[k:k + 9]
+            if (w[0] & 0xFFFF0000 == 0x80AD0000 and w[1:5] ==
+                    (0x5460103A, 0x7C65002E, 0x7C85012E, 0x4E800020)):
+                handler_table.add((sda + signed(w[0] & 0xFFFF)) & 0xFFFFFFFF)
+            if (w[0] == 0x7C7E1B78 and w[1] >> 26 == 18 and w[1] & 1 and w[2] == 0x2C1E0000
+                    and w[3] & 0xFFFF0000 == 0x83ED0000):
+                switch_callback.add((sda + signed(w[3] & 0xFFFF)) & 0xFFFFFFFF)
+            if w[0] == 0x90DE000C and w[1] == 0x90BE0008 and w[2] & 0xFFFF0000 == 0x80ED0000:
+                alarm_queue.add(-signed(w[2] & 0xFFFF))
+            if (w[0] & 0xFFFF0000 == 0x3C800000 and w[1] == 0x80C30198 and w[3] == 0x7C062840
+                    and w[4] == 0x40810018 and w[7] == 0x7C060040):
+                load_context.add(start + 4 * k)
+
     return {
         "run_queue": queue,
         "run_queue_bits": bits,
+        "switch_thread_callback_ptr": unique(switch_callback),
+        "interrupt_handler_table_ptr": unique(handler_table),
+        "alarm_queue_r13_offset": unique(alarm_queue),
+        "load_context": unique(load_context),
         "reschedule": below(4),
         "scheduler_disable_count": below(8),
         "default_thread": neighbour(-0x318),   # sizeof(OSThread)
@@ -744,7 +781,8 @@ def main(argv):
               ", ".join(f"0x{site:08X}" for site in found["found_at"][:3]))
         print("RuntimeGuestOs::Layout layout;")
         for field in ("run_queue", "run_queue_bits", "reschedule", "scheduler_disable_count",
-                      "default_thread", "idle_thread"):
+                      "default_thread", "idle_thread", "switch_thread_callback_ptr",
+                      "interrupt_handler_table_ptr", "alarm_queue_r13_offset", "load_context"):
             value = found[field]
             print(f"layout.{field} = 0x{value:08X}u;" if value
                   else f"// layout.{field} = ?;  not confirmed")

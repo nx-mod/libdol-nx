@@ -252,7 +252,18 @@ extern "C" void SelectThread_801a9c08(CpuContext* ctx)
             const uint16_t modeFlags = ::Memory::Read16(runningContext + 0x1A2u);
             if ((modeFlags & 0x0002u) == 0) {
                 cpu->gpr[3] = runningContext;
-                WIINX_GUEST_HELPER(func_801A1ED8, cpu);
+                if (&func_801A1ED8 != nullptr) {
+                    func_801A1ED8(cpu);
+                } else {
+                    // OSSaveContext at Mario Kart Wii's address, so no other game
+                    // has it. Threads switch as fibers here and nothing resumes
+                    // one through its saved context, so "saved, carry on" (0) is
+                    // the only answer this path ever acts on. Skipping the call
+                    // left the thread pointer in r3 - read as "resumed" - and
+                    // every SelectThread returned without switching or idling:
+                    // the Wii Menu waited forever for a retrace.
+                    cpu->gpr[3] = 0;
+                }
                 if (cpu->gpr[3] != 0) {
                     cpu->gpr[3] = 0;
                     return;

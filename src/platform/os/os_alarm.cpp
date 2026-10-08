@@ -132,6 +132,8 @@ constexpr uint32_t kAlarmFireTimeHiOffset = 0x08u;
 constexpr uint32_t kAlarmFireTimeLoOffset = 0x0Cu;
 constexpr uint32_t kAlarmPeriodHiOffset = 0x18u;
 constexpr uint32_t kAlarmPeriodLoOffset = 0x1Cu;
+constexpr uint32_t kAlarmStartHiOffset = 0x20u;
+constexpr uint32_t kAlarmStartLoOffset = 0x24u;
 
 bool IsLikelyCodeAddress(uint32_t addr)
 {
@@ -142,6 +144,101 @@ bool IsLikelyCodeAddress(uint32_t addr)
         return true;
     }
     return Memory::Contains(addr, 4);
+}
+
+// The alarm into the game's alarm queue, kept in fire-time order (InsertAlarm's
+// list work). `alarm` already carries its fire time and handler.
+void LinkAlarmSorted(CpuContext* cpu, uint32_t alarm, uint64_t fireTime)
+{
+    const uint32_t queueBase = cpu->gpr[13] - kAlarmQueueOffsetFromR13;
+    try {
+        const uint32_t head = ::Memory::Read32(queueBase);
+        if (head == 0) {
+            ::Memory::Write32(queueBase, alarm);
+            ::Memory::Write32(queueBase + 4u, alarm);
+        } else {
+            uint32_t cur = head;
+            uint32_t prev = 0;
+              while (cur != 0) {
+                  const uint32_t curHi = ::Memory::Read32(cur + kAlarmFireTimeHiOffset);
+                  const uint32_t curLo = ::Memory::Read32(cur + kAlarmFireTimeLoOffset);
+                  const uint64_t curFire = (static_cast<uint64_t>(curHi) << 32) | curLo;
+                  if (static_cast<int64_t>(fireTime) < static_cast<int64_t>(curFire)) {
+                      break;
+                  }
+                  prev = cur;
+                  cur = ::Memory::Read32(cur + kAlarmNextOffset);
+              }
+
+
+            if (prev == 0) {
+                ::Memory::Write32(alarm + kAlarmNextOffset, head);
+                ::Memory::Write32(head + kAlarmPrevOffset, alarm);
+                ::Memory::Write32(queueBase, alarm);
+            } else {
+                ::Memory::Write32(alarm + kAlarmPrevOffset, prev);
+                ::Memory::Write32(alarm + kAlarmNextOffset, cur);
+                ::Memory::Write32(prev + kAlarmNextOffset, alarm);
+                if (cur != 0) {
+                    ::Memory::Write32(cur + kAlarmPrevOffset, alarm);
+                } else {
+                    ::Memory::Write32(queueBase + 4u, alarm);
+                }
+            }
+        }
+    } catch (const ::Memory::AccessViolation&) {
+    }
+}
+
+// InsertAlarm(alarm, fire, handler), for a game without Mario Kart Wii's copy
+// at func_801A0620 - every other game. As the SDK's: a periodic alarm fires at
+// the first start + n * period still ahead of now; otherwise at `fire`.
+void InsertAlarmNative(CpuContext* cpu, uint32_t alarm, uint64_t fire, uint32_t handler)
+{
+    const uint64_t period = (static_cast<uint64_t>(::Memory::Read32(alarm + kAlarmPeriodHiOffset)) << 32) |
+                            ::Memory::Read32(alarm + kAlarmPeriodLoOffset);
+    if (period != 0) {
+        const uint64_t now = ReadSystemTime();
+        const uint64_t start = (static_cast<uint64_t>(::Memory::Read32(alarm + kAlarmStartHiOffset)) << 32) |
+                               ::Memory::Read32(alarm + kAlarmStartLoOffset);
+        fire = start;
+        if (static_cast<int64_t>(start) < static_cast<int64_t>(now)) {
+            fire = start + period * ((now - start) / period + 1);
+        }
+    }
+    ::Memory::Write32(alarm + kAlarmHandlerOffset, handler);
+    ::Memory::Write32(alarm + kAlarmFireTimeHiOffset, static_cast<uint32_t>(fire >> 32));
+    ::Memory::Write32(alarm + kAlarmFireTimeLoOffset, static_cast<uint32_t>(fire));
+    ::Memory::Write32(alarm + kAlarmNextOffset, 0);
+    ::Memory::Write32(alarm + kAlarmPrevOffset, 0);
+    LinkAlarmSorted(cpu, alarm, fire);
+}
+
+// The guest's InsertAlarm when it has Mario Kart Wii's, the native one otherwise
+// (r3 alarm, r5:r6 fire, r7 handler, as the SDK calls it).
+void InsertAlarm(CpuContext* cpu)
+{
+    if (&func_801A0620 != nullptr) {
+        func_801A0620(cpu);
+        return;
+    }
+    InsertAlarmNative(cpu, cpu->gpr[3],
+                      (static_cast<uint64_t>(cpu->gpr[5]) << 32) | cpu->gpr[6], cpu->gpr[7]);
+}
+
+// __OSTimeToSystemTime(r3:r4), result in r3:r4: the time plus the OS's
+// adjustment at 0x800030D8, as the SDK's; Mario Kart Wii's copy when it is there.
+void TimeToSystemTime(CpuContext* cpu)
+{
+    if (&func_801AADE0 != nullptr) {
+        func_801AADE0(cpu);
+        return;
+    }
+    const uint64_t adjust = (static_cast<uint64_t>(::Memory::Read32(0x800030D8u)) << 32) |
+                            ::Memory::Read32(0x800030DCu);
+    const uint64_t result = ((static_cast<uint64_t>(cpu->gpr[3]) << 32) | cpu->gpr[4]) + adjust;
+    cpu->gpr[3] = static_cast<uint32_t>(result >> 32);
+    cpu->gpr[4] = static_cast<uint32_t>(result);
 }
 } // namespace
 
@@ -211,7 +308,7 @@ bool ProcessAlarmQueue(CpuContext* cpu, int maxToProcess)
                     cpu->gpr[5] = 0;
                     cpu->gpr[6] = 0;
                     cpu->gpr[7] = handler;
-                    WIINX_GUEST_HELPER(func_801A0620, cpu);
+                    InsertAlarm(cpu);
                 }
 
                 if (handler != 0) {
@@ -308,44 +405,7 @@ extern "C" void OSSetAlarm_HLE_801a0870(CpuContext* ctx)
         return;
     }
 
-    const uint32_t queueBase = cpu->gpr[13] - kAlarmQueueOffsetFromR13;
-    try {
-        const uint32_t head = ::Memory::Read32(queueBase);
-        if (head == 0) {
-            ::Memory::Write32(queueBase, alarm);
-            ::Memory::Write32(queueBase + 4u, alarm);
-        } else {
-            uint32_t cur = head;
-            uint32_t prev = 0;
-              while (cur != 0) {
-                  const uint32_t curHi = ::Memory::Read32(cur + kAlarmFireTimeHiOffset);
-                  const uint32_t curLo = ::Memory::Read32(cur + kAlarmFireTimeLoOffset);
-                  const uint64_t curFire = (static_cast<uint64_t>(curHi) << 32) | curLo;
-                  if (static_cast<int64_t>(fireTime) < static_cast<int64_t>(curFire)) {
-                      break;
-                  }
-                  prev = cur;
-                  cur = ::Memory::Read32(cur + kAlarmNextOffset);
-              }
-
-
-            if (prev == 0) {
-                ::Memory::Write32(alarm + kAlarmNextOffset, head);
-                ::Memory::Write32(head + kAlarmPrevOffset, alarm);
-                ::Memory::Write32(queueBase, alarm);
-            } else {
-                ::Memory::Write32(alarm + kAlarmPrevOffset, prev);
-                ::Memory::Write32(alarm + kAlarmNextOffset, cur);
-                ::Memory::Write32(prev + kAlarmNextOffset, alarm);
-                if (cur != 0) {
-                    ::Memory::Write32(cur + kAlarmPrevOffset, alarm);
-                } else {
-                    ::Memory::Write32(queueBase + 4u, alarm);
-                }
-            }
-        }
-    } catch (const ::Memory::AccessViolation&) {
-    }
+    LinkAlarmSorted(cpu, alarm, fireTime);
 
     OS__RestoreInterrupts_801a65d4(level);
 }
@@ -426,15 +486,15 @@ extern "C" void OS__SetPeriodicAlarm_801a08e0(CpuContext* ctx)
 
     cpu->gpr[3] = startHi;
     cpu->gpr[4] = startLo;
-    WIINX_GUEST_HELPER(func_801AADE0, cpu);
-    Memory::Write32(alarm + 0x20u, cpu->gpr[3]);
-    Memory::Write32(alarm + 0x24u, cpu->gpr[4]);
+    TimeToSystemTime(cpu);
+    Memory::Write32(alarm + kAlarmStartHiOffset, cpu->gpr[3]);
+    Memory::Write32(alarm + kAlarmStartLoOffset, cpu->gpr[4]);
 
     cpu->gpr[3] = alarm;
     cpu->gpr[5] = 0;
     cpu->gpr[6] = 0;
     cpu->gpr[7] = handler;
-    WIINX_GUEST_HELPER(func_801A0620, cpu);
+    InsertAlarm(cpu);
 
     cpu->gpr[3] = static_cast<uint32_t>(OS__RestoreInterrupts_801a65d4(level));
 }
