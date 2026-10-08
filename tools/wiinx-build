@@ -17,12 +17,14 @@
 #   --jobs N        parallel compiles    (default 2; translation is memory-hungry)
 #   --into DIR      put a new game's project here (its own repository, say)
 #   --skip-translate  build only, when the C++ is already there
+#   --distcc HOSTS  compile on other machines too (docs/distcc.md), e.g.
+#                   "10.214.216.122:3632/4": --jobs becomes their slots plus one
 set -euo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
 libwiinx=$(cd "$here/.." && pwd)
 
-usage() { sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 [ $# -ge 1 ] || usage
 target=$1; shift
 # Aurora and Dawn are checkouts beside the library, and the folder names are not
@@ -46,13 +48,16 @@ aurora=$(find_tree aurora-nx aurora-main aurora || true)
 jobs=2
 translate=1
 into=
+distcc=
+explicit=
 while [ $# -gt 0 ]; do
     case $1 in
-        --dawn) dawn=$2; shift 2 ;;
-        --aurora) aurora=$2; shift 2 ;;
+        --dawn) dawn=$2; explicit="$explicit --dawn "; shift 2 ;;
+        --aurora) aurora=$2; explicit="$explicit --aurora "; shift 2 ;;
         --jobs) jobs=$2; shift 2 ;;
         --into) into=$2; shift 2 ;;
         --skip-translate) translate=0; shift ;;
+        --distcc) distcc=$2; shift 2 ;;
         *) usage ;;
     esac
 done
@@ -110,11 +115,39 @@ for piece in dawn aurora; do
     eval "$piece=\$(cd \"\$path\" && pwd)"
 done
 
+# Other machines compile through distcc, which only ever sees preprocessed
+# source: this machine keeps one compile and the preprocessing. Without
+# --distcc the launcher is cleared, so a build never keeps a stale one.
+launcher=
+if [ -n "$distcc" ]; then
+    command -v distcc >/dev/null || { echo "--distcc: distcc is not installed" >&2; exit 1; }
+    export DISTCC_HOSTS="$distcc --localslots=1 --localslots_cpp=2"
+    slots=$(echo "$distcc" | tr ' ' '\n' | sed -n 's#.*/\([0-9]*\)$#\1#p' | awk '{n += $1} END {print n + 0}')
+    jobs=$(( slots + 1 ))
+    launcher="$libwiinx/tools/wiinx-distcc-launch"
+    echo "== compiling on $distcc and here: -j $jobs"
+fi
+
+# A project already built keeps the Aurora and Dawn it was built against: the
+# search above finds whichever checkout comes first, and ~/switch holds several
+# (aurora-nx beside wiicompiled/aurora-main). A rebuild once switched trees
+# silently and failed in a fresh SDL configure. --aurora/--dawn still override.
+cache="$game/build/CMakeCache.txt"
+if [ -f "$cache" ]; then
+    for piece in dawn aurora; do
+        upper=$(echo "$piece" | tr a-z A-Z)
+        case "$explicit" in *" --$piece "*) continue ;; esac
+        cached=$(sed -n "s/^WIINX_${upper}_DIR:PATH=//p" "$cache")
+        [ -n "$cached" ] && [ -f "$cached/CMakeLists.txt" ] && eval "$piece=\$cached"
+    done
+fi
+
 echo "== building $(basename "$game")"
 cmake -S "$libwiinx/cmake/game" -B "$game/build" -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE="$DEVKITPRO/cmake/Switch.cmake" \
     -DWIINX_GAME_DIR="$game" -DWIINX_DAWN_DIR="$dawn" \
-    -DWIINX_AURORA_DIR="$aurora"
+    -DWIINX_AURORA_DIR="$aurora" \
+    -DCMAKE_C_COMPILER_LAUNCHER="$launcher" -DCMAKE_CXX_COMPILER_LAUNCHER="$launcher"
 # The game's own target, not everything: a plain build compiles every target
 # the third-party projects define, including ones nothing links, and some of
 # those are written for a desktop libc rather than this one.

@@ -55,6 +55,10 @@ Android stops the node mid-build.
 
 ## Building against them
 
+`tools/wiinx-build <game> --distcc "10.214.216.122:3632/5"` does all of the
+below: it sets `DISTCC_HOSTS`, the launcher and `-j` (the slots plus one here).
+By hand:
+
 ```sh
 export DISTCC_HOSTS="10.214.216.122:3632/6 10.214.216.58:3632/1 --localslots=1"
 cmake -S libdol-nx/cmake/game -B <build> ... \
