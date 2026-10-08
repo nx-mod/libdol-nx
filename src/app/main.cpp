@@ -2002,8 +2002,18 @@ void SwitchWatchdogMain(void*) {
         const uint32_t* addrPtr = g_switchMainGuestAddr.load(std::memory_order_relaxed);
         const uint32_t addr = addrPtr != nullptr ? *const_cast<const volatile uint32_t*>(addrPtr) : 0u;
         uint32_t osThread = 0;
+        // The scheduler's own state, for a guest parked with nothing switching:
+        // disable count (OSDisableScheduler nesting), run-queue bits, and the
+        // current context (OSGetCurrentContext) beside the running thread.
+        uint32_t schedDisable = 0, runBits = 0, curContext = 0;
         try {
             osThread = Memory::Read32(0x800000E4u);  // OSGetCurrentThread
+            curContext = Memory::Read32(0x800000D4u);
+            const auto& layout = RuntimeGuestOs::g_layout;
+            if (layout.scheduler_disable_count)
+                schedDisable = Memory::Read32(layout.scheduler_disable_count);
+            if (layout.run_queue_bits)
+                runBits = Memory::Read32(layout.run_queue_bits);
         } catch (...) {
         }
         sameCount = addr == lastAddr ? sameCount + 1 : 0;
@@ -2017,11 +2027,11 @@ void SwitchWatchdogMain(void*) {
         const long long ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  std::chrono::steady_clock::now() - g_switchBootStart)
                                  .count();
-        char line[256];
+        char line[384];
         const int length = std::snprintf(
             line, sizeof(line),
-            "%7lldms [wd] guest=0x%08X (same %ds) osThread=0x%08X presents=%u gxcopies=%d sel=%u idle=%u fib=%u retrace=%u poll=%u notdue=%u host=%s\n", ms,
-            addr, sameCount, osThread, VI_HLE_DebugPresentCount(), g_gxFrameCount,
+            "%7lldms [wd] guest=0x%08X (same %ds) osThread=0x%08X ctx=0x%08X schedOff=%u runBits=0x%08X presents=%u gxcopies=%d sel=%u idle=%u fib=%u retrace=%u poll=%u notdue=%u host=%s\n", ms,
+            addr, sameCount, osThread, curContext, schedDisable, runBits, VI_HLE_DebugPresentCount(), g_gxFrameCount,
             g_switchSelectCount.load(std::memory_order_relaxed),
             g_switchIdleSpinCount.load(std::memory_order_relaxed),
             g_switchFiberSwitchCount.load(std::memory_order_relaxed),
