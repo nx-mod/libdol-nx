@@ -398,6 +398,16 @@ class Finder:
         start, ev = self.events("NANDInit_HLE")
         if not start:
             return
+        # NANDInit opens the ISFS library before anything else: its first call
+        # past the interrupt guards (OSDisable/RestoreInterrupts) is ISFS_OpenLib,
+        # which a game other than the reference one runs itself (NANDInit_HLE).
+        def reads_msr(target):
+            # OSDisableInterrupts / OSRestoreInterrupts open with mfmsr
+            return any((self.dol.word(target + 4 * i) or 0) & 0xFC1FFFFE == 0x7C0000A6 for i in range(3))
+        for e in ev:
+            if e[0] == "call" and isinstance(e[1], int) and not reads_msr(e[1]):
+                self.put("isfs.ISFS_OpenLib", e[1], f"NANDInit {start:08X} calls it first")
+                break
         loads = {a for k, a in self.sda(ev, ("load",))}
         stores = [a for k, a in self.sda(ev, ("store",))]
         state = [a for a in stores if a in loads]
