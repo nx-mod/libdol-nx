@@ -27,12 +27,13 @@ struct Info {
     const char* code;    // setting.txt CODE
     bool pal;            // 50 Hz console: PAL60 applies to it alone
     uint8_t language;    // SYSCONF IPL.LNG: 0 Japanese, 1 English, 9 Korean
+    uint8_t country;     // SYSCONF IPL.SADR's first byte (wiibrew Country_Codes)
 };
 
-inline constexpr Info kJapan{'J', "JPN", "NTSC", "JP", "LJH", false, 0};
-inline constexpr Info kAmerica{'E', "USA", "NTSC", "US", "LU", false, 1};
-inline constexpr Info kEurope{'P', "EUR", "PAL", "EU", "LEH", true, 1};
-inline constexpr Info kKorea{'K', "KOR", "NTSC", "KR", "LKH", false, 9};
+inline constexpr Info kJapan{'J', "JPN", "NTSC", "JP", "LJH", false, 0, 1};      // Japan
+inline constexpr Info kAmerica{'E', "USA", "NTSC", "US", "LU", false, 1, 49};       // United States
+inline constexpr Info kEurope{'P', "EUR", "PAL", "EU", "LEH", true, 1, 110};      // United Kingdom
+inline constexpr Info kKorea{'K', "KOR", "NTSC", "KR", "LKH", false, 9, 136};    // South Korea
 
 inline const Info& FromLetter(char letter) noexcept {
     switch (letter) {
