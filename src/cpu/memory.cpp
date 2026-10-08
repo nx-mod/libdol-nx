@@ -639,11 +639,34 @@ constexpr uint32_t kGpioBCount = 8;
 constexpr uint32_t kGpioBIn = 2;
 std::array<std::atomic<uint32_t>, kGpioBCount> g_gpioB{};
 
+// More Hollywood registers that are plain storage as the PowerPC uses them, as
+// Dolphin keeps them (WII_IPC.cpp): PPCSPEED (0x18), VISOLID (0x24, a solid
+// colour the video output shows instead of the frame), the ARM interrupt mask
+// (0x3C), and 0x70, 0x180, 0x1CC and 0x1D0, configuration bits the Wii Menu's
+// startup sets with read-modify-writes. Nothing on the Switch acts on them; a
+// read sees what was last written, 0 at first.
+constexpr std::array<uint32_t, 7> kPlainHollywood = {
+    0xCD800018u, 0xCD800024u, 0xCD80003Cu, 0xCD800070u, 0xCD800180u, 0xCD8001CCu, 0xCD8001D0u,
+};
+std::array<std::atomic<uint32_t>, kPlainHollywood.size()> g_plainHollywood{};
+
+std::atomic<uint32_t>* PlainHollywoodRegister(uint32_t addr) {
+    for (size_t i = 0; i < kPlainHollywood.size(); ++i) {
+        if (kPlainHollywood[i] == addr)
+            return &g_plainHollywood[i];
+    }
+    return nullptr;
+}
+
 bool IsGpioB(uint32_t addr) {
     return addr >= kGpioBBase && addr < kGpioBBase + kGpioBCount * 4 && (addr & 3u) == 0;
 }
 
-bool WriteGpioB32(uint32_t addr, uint32_t value) {
+bool WriteHollywoodRegister32(uint32_t addr, uint32_t value) {
+    if (auto* reg = PlainHollywoodRegister(addr)) {
+        reg->store(value, std::memory_order_relaxed);
+        return true;
+    }
     if (!IsGpioB(addr))
         return false;
     const uint32_t index = (addr - kGpioBBase) / 4;
@@ -659,6 +682,10 @@ bool ReadConstantRegister32(uint32_t addr, uint32_t* value) {
     }
     if (IsGpioB(addr)) {
         *value = g_gpioB[(addr - kGpioBBase) / 4].load(std::memory_order_relaxed);
+        return true;
+    }
+    if (auto* reg = PlainHollywoodRegister(addr)) {
+        *value = reg->load(std::memory_order_relaxed);
         return true;
     }
     return false;
@@ -762,7 +789,7 @@ void MemoryInline::Write32Slow(uint32_t addr, uint32_t val) {
         return;
     }
     if (IsMmioAddress(addr)) {
-        if (WriteGpioB32(addr, val))
+        if (WriteHollywoodRegister32(addr, val))
             return;
         throw Memory::AccessViolation(addr, sizeof(val), "MMIO write blocked (non-GPU)");
     }
