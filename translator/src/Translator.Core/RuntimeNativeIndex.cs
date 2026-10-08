@@ -119,6 +119,14 @@ public static class RuntimeNativeIndexBuilder
             var path = Path.Combine(beside, library, "src");
             if (Directory.Exists(path))
                 yield return path;
+            else
+                // Said, not fatal (a GameCube-only checkout has no libwii-nx), but
+                // a Wii title translated without it builds and then dies at start
+                // with "Stale generated indirect dispatch winner": the NAND natives
+                // were translated too. Seen on a helper given libdol-nx alone.
+                Console.Error.WriteLine(
+                    $"[translator] WARNING: {library} is not beside libdol-nx ({path}); its natives are " +
+                    "unknown here, and a title that uses them will not start.");
         }
     }
 
