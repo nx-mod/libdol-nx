@@ -9,4 +9,26 @@ compiler=$1
 shift
 PATH="/opt/devkitpro/devkitA64/bin:$PATH"
 export PATH
-exec /usr/bin/distcc "$(basename "$compiler")" "$@"
+# A precompiled header is never sent away: distcc compiles from preprocessed
+# text, and a .gch built from that has every declaration but none of the
+# include guards, so each unit that later includes a header normally redefines
+# the C library ("redefinition of std::__terminate").
+for arg in "$@"; do
+    case $arg in *.gch|c++-header|c-header) exec "$compiler" "$@" ;; esac
+done
+
+# A helper that has gone (a phone asleep, off the network) must not fail the
+# build: distcc's own fallback re-runs a precompiled-header unit locally in a
+# way that redefines the C library, and every such unit fails. With no helper
+# answering, compile here directly instead.
+for host in ${DISTCC_HOSTS:-}; do
+    case $host in --*) continue ;; esac
+    address=${host%%/*}
+    name=${address%%:*}
+    port=${address#*:}
+    [ "$port" = "$address" ] && port=3632
+    if timeout 2 bash -c "exec 3<>/dev/tcp/$name/$port" 2>/dev/null; then
+        exec /usr/bin/distcc "$(basename "$compiler")" "$@"
+    fi
+done
+exec "$compiler" "$@"
