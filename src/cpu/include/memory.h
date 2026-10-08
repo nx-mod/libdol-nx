@@ -102,6 +102,20 @@ public:
     static uint8_t* GetPointer(uint32_t addr, size_t length);
     static bool Contains(uint32_t addr, size_t length = 1);
 
+    // A hardware device a console library answers itself (libwii-nx's Hollywood
+    // registers, say): 32-bit reads and writes of [base, base + size) go to it
+    // instead of trapping as unknown MMIO; 16-bit reads are taken from the word.
+    // Either callback returns false for an address it does not answer.
+    // Registered at static initialisation, before the game runs.
+    struct MmioDevice {
+        const char* name;
+        uint32_t base;
+        uint32_t size;
+        bool (*read32)(uint32_t addr, uint32_t* value);
+        bool (*write32)(uint32_t addr, uint32_t value);
+    };
+    static void RegisterMmioDevice(const MmioDevice& device);
+
     static uint64_t RegisterDeferredRead(uint32_t addr, size_t length,
                                          DeferredReadCallback callback, void* user);
     static void ClearDeferredReads();

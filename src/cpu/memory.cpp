@@ -629,50 +629,53 @@ namespace {
 // registers, where a constant is the device.
 constexpr uint32_t kPiFlipperRevision = 0xCC00302Cu; // FLIPPER_REV_C, as Dolphin reports it
 
-// Hollywood's GPIO B bank, as the PowerPC sees it (0xCD8000C0-0xCD8000DC: out,
-// direction, in, interrupt level, flags, mask, input mirror, owner). It drives
-// the disc slot LED, the sensor bar and the like, none of which the Switch has:
-// written values are kept so a read-back sees them, and the inputs read 0
-// (nothing pressed, no disc ejected).
-constexpr uint32_t kGpioBBase = 0xCD8000C0u;
-constexpr uint32_t kGpioBCount = 8;
-constexpr uint32_t kGpioBIn = 2;
-std::array<std::atomic<uint32_t>, kGpioBCount> g_gpioB{};
+// The video interface's registers (0xCC002000-0xCC0020FF), kept as a register
+// file. libdol's VI natives (VIInit, VIConfigure, VIGetCurrentLine,
+// VIGetDTVStatus...) are where VI behaves; this is for the SDK and title code
+// that still touch the registers directly - the Wii Menu reads the clock select
+// (0x6C) to tell progressive from interlaced, and writes the display
+// configuration (0x02). Writes are kept and read back. DTV status (0x6E) is
+// read-only and reads 0, as VIGetDTVStatus answers.
+constexpr uint32_t kViBase = 0xCC002000u;
+constexpr uint32_t kViSize = 0x100u;
+constexpr uint32_t kViDtvStatus = 0x6Eu;
+std::array<std::atomic<uint16_t>, kViSize / 2> g_vi{};
 
-// More Hollywood registers that are plain storage as the PowerPC uses them, as
-// Dolphin keeps them (WII_IPC.cpp): PPCSPEED (0x18), VISOLID (0x24, a solid
-// colour the video output shows instead of the frame), the ARM interrupt mask
-// (0x3C), and 0x70, 0x180, 0x1CC and 0x1D0, configuration bits the Wii Menu's
-// startup sets with read-modify-writes. Nothing on the Switch acts on them; a
-// read sees what was last written, 0 at first.
-constexpr std::array<uint32_t, 7> kPlainHollywood = {
-    0xCD800018u, 0xCD800024u, 0xCD80003Cu, 0xCD800070u, 0xCD800180u, 0xCD8001CCu, 0xCD8001D0u,
-};
-std::array<std::atomic<uint32_t>, kPlainHollywood.size()> g_plainHollywood{};
+bool IsVi(uint32_t addr) { return addr >= kViBase && addr < kViBase + kViSize; }
 
-std::atomic<uint32_t>* PlainHollywoodRegister(uint32_t addr) {
-    for (size_t i = 0; i < kPlainHollywood.size(); ++i) {
-        if (kPlainHollywood[i] == addr)
-            return &g_plainHollywood[i];
+uint16_t ReadVi16(uint32_t offset) {
+    return offset == kViDtvStatus ? 0 : g_vi[offset / 2].load(std::memory_order_relaxed);
+}
+
+void WriteVi16(uint32_t offset, uint16_t value) {
+    if (offset != kViDtvStatus)
+        g_vi[offset / 2].store(value, std::memory_order_relaxed);
+}
+
+// Devices a console library registers (Memory::RegisterMmioDevice). Filled in
+// at static initialisation and only read after, so no lock.
+constexpr size_t kMaxMmioDevices = 16;
+std::array<Memory::MmioDevice, kMaxMmioDevices>& MmioDevices() {
+    static std::array<Memory::MmioDevice, kMaxMmioDevices> devices{};
+    return devices;
+}
+size_t& MmioDeviceCount() {
+    static size_t count = 0;
+    return count;
+}
+
+const Memory::MmioDevice* FindMmioDevice(uint32_t addr) {
+    for (size_t i = 0; i < MmioDeviceCount(); ++i) {
+        const auto& device = MmioDevices()[i];
+        if (addr - device.base < device.size)
+            return &device;
     }
     return nullptr;
 }
 
-bool IsGpioB(uint32_t addr) {
-    return addr >= kGpioBBase && addr < kGpioBBase + kGpioBCount * 4 && (addr & 3u) == 0;
-}
-
-bool WriteHollywoodRegister32(uint32_t addr, uint32_t value) {
-    if (auto* reg = PlainHollywoodRegister(addr)) {
-        reg->store(value, std::memory_order_relaxed);
-        return true;
-    }
-    if (!IsGpioB(addr))
-        return false;
-    const uint32_t index = (addr - kGpioBBase) / 4;
-    if (index != kGpioBIn)
-        g_gpioB[index].store(value, std::memory_order_relaxed);
-    return true;
+bool WriteRegisteredDevice32(uint32_t addr, uint32_t value) {
+    const auto* device = FindMmioDevice(addr);
+    return device && device->write32 && device->write32(addr, value);
 }
 
 bool ReadConstantRegister32(uint32_t addr, uint32_t* value) {
@@ -680,14 +683,13 @@ bool ReadConstantRegister32(uint32_t addr, uint32_t* value) {
         *value = 0x246500B1u;
         return true;
     }
-    if (IsGpioB(addr)) {
-        *value = g_gpioB[(addr - kGpioBBase) / 4].load(std::memory_order_relaxed);
+    if (IsVi(addr) && (addr & 3u) == 0) {
+        const uint32_t offset = addr - kViBase;
+        *value = static_cast<uint32_t>(ReadVi16(offset)) << 16 | ReadVi16(offset + 2);
         return true;
     }
-    if (auto* reg = PlainHollywoodRegister(addr)) {
-        *value = reg->load(std::memory_order_relaxed);
-        return true;
-    }
+    if (const auto* device = FindMmioDevice(addr))
+        return device->read32 && device->read32(addr, value);
     return false;
 }
 
@@ -699,6 +701,14 @@ bool ReadConstantRegister16(uint32_t addr, uint16_t* value) {
     return true;
 }
 } // namespace
+
+void Memory::RegisterMmioDevice(const MmioDevice& device) {
+    if (MmioDeviceCount() == kMaxMmioDevices) {
+        std::fprintf(stderr, "[memory] too many MMIO devices; '%s' not registered\n", device.name);
+        return;
+    }
+    MmioDevices()[MmioDeviceCount()++] = device;
+}
 
 uint8_t MemoryInline::Read8Slow(uint32_t addr) {
     if (IsMmioAddress(addr)) {
@@ -778,6 +788,10 @@ void MemoryInline::Write16Slow(uint32_t addr, uint16_t val) {
         return;
     }
     if (IsMmioAddress(addr)) {
+        if (IsVi(addr) && (addr & 1u) == 0) {
+            WriteVi16(addr - kViBase, val);
+            return;
+        }
         throw Memory::AccessViolation(addr, sizeof(val), "MMIO write blocked (non-GPU)");
     }
     WriteScalar(addr, val);
@@ -789,8 +803,13 @@ void MemoryInline::Write32Slow(uint32_t addr, uint32_t val) {
         return;
     }
     if (IsMmioAddress(addr)) {
-        if (WriteHollywoodRegister32(addr, val))
+        if (WriteRegisteredDevice32(addr, val))
             return;
+        if (IsVi(addr) && (addr & 3u) == 0) {
+            WriteVi16(addr - kViBase, static_cast<uint16_t>(val >> 16));
+            WriteVi16(addr - kViBase + 2, static_cast<uint16_t>(val));
+            return;
+        }
         throw Memory::AccessViolation(addr, sizeof(val), "MMIO write blocked (non-GPU)");
     }
     WriteScalar(addr, val);
