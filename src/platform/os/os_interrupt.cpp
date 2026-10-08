@@ -398,6 +398,13 @@ static bool GuestFunctionStartsHere(uint32_t address)
 
 extern "C" int32_t IPCCltInit_80193478(CpuContext* ctx)
 {
+    // (the guest reads the result from r3, which the native's own return value
+    // does not reach: set on every way out, or a caller such as DVDLowInit sees
+    // whatever IPCInit left there and takes it for an error)
+    const auto succeed = [ctx]() {
+        ctx->gpr[3] = 0;
+        return 0;
+    };
     // Sets the IPC buffer lo/hi and the init flag from __OSGetIPCBufferLo/Hi.
     // The game's own IPCInit when it names one; otherwise where the module layout puts it.
     const uint32_t cltInit = ::NativeBindings::Resolve(kIpcCltInitReference);
@@ -410,7 +417,7 @@ extern "C" int32_t IPCCltInit_80193478(CpuContext* ctx)
                              " it (derived 0x" << std::hex << ipcInit << std::dec
                           << "); leaving the IPC buffer alone rather than calling into the wrong"
                              " function" << std::endl;
-        return 0;
+        return succeed();
     }
     RT_LOG(RT_TAG_OS) << "IPCCltInit_80193478 called: calling IPCInit at 0x" << std::hex << ipcInit
                       << std::dec << " for buffer setup" << std::endl;
@@ -421,7 +428,7 @@ extern "C" int32_t IPCCltInit_80193478(CpuContext* ctx)
     if (bufferLoAddr == 0) {
         RT_LOG(RT_TAG_OS) << "IPCCltInit: iosHeap reserve skipped; ipc.IPCBufferLo not named"
                              " for this game" << std::endl;
-        return 0;
+        return succeed();
     }
     uint32_t bufferLo = Memory::Read32(bufferLoAddr);
     uint32_t newBufLo = bufferLo + 0x1000; // Advance by 4KB for iosHeap
@@ -431,7 +438,7 @@ extern "C" int32_t IPCCltInit_80193478(CpuContext* ctx)
               << " to 0x" << newBufLo << std::dec << std::endl;
 
     // Skip the rest (interrupt handler, IPC MMIO access) - those are hardware-specific
-    return 0; // Success
+    return succeed(); // Success
 }
 
 PPC_NATIVE_OVERRIDE(80193478, IPCCltInit_80193478, int32_t, (CpuContext* ctx), (ctx));
