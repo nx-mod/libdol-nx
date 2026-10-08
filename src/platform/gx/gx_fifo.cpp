@@ -1,3 +1,5 @@
+#include <cstdio>
+#include <cstring>
 #include "gx_internal.h"
 #include "gx_stream_common.h"
 #include "gx_cp_decode.h"
@@ -408,7 +410,36 @@ void SubmitAttribute(GXAttr attr, float* comps, const VtxAttrFmt& fmt, const u32
 
 // `val` is a raw big-endian bit pattern: the FIFO stream is type-agnostic, and
 // the float entry point converts before it gets here.
+#if defined(__SWITCH__)
+extern int g_gxTraceBegins;
+void SwitchBootLogExternal(const char* text) noexcept;
+// Every FIFO write of the first eight draws (see GX__Begin), whatever path it
+// came by - single stores, paired-single pairs, bursts: one line per draw, each
+// write as size:hex, 4-byte ones also as a float.
+static void TraceFifoWrite(u32 val, uint32_t size) {
+    static int draw = -1, writes = 0, at = 0;
+    static char line[600];
+    if (g_gxTraceBegins == 0 || g_gxTraceBegins > 8) return;
+    if (draw != g_gxTraceBegins) {
+        if (at > 0) SwitchBootLogExternal(line);
+        draw = g_gxTraceBegins; writes = 0;
+        at = std::snprintf(line, sizeof(line), "[gx] draw #%d fifo:", draw - 1);
+    }
+    if (writes++ < 40 && at < (int)sizeof(line) - 28) {
+        if (size == 4) {
+            float f; std::memcpy(&f, &val, 4);
+            at += std::snprintf(line + at, sizeof(line) - at, " %08X(%.4g)", val, f);
+        } else {
+            at += std::snprintf(line + at, sizeof(line) - at, " %u:%X", size, val);
+        }
+    }
+}
+#else
+static void TraceFifoWrite(u32, uint32_t) {}
+#endif
+
 void HleFifoWrite(u32 val, uint32_t sizeBytes) {
+    TraceFifoWrite(val, sizeBytes);
     GX_FIFO_TIMER;
     const bool recordOnly = IsDisplayListActive();
     if (recordOnly) {
