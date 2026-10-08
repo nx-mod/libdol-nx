@@ -42,10 +42,10 @@ const RuntimeGuestGlobals::Entry kGlobals[] = {{
 {rows}
     {{nullptr, 0u}},
 }};
-struct Install {{
-    Install() {{ RuntimeGuestGlobals::install(kGlobals, {len(entries)}); }}
+struct GlobalsInstall {{
+    GlobalsInstall() {{ RuntimeGuestGlobals::install(kGlobals, {len(entries)}); }}
 }};
-const Install g_install;
+const GlobalsInstall g_globals_install;
 }}  // namespace
 """)
     return 0
