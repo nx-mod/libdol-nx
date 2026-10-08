@@ -217,6 +217,12 @@ def unpack(data, folder):
     kind, ticket, tmd, at = sections(data)
     key = title_key(ticket)
     os.makedirs(folder, exist_ok=True)
+    # The TMD and ticket beside the contents, as a downloaded title keeps them:
+    # the TMD is what says which title this is (wiinx-identity reads it).
+    with open(os.path.join(folder, "tmd"), "wb") as out:
+        out.write(tmd)
+    with open(os.path.join(folder, "cetk"), "wb") as out:
+        out.write(ticket)
 
     boot = boot_index(tmd)
     executable = None

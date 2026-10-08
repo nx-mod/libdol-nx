@@ -72,6 +72,9 @@ else
     game=$(cd "$target" 2>/dev/null && pwd) || { echo "no such game folder: $target" >&2; exit 1; }
 fi
 [ -f "$game/recomp.yml" ] || { echo "no game project at $game" >&2; exit 1; }
+# The title's own identity first (wiinx-identity): the NRO's name and region
+# come from recomp.yml, which is corrected here to match the title.
+python3 "$(dirname "$0")/wiinx-identity" "$game" --write || true
 
 if [ "$translate" = 1 ]; then
     dol="$game/disc/sys/main.dol"

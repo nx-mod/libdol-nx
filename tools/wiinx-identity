@@ -1,0 +1,134 @@
+#!/usr/bin/env python3
+"""Which title a project is, read from the title itself.
+
+    tools/wiinx-identity <project>            print what the title says
+    tools/wiinx-identity <project> --check    exit 1 if recomp.yml disagrees
+    tools/wiinx-identity <project> --write    correct recomp.yml to match
+
+A project's game_id, title_id and region decide what it is called on screen -
+the NRO's name, "Wii Menu (Europe)", is built from them - and written by hand
+they drift: projects were found saying `unknown`, with no title id, and the
+European Wii Menu calling itself American. So they are read from the title's
+own files, wherever the project keeps them:
+
+  disc/sys/boot.bin     a disc: its six-character game id
+  title/tmd, game/tmd   a channel, a system title or a WAD: the title id, whose
+                        low four characters are the game id, and the region
+                        (the TMD's own, or for the Wii Menu its version)
+
+wiinx-translate and wiinx-build run --write first, so a project is corrected
+before anything is built from it. A title whose files say nothing (a system
+title with no game id of its own) keeps what recomp.yml has.
+"""
+import os
+import re
+import struct
+import sys
+
+TMD_SIGNATURE = 0x140
+REGION_LETTERS = {"J": "J", "E": "E", "N": "E", "P": "P", "D": "P", "F": "P", "S": "P", "I": "P",
+                  "H": "P", "U": "P", "X": "P", "Y": "P", "Z": "P", "K": "K", "Q": "K", "T": "K", "A": "A"}
+TMD_REGION = {0: "J", 1: "E", 2: "P", 3: "A", 4: "K"}
+# The Wii Menu's region is in its version: the low bits are 0 J, 1 U, 2 E, 6 K.
+MENU_REGION = {0: "J", 1: "E", 2: "P", 6: "K"}
+MENU_TITLE = 0x0000000100000002
+
+
+def from_disc(folder):
+    for boot in ("disc/sys/boot.bin", "disc/disc/sys/boot.bin"):
+        path = os.path.join(folder, boot)
+        if os.path.exists(path):
+            raw = open(path, "rb").read(6)
+            if len(raw) == 6 and raw.isalnum():
+                game_id = raw.decode("ascii")
+                return {"game_id": game_id, "region": REGION_LETTERS.get(game_id[3], "P"), "source": boot}
+    return None
+
+
+def from_tmd(folder):
+    for name in ("title/tmd", "game/tmd", "title/title.tmd", "game/title.tmd"):
+        path = os.path.join(folder, name)
+        if not os.path.exists(path):
+            continue
+        tmd = open(path, "rb").read()
+        if len(tmd) < TMD_SIGNATURE + 0xA0:
+            continue
+        title_id = struct.unpack(">Q", tmd[TMD_SIGNATURE + 0x4C:TMD_SIGNATURE + 0x54])[0]
+        version = struct.unpack(">H", tmd[TMD_SIGNATURE + 0x9C:TMD_SIGNATURE + 0x9E])[0]
+        region_field = struct.unpack(">H", tmd[TMD_SIGNATURE + 0x5C:TMD_SIGNATURE + 0x5E])[0]
+        out = {"title_id": f"{title_id:016X}", "source": name}
+        low = (title_id & 0xFFFFFFFF).to_bytes(4, "big")
+        if all(0x30 <= c <= 0x5A for c in low):
+            out["game_id"] = low.decode("ascii")
+            out["region"] = REGION_LETTERS.get(out["game_id"][3]) or TMD_REGION.get(region_field, "P")
+        elif title_id == MENU_TITLE:
+            out["region"] = MENU_REGION.get(version & 0x1F, "P")
+        return out
+    return None
+
+
+def identity(folder):
+    found = {}
+    for reader in (from_disc, from_tmd):
+        part = reader(folder)
+        if part:
+            for key, value in part.items():
+                found.setdefault(key, value)
+    return found
+
+
+FIELDS = ("game_id", "title_id", "region")
+
+
+def read_project(text):
+    return {f: (m.group(1) if (m := re.search(rf"\n\s*{f}:\s*([^\s#]+)", text)) else None) for f in FIELDS}
+
+
+def write_project(text, wanted):
+    for field in FIELDS:
+        if field not in wanted:
+            continue
+        value = wanted[field]
+        if re.search(rf"\n\s*{field}:", text):
+            text = re.sub(rf"(\n\s*{field}:[ \t]*)[^\s#]*", lambda m: m.group(1) + value, text, count=1)
+        else:
+            anchor = re.search(r"\n(\s*)game_id:[^\n]*", text) or re.search(r"\n(\s*)name:[^\n]*", text)
+            if anchor:
+                text = text[:anchor.end()] + f"\n{anchor.group(1)}{field}: {value}" + text[anchor.end():]
+    return text
+
+
+def main(argv):
+    if not argv:
+        print(__doc__.strip())
+        return 2
+    folder = argv[0]
+    project = os.path.join(folder, "recomp.yml")
+    found = identity(folder)
+    if not found:
+        print(f"{folder}: no disc boot.bin or TMD to read the title from; recomp.yml stands")
+        return 0
+    text = open(project).read() if os.path.exists(project) else ""
+    have = read_project(text)
+    # a disc game's game id is six characters (RMCP01); a recomp.yml may carry
+    # those six where the TMD gives four - the first four agreeing is agreement
+    def same(field):
+        a, b = have.get(field) or "", found.get(field) or ""
+        if field == "game_id" and a and b:
+            return a[:4].upper() == b[:4].upper()
+        return a.upper() == b.upper()
+    wrong = [f for f in FIELDS if f in found and not same(f)]
+    print(f"{folder}: " + ", ".join(f"{f}={found[f]}" for f in FIELDS if f in found) + f"  (from {found['source']})")
+    if not wrong:
+        return 0
+    for f in wrong:
+        print(f"  recomp.yml {f}: {have.get(f)} -> {found[f]}")
+    if "--write" in argv:
+        open(project, "w").write(write_project(text, found))
+        print("  recomp.yml corrected")
+        return 0
+    return 1 if "--check" in argv else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

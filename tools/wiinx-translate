@@ -33,6 +33,9 @@ done
 
 dir=$(cd "$game" 2>/dev/null && pwd) || { echo "no such folder: $game" >&2; exit 1; }
 project="$dir/recomp.yml"
+# Which title this is, from the title's own files (wiinx-identity): recomp.yml's
+# game_id, title_id and region are corrected before anything is built from them.
+python3 "$libwiinx/tools/wiinx-identity" "$dir" --write || true
 [ -f "$project" ] || { echo "no game project at $dir (no recomp.yml)" >&2; exit 1; }
 # What the project translates is whatever its recomp.yml points at. A disc game
 # keeps that under disc/; a title installed from a WAD has no disc at all, and
