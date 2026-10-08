@@ -231,6 +231,10 @@ if (TARGET WiiCompiled)
     # The project, for the name and region below. The read used to happen higher
     # up for the address-alias switch; that went, and took this with it.
     file(READ "${WIINX_GAME_DIR}/recomp.yml" _wiinx_project)
+    # The name below is read from recomp.yml at configure time: an edit to it
+    # (a corrected game_id, a new title) has to reconfigure, or the NRO keeps
+    # showing the old name - the Wii Menu stayed "(USA)" after RHAE became RHAP.
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${WIINX_GAME_DIR}/recomp.yml")
 
     # What to call this on screen. The disc's own name is not it: internal names
     # run words together ("MegaMan9", "MarioKartWii"), so a project spells the
