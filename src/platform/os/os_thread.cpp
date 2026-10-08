@@ -12,6 +12,8 @@
 #include "fiber_manager.h"
 #include "runtime_log.h"
 #include "os_internal.h"
+#include "native_bindings.h"
+#include "generated/RuntimeConfig.h"
 
 namespace OsHleInternal {
 void RemoveThreadFromList(uint32_t threadPtr)
@@ -170,6 +172,77 @@ uint32_t SetThreadEffectivePriority(uint32_t threadPtr, int32_t priority)
 } // namespace OsHleInternal
 
 namespace {
+
+// Three SDK routines OSCreateThread and OSExitThread lean on, at the addresses
+// they have in Mario Kart Wii - the game these natives were written from.
+constexpr uint32_t kRefOSExitThread = 0x801AA0F0u;
+constexpr uint32_t kRefOSInitContext = 0x801A20BCu;
+constexpr uint32_t kRefOSUnlockAllMutex = 0x801A8088u;
+
+// True in the game the reference addresses come from, where the SDK's own
+// translated routines are at them and are used unchanged. Every other game has
+// something else there, or nothing (the Wii Menu crashed jumping to it), and
+// gets the native routines below instead.
+bool IsReferenceGame()
+{
+    static const bool reference = NativeBindings::Resolve(kRefOSExitThread) == kRefOSExitThread;
+    return reference;
+}
+
+// Where a thread returns to when its function does: this game's OSExitThread.
+uint32_t OSExitThreadAddress()
+{
+    const uint32_t address = NativeBindings::Resolve(kRefOSExitThread);
+    return address != 0 ? address : kRefOSExitThread;
+}
+
+// OSInitContext(context, pc, sp), as the SDK's: a fresh context that starts at
+// pc on stack sp with the small-data bases loaded, interrupts and translation
+// on, and everything else - registers, CR, XER, GQRs, FP state, mode - cleared.
+void InitContextNative(uint32_t context, uint32_t pc, uint32_t sp)
+{
+    constexpr uint32_t kMsrEeMeIrDrRi = 0x9032u;
+    for (uint32_t i = 0; i < 32; ++i) {
+        ::Memory::Write32(context + 4 * i, 0);
+    }
+    ::Memory::Write32(context + 4 * 1, sp);
+    ::Memory::Write32(context + 4 * 2, RuntimeConfig::SDA2_BASE);
+    ::Memory::Write32(context + 4 * 13, RuntimeConfig::SDA1_BASE);
+    ::Memory::Write32(context + 0x80u, 0);              // CR
+    ::Memory::Write32(context + 0x8Cu, 0);              // XER
+    ::Memory::Write32(context + 0x198u, pc);            // SRR0
+    ::Memory::Write32(context + 0x19Cu, kMsrEeMeIrDrRi); // SRR1
+    for (uint32_t i = 0; i < 8; ++i) {
+        ::Memory::Write32(context + 0x1A4u + 4 * i, 0); // GQR0-7
+    }
+    ::Memory::Write16(context + 0x1A0u, 0);             // mode (OSClearContext)
+    ::Memory::Write16(context + 0x1A2u, 0);             // state
+}
+
+// __OSUnlockAllMutex(thread), as the SDK's: every mutex the thread still holds
+// is released and its waiters woken. OSThread.queueMutex is at 0x2F4 (head) and
+// 0x2F8 (tail); an OSMutex is its wait queue, owner (8), count (0xC) and link
+// (next 0x10, prev 0x14).
+void UnlockAllMutexNative(CpuContext* cpu, uint32_t threadPtr)
+{
+    for (int guard = 0; guard < 4096; ++guard) {
+        const uint32_t mutex = ::Memory::Read32(threadPtr + 0x2F4u);
+        if (mutex == 0) {
+            break;
+        }
+        const uint32_t next = ::Memory::Read32(mutex + 0x10u);
+        if (next == 0) {
+            ::Memory::Write32(threadPtr + 0x2F8u, 0);
+        } else {
+            ::Memory::Write32(next + 0x14u, 0);
+        }
+        ::Memory::Write32(threadPtr + 0x2F4u, next);
+        ::Memory::Write32(mutex + 0x0Cu, 0);
+        ::Memory::Write32(mutex + 0x08u, 0);
+        cpu->gpr[3] = mutex;  // the mutex's wait queue is its first member
+        OSWakeupThread_HLE_801aaaa4(cpu);
+    }
+}
 void PropagateMutexOwnerPriority(uint32_t mutexPtr)
 {
     if (mutexPtr == 0) {
@@ -216,8 +289,12 @@ void UnlockAllThreadMutexes(CpuContext* cpu, uint32_t threadPtr)
         return;
     }
     CpuContextScope scope(cpu);
+    if (!IsReferenceGame()) {
+        UnlockAllMutexNative(cpu, threadPtr);
+        return;
+    }
     cpu->gpr[3] = threadPtr;
-    InvokeIndirectCpu(0x801A8088u, cpu); // __OSUnlockAllMutex
+    InvokeIndirectCpu(kRefOSUnlockAllMutex, cpu); // __OSUnlockAllMutex
 }
 
 // Shared tail of OSExitThread/OSCancelThread: clears context, delists if detached, marks
@@ -308,11 +385,15 @@ extern "C" void OSCreateThread_HLE_801a9e84(CpuContext* ctx)
         // like OSInitContext, then apply the OSCreateThread-specific overrides
         // that follow in the original PPC.
         {
-            CpuContextScope scope(cpu);
-            cpu->gpr[3] = threadPtr;
-            cpu->gpr[4] = entryFunc;
-            cpu->gpr[5] = alignedStack - 8;
-            InvokeIndirectCpu(0x801A20BCu, cpu); // OSInitContext
+            if (IsReferenceGame()) {
+                CpuContextScope scope(cpu);
+                cpu->gpr[3] = threadPtr;
+                cpu->gpr[4] = entryFunc;
+                cpu->gpr[5] = alignedStack - 8;
+                InvokeIndirectCpu(kRefOSInitContext, cpu); // OSInitContext
+            } else {
+                InitContextNative(threadPtr, entryFunc, alignedStack - 8);
+            }
         }
 
         if (IsThpVideoDecoderEntry(entryFunc)) {
@@ -326,7 +407,7 @@ extern "C" void OSCreateThread_HLE_801a9e84(CpuContext* ctx)
 
         }
 
-        ::Memory::Write32(threadPtr + 0x84u, 0x801AA0F0u); // LR = OSExitThread
+        ::Memory::Write32(threadPtr + 0x84u, OSExitThreadAddress()); // LR = this game's OSExitThread
         ::Memory::Write32(threadPtr + 0x0Cu, entryArg);    // r3 = argument
 
         // Stack info
