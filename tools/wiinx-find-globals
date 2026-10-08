@@ -360,6 +360,13 @@ class Finder:
             built = [e[1] for e in trace(self.dol, clear, 20) if e[0] == "addr" and isinstance(e[1], int)]
             if built:
                 self.put("dvd.WaitingQueue", built[0], f"__DVDClearWaitingQueue {clear:08X} links it")
+        # EXIUnlock indexes the channel's control block: Ecb + chan * 0x40,
+        # the one address it builds before touching the block's state.
+        start, ev = self.events("EXIUnlock_80169260")
+        if start:
+            built = [e[1] for e in ev if e[0] == "addr" and isinstance(e[1], int)]
+            if built:
+                self.put("exi.Ecb", built[0], f"EXIUnlock {start:08X} indexes it by channel")
         start, ev = self.events("DVDLowInit")
         if start:
             words = [e[1] for e in ev if e[0] == "store" and isinstance(e[1], int)]

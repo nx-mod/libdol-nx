@@ -9,6 +9,7 @@
 #include "hle_stubs.h"
 #include "abi_bridge.h"
 #include "memory.h"
+#include "guest_globals.h"
 #include "runtime_log.h"
 
 #include "sram.h"
@@ -245,9 +246,35 @@ EXI_CHANNEL_STUB(EXISync_80168380, 5, "chan=")
 
 // RVL__EXIUnlock / EXIUnlock
 // Address: 0x80169260
-// Behavior: Unlocks the EXI channel and triggers any pending callbacks.
-//           Stub: Return 1 (success) to bypass internal callback logic that causes the 0x0 crash.
-EXI_CHANNEL_STUB(EXIUnlock_80169260, 5, "chan=")
+//
+// EXILock is the game's own code, and it marks the channel LOCKED in the game's
+// control block (Ecb[chan].state, 0x40 bytes a channel). Unlocking has to clear
+// that bit, or the next EXILock on the channel fails for good: the Wii Menu
+// probed channel 0 with EXIGetID, could then never write SRAM, and spun in
+// __OSSyncSram. The callbacks queued by a failed EXILock are not run - that is
+// what used to crash on a null entry - but the lock is released, which is what
+// a retry needs. A game whose globals do not name exi.Ecb keeps the old stub.
+extern "C" uint32_t EXIUnlock_80169260(uint32_t channel)
+{
+    constexpr uint32_t kEcbStride = 0x40u;
+    constexpr uint32_t kEcbState = 0x0Cu;
+    constexpr uint32_t kStateLocked = 0x10u;
+    static const uint32_t ecb = RuntimeGuestGlobals::find("exi.Ecb");
+    if (ecb == 0 || channel > 2) {
+        return 1;
+    }
+    try {
+        const uint32_t state = ecb + channel * kEcbStride + kEcbState;
+        const uint32_t value = ::Memory::Read32(state);
+        if ((value & kStateLocked) == 0) {
+            return 0;  // as the SDK: unlocking a channel that is not locked fails
+        }
+        ::Memory::Write32(state, value & ~kStateLocked);
+    } catch (const ::Memory::AccessViolation&) {
+        return 0;
+    }
+    return 1;
+}
 
 PPC_NATIVE_OVERRIDE(80168FA0, EXIInit_80168fa0, uint32_t, (), ());
 
