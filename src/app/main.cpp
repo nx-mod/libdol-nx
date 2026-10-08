@@ -1563,6 +1563,7 @@ void SetRuntimeExitCode(int code) {
 
 // Global handler called via atexit() to flush buffers before any exit
 #if defined(__SWITCH__)
+void StopSwitchWatchdog() noexcept;
 // Exposed for the VI retrace path, which is the only place that can report
 // guest progress now that the heartbeat thread is gone (it ran out of memory
 // for a thread stack and took boot with it).
@@ -1580,7 +1581,18 @@ void SwitchBootLogExternal(const char* text) noexcept {
 
 static void AtExitHandler() {
 #if defined(__SWITCH__)
-    SwitchDurableLog("[exit] AtExitHandler reached (process is terminating)");
+    {
+        // Where the guest was: an exit with no message (the Mii Channel's, at
+        // 8 s) otherwise leaves nothing to say who called it.
+        char line[160];
+        std::snprintf(line, sizeof(line),
+                      "[exit] AtExitHandler reached (process is terminating); guest at 0x%08X, native 0x%08X, exit code %d",
+                      static_cast<unsigned>(RecompMod::g_currentTranslatedExecutionAddress),
+                      static_cast<unsigned>(RecompMod::g_currentNativeTarget),
+                      g_exitCodeSet.load(std::memory_order_relaxed) ? g_lastExitCode.load(std::memory_order_relaxed) : -1);
+        SwitchDurableLog(line);
+    }
+    StopSwitchWatchdog();
 #endif
     // End-of-run guest memory report. This runs before the fatal-report check
     // below because the counters describe the whole session and are just as
@@ -1734,6 +1746,11 @@ void SwitchDumpTraceRing() noexcept {
 std::atomic<const uint32_t*> g_switchMainGuestAddr{nullptr};
 alignas(0x1000) uint8_t g_switchWatchStack[0x10000];
 Thread g_switchWatchThread;
+// Set at exit: the watchdog returns instead of sampling code that is about to
+// be unmapped. Left running, it faulted at the module base during teardown and
+// Atmosphere turned every exit - even a clean one - into a crash to HOME.
+std::atomic_bool g_switchWatchStop{false};
+bool g_switchWatchStarted = false;
 
 // Sampling profiler. The guest runs 4x too slow and the cause is CPU-side, so
 // sample where it actually is: every millisecond, record the main thread's last
@@ -1976,6 +1993,9 @@ void SwitchWatchdogMain(void*) {
         // per-second bookkeeping below still runs once per 1000 ticks.
         for (int tick = 0; tick < 1000; ++tick) {
             svcSleepThread(1000000LL);
+            if (g_switchWatchStop.load(std::memory_order_acquire)) {
+                return;
+            }
             // Plain globals on Switch (see mkw_thread_local.h), so the watchdog
             // can read the main thread's values directly.
             ProfileSample(*const_cast<const volatile uint32_t*>(&RecompMod::g_currentTranslatedExecutionAddress),
@@ -2054,6 +2074,18 @@ void SwitchWatchdogMain(void*) {
     }
 }
 
+// Stop the watchdog and wait for it, from any thread but its own. Safe to call
+// more than once and before it ever started.
+void StopSwitchWatchdog() noexcept {
+    if (!g_switchWatchStarted || g_switchWatchStop.exchange(true, std::memory_order_acq_rel)) {
+        return;
+    }
+    if (threadGetCurHandle() != g_switchWatchThread.handle) {
+        threadWaitForExit(&g_switchWatchThread);
+        threadClose(&g_switchWatchThread);
+    }
+}
+
 void StartSwitchWatchdog() noexcept {
     g_switchMainThreadHandle = threadGetCurHandle();
     {
@@ -2073,6 +2105,7 @@ void StartSwitchWatchdog() noexcept {
     if (R_SUCCEEDED(threadCreate(&g_switchWatchThread, SwitchWatchdogMain, nullptr,
                                  g_switchWatchStack, sizeof(g_switchWatchStack), 0x2B, 1))) {
         threadStart(&g_switchWatchThread);
+        g_switchWatchStarted = true;
         SwitchDurableLog("[boot] watchdog started on core 1");
     } else {
         SwitchDurableLog("[boot] watchdog threadCreate FAILED");
