@@ -74,6 +74,17 @@ if [ -z "${WIINX_SKIP_TRANSLATOR_BUILD:-}" ]; then
 fi
 [ -f "$cli" ] || { echo "the translator is not built: $cli" >&2; exit 1; }
 
+# The translator is built for server GC: a heap per core, collected late. On a
+# phone that grew past what the watchdog below can see - Android swaps to zram
+# and thrashes long before MemAvailable drops - and took the whole proot down
+# even at one thread (the Wii Menu, at final lowering). A small run uses the
+# workstation collector under a hard heap cap instead; HEAP_MB overrides the
+# cap, and a run with more threads keeps server GC.
+if [ "$threads" -le 2 ]; then
+    export DOTNET_gcServer=0 DOTNET_GCConserveMemory=7
+    export DOTNET_GCHeapHardLimit=$(printf '0x%x' $(( ${HEAP_MB:-1536} * 1024 * 1024 )))
+fi
+
 # Translation is memory-hungry: stop cleanly instead of taking the machine
 # down with it (it has crashed small hosts). MIN_FREE_MB overrides.
 min_free_kb=$(( ${MIN_FREE_MB:-600} * 1024 ))
