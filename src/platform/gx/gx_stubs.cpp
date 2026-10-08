@@ -1,5 +1,8 @@
 #include "gx_internal.h"
 
+#include <cstdio>
+#include <cstring>
+
 #if defined(__SWITCH__)
 #include <atomic>
 #include <chrono>
@@ -24,6 +27,31 @@ extern "C" void __GXSetSUTexRegs();
 // FIFO Write Helpers
 // ============================================================================
 
+#if !defined(WIINX_NATIVE_GX)
+#if defined(__SWITCH__)
+extern int g_gxTraceBegins;
+void SwitchBootLogExternal(const char* text) noexcept;
+// The raw words of the first eight draws' vertices (see GX__Begin), as hex and
+// as floats: one line per draw, flushed when the next draw starts.
+static void TraceVertexWord(uint32_t val) {
+    static int draw = -1, words = 0, at = 0;
+    static char line[400];
+    if (g_gxTraceBegins == 0 || g_gxTraceBegins > 8) return;
+    if (draw != g_gxTraceBegins) {
+        if (at > 0) SwitchBootLogExternal(line);
+        draw = g_gxTraceBegins; words = 0;
+        at = std::snprintf(line, sizeof(line), "[gx] draw #%d words:", draw - 1);
+    }
+    if (words++ < 24 && at < (int)sizeof(line) - 24) {
+        float f; std::memcpy(&f, &val, 4);
+        at += std::snprintf(line + at, sizeof(line) - at, " %08X(%.4g)", val, f);
+    }
+}
+#else
+static void TraceVertexWord(uint32_t) {}
+#endif
+#endif
+
 extern "C" void GX_HLE_FIFO_WriteFloat(float val) {
     u32 raw; std::memcpy(&raw, &val, 4);
 #if defined(WIINX_NATIVE_GX)
@@ -31,6 +59,7 @@ extern "C" void GX_HLE_FIFO_WriteFloat(float val) {
                               static_cast<uint8_t>(raw >> 8), static_cast<uint8_t>(raw)};
     dol::gx_native::write(bytes, 4);
 #else
+    TraceVertexWord(raw);
     try { HleFifoWrite(raw, 4); } catch (...) { RT_LOGF(RT_TAG_GX, "FIFO write float failed\n"); }
 #endif
 }
@@ -48,7 +77,7 @@ extern "C" void GX_HLE_FIFO_Write16(uint16_t val) {
 }
 extern "C" void GX_HLE_FIFO_Write8(uint8_t val) { dol::gx_native::write(&val, 1); }
 #else
-extern "C" void GX_HLE_FIFO_Write32(uint32_t val) { HleFifoWrite(val, 4); }
+extern "C" void GX_HLE_FIFO_Write32(uint32_t val) { TraceVertexWord(val); HleFifoWrite(val, 4); }
 extern "C" void GX_HLE_FIFO_Write16(uint16_t val) { HleFifoWrite(static_cast<u32>(val), 2); }
 extern "C" void GX_HLE_FIFO_Write8(uint8_t val) { HleFifoWrite(static_cast<u32>(val), 1); }
 #endif

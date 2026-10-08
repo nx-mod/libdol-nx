@@ -295,7 +295,21 @@ void ServiceDeferredTimingDuringGxWork() {
 }
 }
 
+// The first draws a title makes, to the boot log on the Switch: GXBegin's
+// primitive, format and count, then (gx_stubs.cpp) the raw words of the first
+// few draws' vertices. g_gxTraceBegins counts the draws seen.
+int g_gxTraceBegins = 0;
+
 extern "C" void GX__Begin_8016f0f0(uint32_t t, uint32_t vf, uint32_t nv) {
+#if defined(__SWITCH__)
+    if (g_gxTraceBegins < 40) {
+        char line[80];
+        std::snprintf(line, sizeof(line), "[gx] begin #%d prim=0x%02X vf=%u n=%u%s", g_gxTraceBegins, t, vf, nv,
+                      IsDisplayListActive() ? " (into a display list)" : "");
+        SwitchBootLogExternal(line);
+    }
+    ++g_gxTraceBegins;
+#endif
     if(IsDisplayListActive()){
         WriteDisplayListData((u8)(t|vf), 1);
         WriteDisplayListData((u16)nv, 2);
