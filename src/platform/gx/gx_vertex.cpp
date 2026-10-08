@@ -103,7 +103,25 @@ PPC_NATIVE_OVERRIDE_VOID(8016dba4, GX__GetVtxDescv_8016dba4, (uint32_t la), (la)
 // Vertex Attribute Format
 // ============================================================================
 
+#if defined(__SWITCH__)
+void SwitchBootLogExternal(const char* text) noexcept;
+#endif
+
 extern "C" void GX__SetVtxAttrFmt_8016dc68(uint32_t vf, uint32_t a, uint32_t c, uint32_t t, uint32_t fr) {
+#if defined(__SWITCH__)
+    {   // each distinct format to the boot log, once (vf, attr, count, type, frac)
+        static uint32_t seen[64]; static int n = 0;
+        const uint32_t key = vf << 24 | (a & 0xFF) << 16 | (c & 0xF) << 12 | (t & 0xF) << 8 | (fr & 0xFF);
+        bool known = false;
+        for (int i = 0; i < n; ++i) known |= seen[i] == key;
+        if (!known && n < 64) {
+            seen[n++] = key;
+            char line[96];
+            std::snprintf(line, sizeof(line), "[gx] vtxfmt vf=%u attr=%u cnt=%u type=%u frac=%u", vf, a, c, t, fr);
+            SwitchBootLogExternal(line);
+        }
+    }
+#endif
     const uint32_t attr = CanonicalVtxAttr(a);
     if(vf<8&&attr<26){
         const VtxAttrFmt oldFmt = g_hleGxState.vtxAttrFmt[vf][attr];
@@ -130,7 +148,9 @@ extern "C" void GX__SetVtxAttrFmtv_8016de08(uint32_t vf, uint32_t la) {
     while(true){
         uint32_t a=Memory::Read32(p);
         if(a==0xFFu) break;
-        GX__SetVtxAttrFmt_8016dc68(vf, a, Memory::Read32(p+4), Memory::Read32(p+8), Memory::Read32(p+12)&0xFFu);
+        // GXVtxAttrFmtList is {attr, cnt, type, u8 frac}: frac is the first byte of the
+        // last word (big-endian), not its low byte, which is padding.
+        GX__SetVtxAttrFmt_8016dc68(vf, a, Memory::Read32(p+4), Memory::Read32(p+8), Memory::Read8(p+12));
         p+=16;
     }
 }

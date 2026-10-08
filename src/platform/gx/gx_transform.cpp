@@ -3,6 +3,37 @@
 #include "isa/big_endian.h"
 #include "gx_internal.h"
 
+#include <cstdio>
+#include <cstring>
+
+#if defined(__SWITCH__)
+void SwitchBootLogExternal(const char* text) noexcept;
+#endif
+
+namespace {
+// What a title sets as its viewport and projection, to the boot log: the first
+// dozen, then each change. A picture squashed or stretched along one axis is
+// read straight off these.
+void LogTransform(const char* what, const float* v, int n) {
+#if defined(__SWITCH__)
+    static int count = 0;
+    static char last[3][160] = {};
+    char line[160];
+    int at = std::snprintf(line, sizeof(line), "[gx] %s", what);
+    for (int i = 0; i < n && at < (int)sizeof(line) - 12; ++i)
+        at += std::snprintf(line + at, sizeof(line) - at, " %.4g", v[i]);
+    const int slot = what[0] == 'v' ? 0 : (what[4] == 'v' ? 1 : 2);
+    if (count < 12 || std::strcmp(line, last[slot]) != 0) {
+        ++count;
+        std::snprintf(last[slot], sizeof(last[slot]), "%s", line);
+        if (count < 200) SwitchBootLogExternal(line);
+    }
+#else
+    (void)what; (void)v; (void)n;
+#endif
+}
+}  // namespace
+
 namespace {
     static inline void SwapBeF32ArrayToHost(const uint32_t* srcBe, float* dst, size_t count) {
         const auto* bytes = reinterpret_cast<const uint8_t*>(srcBe);
@@ -46,6 +77,7 @@ extern "C" void GX__SetViewportJitter_80173378(float l, float t, float w, float 
 PPC_NATIVE_OVERRIDE_VOID(80173378, GX__SetViewportJitter_80173378, (float l, float t, float w, float h, float nz, float fz, uint32_t f), (l, t, w, h, nz, fz, f));
 
 extern "C" void GX__SetViewport_801733b4(float l, float t, float w, float h, float nz, float fz) {
+    { const float v[6] = {l, t, w, h, nz, fz}; LogTransform("viewport", v, 6); }
     g_viewportState[0]=l; g_viewportState[1]=t; g_viewportState[2]=w; g_viewportState[3]=h; g_viewportState[4]=nz; g_viewportState[5]=fz;
     GXSetViewport(l, t, w, h, nz, fz);
 }
@@ -116,6 +148,7 @@ PPC_NATIVE_OVERRIDE_VOID(80173430, GX__SetScissor_80173430, (uint32_t l, uint32_
 extern "C" void GX__SetProjection_8017301c(uint32_t ma, uint32_t pt) {
     const uint32_t* raw=(const uint32_t*)GuestToHostPtr(ma, 64); float m[16];
     SwapBeF32ArrayToHost(raw, m, 16);
+    { const float v[9] = {(float)pt, m[0], m[2], m[3], m[5], m[6], m[7], m[10], m[11]}; LogTransform("proj mtx t,00,02,03,11,12,13,22,23", v, 9); }
     GXSetProjection(m, (GXProjectionType)pt);
     UpdateProjectionVectorFromMatrix(m, (GXProjectionType)pt);
 }
@@ -124,6 +157,7 @@ PPC_NATIVE_OVERRIDE_VOID(8017301c, GX__SetProjection_8017301c, (uint32_t ma, uin
 extern "C" void GX__SetProjectionv_80173080(uint32_t pa) {
     const uint32_t* raw=(const uint32_t*)GuestToHostPtr(pa, 28); float v[7];
     SwapBeF32ArrayToHost(raw, v, 7);
+    LogTransform("projv", v, 7);
     GXProjectionType pt=(v[0]!=0.f)?GX_ORTHOGRAPHIC:GX_PERSPECTIVE;
     float m[16]={0.f}; m[0]=v[1]; m[5]=v[3]; m[10]=v[5]; m[11]=v[6];
     if(pt==GX_PERSPECTIVE){ m[2]=v[2]; m[6]=v[4]; m[14]=-1.f; } else { m[3]=v[2]; m[7]=v[4]; m[15]=1.f; }
@@ -147,6 +181,17 @@ PPC_NATIVE_OVERRIDE_VOID(801730cc, GX__GetProjectionv_801730cc, (uint32_t pa), (
 extern "C" void GX__LoadPosMtxImm_8017310c(uint32_t ma, uint32_t id) {
     const uint32_t* raw=(const uint32_t*)GuestToHostPtr(ma); float m[12];
     SwapBeF32ArrayToHost(raw, m, 12);
+#if defined(__SWITCH__)
+    {   // the first few position matrices, rows 0 and 1 (x and y): a squashed axis shows here
+        static int n = 0;
+        if (n++ < 40) {
+            char line[160];
+            std::snprintf(line, sizeof(line), "[gx] posmtx id=%u x: %.4g %.4g %.4g %.4g | y: %.4g %.4g %.4g %.4g", id,
+                          m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7]);
+            SwitchBootLogExternal(line);
+        }
+    }
+#endif
     GXLoadPosMtxImm((float(*)[4])m, id);
 }
 PPC_NATIVE_OVERRIDE_VOID(8017310c, GX__LoadPosMtxImm_8017310c, (uint32_t ma, uint32_t id), (ma, id));
