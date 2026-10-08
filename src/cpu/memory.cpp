@@ -652,6 +652,40 @@ void WriteVi16(uint32_t offset, uint16_t value) {
         g_vi[offset / 2].store(value, std::memory_order_relaxed);
 }
 
+// The external interface's registers (EXI: 0xCC006800 on a GameCube, its
+// 0xCD006800 mirror on a Wii), kept as a register file. Three channels of five:
+// status (CPR), DMA address, DMA length, control, immediate data. libdol's EXI
+// natives (EXISelect, EXIImm, EXIDma...) are where transfers happen; this is for
+// SDK code that still reads the registers - EXIGetID's probe of a channel, which
+// the Wii Menu runs on channel 0. Writes are kept and read back, except that
+// nothing is ever plugged in (the status register's EXT bit reads 0, as on a
+// Wii, which has no memory card slots) and a transfer is always finished (the
+// control register's TSTART bit reads 0), so no probe or wait spins.
+constexpr uint32_t kExiSize = 3 * 0x14u;
+constexpr uint32_t kExiStatusExt = 1u << 12;
+constexpr uint32_t kExiControlStart = 1u << 0;
+std::array<std::atomic<uint32_t>, kExiSize / 4> g_exi{};
+
+bool IsExi(uint32_t addr) {
+    const uint32_t offset = (addr & ~0x01000000u) - 0xCC006800u;  // either mirror
+    return offset < kExiSize && (addr & 3u) == 0;
+}
+
+uint32_t ReadExi32(uint32_t addr) {
+    const uint32_t offset = (addr & ~0x01000000u) - 0xCC006800u;
+    const uint32_t value = g_exi[offset / 4].load(std::memory_order_relaxed);
+    switch (offset % 0x14u) {
+    case 0x00: return value & ~kExiStatusExt;
+    case 0x0C: return value & ~kExiControlStart;
+    default: return value;
+    }
+}
+
+void WriteExi32(uint32_t addr, uint32_t value) {
+    const uint32_t offset = (addr & ~0x01000000u) - 0xCC006800u;
+    g_exi[offset / 4].store(value, std::memory_order_relaxed);
+}
+
 // Devices a console library registers (Memory::RegisterMmioDevice). Filled in
 // at static initialisation and only read after, so no lock.
 constexpr size_t kMaxMmioDevices = 16;
@@ -686,6 +720,10 @@ bool ReadConstantRegister32(uint32_t addr, uint32_t* value) {
     if (IsVi(addr) && (addr & 3u) == 0) {
         const uint32_t offset = addr - kViBase;
         *value = static_cast<uint32_t>(ReadVi16(offset)) << 16 | ReadVi16(offset + 2);
+        return true;
+    }
+    if (IsExi(addr)) {
+        *value = ReadExi32(addr);
         return true;
     }
     if (const auto* device = FindMmioDevice(addr))
@@ -803,6 +841,10 @@ void MemoryInline::Write32Slow(uint32_t addr, uint32_t val) {
         return;
     }
     if (IsMmioAddress(addr)) {
+        if (IsExi(addr)) {
+            WriteExi32(addr, val);
+            return;
+        }
         if (WriteRegisteredDevice32(addr, val))
             return;
         if (IsVi(addr) && (addr & 3u) == 0) {
