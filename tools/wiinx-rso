@@ -1,0 +1,363 @@
+#!/usr/bin/env python3
+"""A title's RSO modules: the code it loads and links at run time.
+
+    tools/wiinx-rso extract <content.app> <name> <out.rso>
+        a file out of a U8 content archive, LZ77-decompressed if it is (.lz7)
+    tools/wiinx-rso info <module.rso> [--sel main.sel]
+        its sections, relocations and imports
+    tools/wiinx-rso link <module.rso> --sel main.sel --base ADDR --bss ADDR
+                         --main SEC=ADDR [--main SEC=ADDR ...] --out <image.bin>
+        the module relocated as it is in memory once its title has loaded it
+    tools/wiinx-rso merge <program.dol> <image.bin> --base ADDR --out <out.dol>
+        the program with the module's sections added, for the translator
+    tools/wiinx-rso build <project>
+        all of the above for every module the project's modules.json names:
+        writes the merged program and the modules' function starts into
+        functions.map (wiinx-translate runs this first)
+
+Some titles are more than their executable. The Wii Menu runs `wwwlib`, its
+web engine, as an RSO - a module the menu decompresses from its content 0x09,
+loads into its heap and links to itself by name through `main.sel` - and only
+`program.dol` was ever translated, so the first call into the module stopped
+the menu. An RSO is laid out like a REL (sections in place, relocations by
+section index), but its references to the program are by symbol name, resolved
+through the SEL file the program ships with.
+
+Linking needs what the title decides at run time: where it loads the module
+(--base, the module header's address), where it puts the module's .bss (--bss),
+and where the program's own sections the SEL names start (--main, by ELF
+section index: 1 .init, 2 .text, and the data sections the module reads). For
+the Wii Menu 4.3E those are in titles/wiimenu-nx/modules.json:
+
+    {"program": "title/program.dol", "out": "title/program.modules.dol",
+     "modules": [{"name": "wwwlib",
+                  "content": "title/00000009.app", "file": "wwwlib-rvl.lz7",
+                  "sel": {"content": "title/0000009a.app", "file": "main.sel"},
+                  "base": "0x80080420", "bss": "0x80BE50E0",
+                  "main": {"1": "0x81330000", "2": "0x81332120", ...}}]}
+
+Everything comes from the title's own contents; nothing from a memory dump.
+recomp.yml's inputs.dol then names "out". A module's function starts - its
+exports and every address its relocations take in its code (vtables, callbacks,
+calls) - go into functions.map between `# wiinx-rso <name>` markers, replaced
+on each run, so the translator reaches code only the module's callers know.
+"""
+import json
+import os
+import struct
+import sys
+
+HEADER_WORDS = 22
+
+
+def u8_file(archive, name):
+    root = struct.unpack(">I", archive[4:8])[0]
+    count = struct.unpack(">I", archive[root + 8:root + 12])[0]
+    strings = root + count * 12
+    for i in range(count):
+        entry = archive[root + i * 12:root + i * 12 + 12]
+        name_at = int.from_bytes(entry[1:4], "big")
+        at, size = struct.unpack(">II", entry[4:12])
+        end = archive.index(b"\0", strings + name_at)
+        if entry[0] == 0 and archive[strings + name_at:end].decode("latin1") == name:
+            return archive[at:at + size]
+    sys.exit(f"{name}: not in the archive")
+
+
+def lz77(src):
+    """Nintendo LZ77 (type 0x10)."""
+    if src[0] != 0x10:
+        return src
+    size = int.from_bytes(src[1:4], "little")
+    out, i = bytearray(), 4
+    while len(out) < size:
+        flags = src[i]
+        i += 1
+        for bit in range(8):
+            if len(out) >= size:
+                break
+            if flags & (0x80 >> bit):
+                word = (src[i] << 8) | src[i + 1]
+                i += 2
+                count, distance = (word >> 12) + 3, (word & 0xFFF) + 1
+                for _ in range(count):
+                    out.append(out[-distance])
+            else:
+                out.append(src[i])
+                i += 1
+    return bytes(out)
+
+
+class Rso:
+    def __init__(self, data):
+        self.data = data
+        h = struct.unpack(">%dI" % HEADER_WORDS, data[:HEADER_WORDS * 4])
+        self.section_count, self.section_table = h[2], h[3]
+        self.bss_size = h[7]
+        self.internal = (h[12], h[13])
+        self.external = (h[14], h[15])
+        self.exports = (h[16], h[17], h[18])
+        self.imports_table = (h[19], h[20], h[21])
+        self.sections = [struct.unpack(">II", data[self.section_table + 8 * i:self.section_table + 8 * i + 8])
+                         for i in range(self.section_count)]
+        self.code_section = self.find_code_section()
+
+    def find_code_section(self):
+        """An RSO marks no section executable (wwwlib has no prolog either),
+        so code is where its branches are: the section holding REL24 sites."""
+        counts = {}
+        for at, info, _ in self.relocations(self.internal):
+            if info & 0xFF == 10:
+                for i, (offset, size) in enumerate(self.sections):
+                    start = offset & ~1
+                    if size and start and start <= at < start + size:
+                        counts[i] = counts.get(i, 0) + 1
+                        break
+        return max(counts, key=counts.get) if counts else 1
+
+    def relocations(self, table):
+        offset, size = table
+        for i in range(size // 12):
+            yield struct.unpack(">III", self.data[offset + 12 * i:offset + 12 * i + 12])
+
+    def imports(self):
+        table, size, names = self.imports_table
+        out = []
+        for i in range(size // 12):
+            name_at = struct.unpack(">I", self.data[table + 12 * i:table + 12 * i + 4])[0]
+            end = self.data.index(b"\0", names + name_at)
+            out.append(self.data[names + name_at:end].decode("latin1"))
+        return out
+
+    def exported(self):
+        table, size, names = self.exports
+        out = []
+        for i in range(size // 16):
+            name_at, offset, section, _ = struct.unpack(">IIII", self.data[table + 16 * i:table + 16 * i + 16])
+            end = self.data.index(b"\0", names + name_at)
+            out.append((self.data[names + name_at:end].decode("latin1"), offset, section))
+        return out
+
+
+def sel_symbols(sel):
+    s = Rso(sel)
+    return {name: (offset, section) for name, offset, section in s.exported()}
+
+
+def sext16(v):
+    return v - 0x10000 if v & 0x8000 else v
+
+
+def apply(image, at, kind, value):
+    """One PowerPC ELF relocation at image offset `at`."""
+    if kind == 1:                                   # R_PPC_ADDR32
+        struct.pack_into(">I", image, at, value & 0xFFFFFFFF)
+    elif kind == 4:                                 # R_PPC_ADDR16_LO
+        struct.pack_into(">H", image, at, value & 0xFFFF)
+    elif kind == 5:                                 # R_PPC_ADDR16_HI
+        struct.pack_into(">H", image, at, (value >> 16) & 0xFFFF)
+    elif kind == 6:                                 # R_PPC_ADDR16_HA
+        struct.pack_into(">H", image, at, ((value + 0x8000) >> 16) & 0xFFFF)
+    else:
+        return False
+    return True
+
+
+def link(rso, sel, base, bss, main_sections):
+    image = bytearray(rso.data)
+    section_address = {}
+    for i, (offset, size) in enumerate(rso.sections):
+        if size == 0:
+            continue
+        section_address[i] = base + (offset & ~1) if offset & ~1 else bss
+    symbols = sel_symbols(sel)
+    resolved = []
+    for name in rso.imports():
+        offset, section = symbols[name]
+        if section == 0xFFF1:
+            resolved.append(offset)
+        elif section in main_sections:
+            resolved.append(main_sections[section] + offset)
+        else:
+            sys.exit(f"import {name} is in the program's section {section}: give --main {section}=ADDR")
+    unknown = {}
+    for table, target_of in ((rso.internal, lambda s: section_address.get(s)),
+                             (rso.external, lambda s: resolved[s])):
+        for at, info, addend in rso.relocations(table):
+            symbol, kind = info >> 8, info & 0xFF
+            target = target_of(symbol)
+            if target is None:
+                continue
+            value = target + addend
+            place = base + at
+            if kind in (10, 11):                    # R_PPC_REL24, R_PPC_REL14
+                delta = value - place
+                word = struct.unpack_from(">I", image, at)[0]
+                if kind == 10:
+                    word = (word & 0xFC000003) | (delta & 0x03FFFFFC)
+                else:
+                    word = (word & 0xFFFF0003) | (delta & 0xFFFC)
+                struct.pack_into(">I", image, at, word)
+            elif not apply(image, at, kind, value):
+                unknown[kind] = unknown.get(kind, 0) + 1
+    return bytes(image), section_address, unknown
+
+
+def parse_addr(text):
+    return int(text, 16) if text.lower().startswith("0x") else int(text)
+
+
+def option(argv, flag, many=False):
+    found = [argv[i + 1] for i, a in enumerate(argv) if a == flag]
+    return found if many else (found[0] if found else None)
+
+
+def merge(dol, image, base):
+    """The program's DOL with the module's sections added: executable ones as
+    text sections, the rest as data, each at its place in memory."""
+    rso = Rso(image)
+    offsets = list(struct.unpack(">18I", dol[0:72]))
+    addresses = list(struct.unpack(">18I", dol[72:144]))
+    sizes = list(struct.unpack(">18I", dol[144:216]))
+    out = bytearray(dol)
+    for i, (offset, size) in enumerate(rso.sections):
+        if size == 0 or (offset & ~1) == 0:
+            continue
+        executable = i == rso.code_section
+        slots = range(0, 7) if executable else range(7, 18)
+        slot = next((s for s in slots if sizes[s] == 0), None)
+        if slot is None:
+            sys.exit("no free DOL section for the module")
+        start = offset & ~1
+        while len(out) % 32:
+            out.append(0)
+        offsets[slot], addresses[slot], sizes[slot] = len(out), base + start, size
+        out += image[start:start + size]
+    out[0:72] = struct.pack(">18I", *offsets)
+    out[72:144] = struct.pack(">18I", *addresses)
+    out[144:216] = struct.pack(">18I", *sizes)
+    return bytes(out)
+
+
+def function_starts(rso, base, bss, image):
+    """Where the module's functions begin: its exports, and every address in
+    its code its own relocations produce, bar branches inside a function."""
+    offset, size = rso.sections[rso.code_section]
+    placed = {rso.code_section: (base + (offset & ~1), size)}
+    starts = set()
+    for _, offset, section in rso.exported():
+        if section in placed:
+            starts.add(placed[section][0] + offset)
+    for at, info, addend in rso.relocations(rso.internal):
+        section, kind = info >> 8, info & 0xFF
+        if section not in placed or kind in (11, 5, 6):
+            continue                                # REL14 branches stay in a function
+        starts.add(placed[section][0] + addend)
+    return sorted(a for a in starts if a % 4 == 0)
+
+
+def write_map_block(path, name, lines):
+    begin, end = f"# wiinx-rso {name}", f"# end wiinx-rso {name}"
+    kept, skipping = [], False
+    for line in (open(path).read().splitlines() if os.path.exists(path) else []):
+        if line == begin:
+            skipping = True
+        elif line == end:
+            skipping = False
+        elif not skipping:
+            kept.append(line)
+    open(path, "w").write("\n".join(kept + [begin] + lines + [end]) + "\n")
+
+
+def build(project):
+    config_path = os.path.join(project, "modules.json")
+    if not os.path.exists(config_path):
+        return 0
+    config = json.load(open(config_path))
+    at = lambda p: os.path.join(project, p)
+    program = open(at(config["program"]), "rb").read()
+    # what the map already has, outside the blocks this writes (a re-run must
+    # not count its own previous output as taken)
+    taken, ours = set(), False
+    for line in open(at("functions.map")).read().splitlines() if os.path.exists(at("functions.map")) else []:
+        if line.startswith("# wiinx-rso ") or line.startswith("# end wiinx-rso "):
+            ours = line.startswith("# wiinx-rso ")
+        elif line and line[0] != "#" and not ours:
+            taken.add(int(line.split()[0], 16))
+    for module in config["modules"]:
+        name = module["name"]
+        rso = Rso(lz77(u8_file(open(at(module["content"]), "rb").read(), module["file"])))
+        sel = lz77(u8_file(open(at(module["sel"]["content"]), "rb").read(), module["sel"]["file"]))
+        base, bss = parse_addr(module["base"]), parse_addr(module["bss"])
+        mains = {int(k): parse_addr(v) for k, v in module["main"].items()}
+        image, _, unknown = link(rso, sel, base, bss, mains)
+        if unknown:
+            sys.exit(f"{name}: relocation types not applied: {unknown}")
+        program = merge(program, image, base)
+        linked = Rso(image)
+        names = {}
+        for export, offset, section in linked.exported():
+            if section == linked.code_section:
+                names[base + (linked.sections[section][0] & ~1) + offset] = export
+        starts = function_starts(linked, base, bss, image)
+        # the program's functions the module imports by name are entries too:
+        # the module reaches them, the program itself may never call them
+        sel_exports = sel_symbols(sel)
+        for symbol in linked.imports():
+            offset, section = sel_exports[symbol]
+            if section in mains and section <= 2:              # .init, .text
+                address = mains[section] + offset
+                names.setdefault(address, symbol)
+                starts.append(address)
+        starts = sorted(set(starts))
+        write_map_block(at("functions.map"), name,
+                        [f"{a:08x} {names.get(a, f'{a:08x}')}" for a in starts if a not in taken])
+        print(f"{name}: {len(image)} bytes at 0x{base:08X}, {len(starts)} function starts")
+    open(at(config["out"]), "wb").write(program)
+    print(f"{config['out']}: {len(program)} bytes")
+    return 0
+
+
+def main(argv):
+    if len(argv) < 2:
+        print(__doc__.strip(), file=sys.stderr)
+        return 2
+    command = argv[0]
+    if command == "extract" and len(argv) >= 4:
+        data = lz77(u8_file(open(argv[1], "rb").read(), argv[2]))
+        open(argv[3], "wb").write(data)
+        print(f"{argv[2]}: {len(data)} bytes -> {argv[3]}")
+        return 0
+    if command == "info":
+        rso = Rso(open(argv[1], "rb").read())
+        for i, (offset, size) in enumerate(rso.sections):
+            if size:
+                print(f"section {i:2}: offset 0x{offset & ~1:X} size 0x{size:X}{' code' if i == rso.code_section else ''}")
+        print(f"bss 0x{rso.bss_size:X}; {rso.internal[1] // 12} internal and {rso.external[1] // 12} external "
+              f"relocations; {len(rso.imports())} imports")
+        return 0
+    if command == "link":
+        rso = Rso(open(argv[1], "rb").read())
+        sel = open(option(argv, "--sel"), "rb").read()
+        mains = {int(k): parse_addr(v) for k, v in (m.split("=") for m in option(argv, "--main", True))}
+        image, placed, unknown = link(rso, sel, parse_addr(option(argv, "--base")),
+                                      parse_addr(option(argv, "--bss")), mains)
+        open(option(argv, "--out"), "wb").write(image)
+        for i, address in sorted(placed.items()):
+            print(f"section {i:2} at 0x{address:08X}")
+        if unknown:
+            print(f"relocation types not applied: {unknown}")
+        return 0
+    if command == "merge" and len(argv) >= 3:
+        out = merge(open(argv[1], "rb").read(), open(argv[2], "rb").read(), parse_addr(option(argv, "--base")))
+        open(option(argv, "--out"), "wb").write(out)
+        print(f"{option(argv, '--out')}: {len(out)} bytes")
+        return 0
+    if command == "build":
+        return build(argv[1])
+    print(__doc__.strip())
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

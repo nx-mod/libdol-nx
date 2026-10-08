@@ -37,6 +37,10 @@ project="$dir/recomp.yml"
 # game_id, title_id and region are corrected before anything is built from them.
 python3 "$libwiinx/tools/wiinx-identity" "$dir" --write || true
 [ -f "$project" ] || { echo "no game project at $dir (no recomp.yml)" >&2; exit 1; }
+# Modules the title loads at run time (modules.json; the Wii Menu's wwwlib):
+# linked from its contents and merged into the program recomp.yml names.
+python3 "$libwiinx/tools/wiinx-rso" build "$dir" || {
+    echo "could not build this title's run-time modules" >&2; exit 1; }
 # What the project translates is whatever its recomp.yml points at. A disc game
 # keeps that under disc/; a title installed from a WAD has no disc at all, and
 # its executable is the content its loader expands.
