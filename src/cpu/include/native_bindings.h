@@ -65,4 +65,14 @@ inline std::uint32_t Resolve(std::uint32_t reference) noexcept {
     return 0;
 }
 
+// True in the game the reference addresses come from (Mario Kart Wii), the one
+// game where a reference address is also the game's own: its table maps
+// OSExitThread to itself. Code that reaches a guest routine by its reference
+// address - a weak func_<address> helper, InvokeIndirectCpu(0x80...) - may do so
+// only here; in any other game that address is some other function, or nothing.
+inline bool IsReferenceGame() noexcept {
+    constexpr std::uint32_t kOSExitThread = 0x801AA0F0u;
+    return Resolve(kOSExitThread) == kOSExitThread;
+}
+
 }  // namespace NativeBindings

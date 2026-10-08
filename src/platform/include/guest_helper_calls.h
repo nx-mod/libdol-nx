@@ -1,5 +1,7 @@
 #pragma once
 
+#include "native_bindings.h"
+
 // Calling a helper inside the game's own SDK.
 //
 // A few places in the platform have to hand work back to code the game itself
@@ -27,7 +29,7 @@ struct CpuContext;
 // Calls it when this game has it, and says so once when it does not.
 #define WIINX_GUEST_HELPER(name, cpu)                                              \
     do {                                                                           \
-        if (&(name) != nullptr) {                                                  \
+        if (&(name) != nullptr && ::NativeBindings::IsReferenceGame()) {          \
             (name)(cpu);                                                           \
         } else {                                                                   \
             static bool reported = false;                                          \

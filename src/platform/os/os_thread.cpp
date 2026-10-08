@@ -179,15 +179,6 @@ constexpr uint32_t kRefOSExitThread = 0x801AA0F0u;
 constexpr uint32_t kRefOSInitContext = 0x801A20BCu;
 constexpr uint32_t kRefOSUnlockAllMutex = 0x801A8088u;
 
-// True in the game the reference addresses come from, where the SDK's own
-// translated routines are at them and are used unchanged. Every other game has
-// something else there, or nothing (the Wii Menu crashed jumping to it), and
-// gets the native routines below instead.
-bool IsReferenceGame()
-{
-    static const bool reference = NativeBindings::Resolve(kRefOSExitThread) == kRefOSExitThread;
-    return reference;
-}
 
 // Where a thread returns to when its function does: this game's OSExitThread.
 uint32_t OSExitThreadAddress()
@@ -289,7 +280,7 @@ void UnlockAllThreadMutexes(CpuContext* cpu, uint32_t threadPtr)
         return;
     }
     CpuContextScope scope(cpu);
-    if (!IsReferenceGame()) {
+    if (!NativeBindings::IsReferenceGame()) {
         UnlockAllMutexNative(cpu, threadPtr);
         return;
     }
@@ -385,7 +376,7 @@ extern "C" void OSCreateThread_HLE_801a9e84(CpuContext* ctx)
         // like OSInitContext, then apply the OSCreateThread-specific overrides
         // that follow in the original PPC.
         {
-            if (IsReferenceGame()) {
+            if (NativeBindings::IsReferenceGame()) {
                 CpuContextScope scope(cpu);
                 cpu->gpr[3] = threadPtr;
                 cpu->gpr[4] = entryFunc;

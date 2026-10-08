@@ -1270,6 +1270,26 @@ extern "C" void VIConfigure_HLE_801b9f6c(CpuContext* ctx)
 
     ::VIConfigure(&renderMode);
 
+#if defined(__SWITCH__)
+    // The mode a title asked for, once per change: what the screen is scaled
+    // from, and the first thing to check when a frame comes out the wrong size.
+    {
+        static uint32_t lastKey = 0;
+        const uint32_t key = static_cast<uint32_t>(renderMode.viTVmode) ^ (renderMode.fbWidth << 8) ^
+                             (renderMode.efbHeight << 18) ^ (renderMode.xfbHeight << 4) ^ renderMode.viWidth;
+        if (key != lastKey) {
+            lastKey = key;
+            char trace[192];
+            std::snprintf(trace, sizeof(trace),
+                          "[vi] VIConfigure tvmode=%u fb=%ux%u xfbH=%u vi=%ux%u at %u,%u field=%u aa=%u",
+                          static_cast<unsigned>(renderMode.viTVmode), renderMode.fbWidth, renderMode.efbHeight,
+                          renderMode.xfbHeight, renderMode.viWidth, renderMode.viHeight, renderMode.viXOrigin,
+                          renderMode.viYOrigin, renderMode.field_rendering, renderMode.aa);
+            SwitchBootLogExternal(trace);
+        }
+    }
+#endif
+
     ViSetR3(ctx, 0);
 }
 PPC_NATIVE_OVERRIDE_VOID(801B9F6C, VIConfigure_HLE_801b9f6c, (CpuContext* ctx), (ctx));

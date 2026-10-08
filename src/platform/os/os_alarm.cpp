@@ -15,6 +15,7 @@
 #include "net/network.h"
 #include "generated/RuntimeConfig.h"
 #include "os_internal.h"
+#include "native_bindings.h"
 #include "guest_helper_calls.h"
 
 extern "C" __attribute__((weak)) void func_801AADE0(CpuContext* ctx);
@@ -218,7 +219,7 @@ void InsertAlarmNative(CpuContext* cpu, uint32_t alarm, uint64_t fire, uint32_t 
 // (r3 alarm, r5:r6 fire, r7 handler, as the SDK calls it).
 void InsertAlarm(CpuContext* cpu)
 {
-    if (&func_801A0620 != nullptr) {
+    if (&func_801A0620 != nullptr && NativeBindings::IsReferenceGame()) {
         func_801A0620(cpu);
         return;
     }
@@ -230,7 +231,7 @@ void InsertAlarm(CpuContext* cpu)
 // adjustment at 0x800030D8, as the SDK's; Mario Kart Wii's copy when it is there.
 void TimeToSystemTime(CpuContext* cpu)
 {
-    if (&func_801AADE0 != nullptr) {
+    if (&func_801AADE0 != nullptr && NativeBindings::IsReferenceGame()) {
         func_801AADE0(cpu);
         return;
     }
