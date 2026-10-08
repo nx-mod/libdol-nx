@@ -17,12 +17,12 @@ namespace {
 void LogTransform(const char* what, const float* v, int n) {
 #if defined(__SWITCH__)
     static int count = 0;
-    static char last[3][160] = {};
+    static char last[5][160] = {};
     char line[160];
     int at = std::snprintf(line, sizeof(line), "[gx] %s", what);
     for (int i = 0; i < n && at < (int)sizeof(line) - 12; ++i)
         at += std::snprintf(line + at, sizeof(line) - at, " %.4g", v[i]);
-    const int slot = what[0] == 'v' ? 0 : (what[4] == 'v' ? 1 : 2);
+    const int slot = what[0] == 'v' ? 0 : what[0] == 's' ? (what[8] == 'o' ? 4 : 3) : (what[4] == 'v' ? 1 : 2);
     if (count < 12 || std::strcmp(line, last[slot]) != 0) {
         ++count;
         std::snprintf(last[slot], sizeof(last[slot]), "%s", line);
@@ -113,6 +113,7 @@ extern "C" void GX__SetZScaleOffset_80173400(float s, float o) {
 PPC_NATIVE_OVERRIDE_VOID(80173400, GX__SetZScaleOffset_80173400, (float s, float o), (s, o));
 
 extern "C" void GX__SetScissorBoxOffset_801734e0(int32_t xo, int32_t yo) {
+    { const float v[2] = {(float)xo, (float)yo}; LogTransform("scissor offset", v, 2); }
     GXSetScissorBoxOffset(xo, yo);
     try {
         const uint32_t gd = GuestGxData();
@@ -126,6 +127,7 @@ PPC_NATIVE_OVERRIDE_VOID(801734e0, GX__SetScissorBoxOffset_801734e0, (int32_t xo
 // ============================================================================
 
 extern "C" void GX__SetScissor_80173430(uint32_t l, uint32_t t, uint32_t w, uint32_t h) {
+    { const float v[4] = {(float)l, (float)t, (float)w, (float)h}; LogTransform("scissor l,t,w,h", v, 4); }
     g_scissorLeft=(int32_t)l; g_scissorTop=(int32_t)t; g_scissorWidth=(int32_t)w; g_scissorHeight=(int32_t)h;
     try { uint32_t gd=GuestGxData(); if(gd){
         uint32_t r148=Memory::Read32(gd+0x148), r14c=Memory::Read32(gd+0x14c);

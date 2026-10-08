@@ -1,3 +1,5 @@
+#include <cstdio>
+#include <cstring>
 // gx_copy.cpp - Framebuffer Copy Operations
 #include <aurora/gfx.h>
 #include "gx_internal.h"
@@ -81,12 +83,38 @@ void InvalidateEfbCopyDestinationsForRange(uint32_t addr, uint32_t size) {
 // Display Copy Source/Destination
 // ============================================================================
 
+
+#if defined(__SWITCH__)
+void SwitchBootLogExternal(const char* text) noexcept;
+#endif
+// The display copy's source and destination, the first few times and on change.
+static void LogCopySetting(const char* what, uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
+#if defined(__SWITCH__)
+    static int n = 0;
+    static char last[2][96] = {};
+    char line[96];
+    std::snprintf(line, sizeof(line), "[gx] %s %u %u %u %u", what, a, b, c, d);
+    const int slot = what[9] == 's' ? 0 : 1;
+    if (n < 6 || std::strcmp(line, last[slot]) != 0) {
+        ++n;
+        std::snprintf(last[slot], sizeof(last[slot]), "%s", line);
+        if (n < 60) SwitchBootLogExternal(line);
+    }
+#else
+    (void)what; (void)a; (void)b; (void)c; (void)d;
+#endif
+}
+
 extern "C" void GX__SetDispCopySrc_8016f438(uint32_t l, uint32_t t, uint32_t w, uint32_t h) {
+    LogCopySetting("dispcopy src", l, t, w, h);
     GXSetDispCopySrc((u16)l, (u16)t, (u16)w, (u16)h);
 }
 PPC_NATIVE_OVERRIDE_VOID(8016f438, GX__SetDispCopySrc_8016f438, (uint32_t l, uint32_t t, uint32_t w, uint32_t h), (l, t, w, h));
 
-extern "C" void GX__SetDispCopyDst_8016f4b8(uint32_t w, uint32_t h) { GXSetDispCopyDst((u16)w, (u16)h); }
+extern "C" void GX__SetDispCopyDst_8016f4b8(uint32_t w, uint32_t h) {
+    LogCopySetting("dispcopy dst", w, h, 0, 0);
+    GXSetDispCopyDst((u16)w, (u16)h);
+}
 PPC_NATIVE_OVERRIDE_VOID(8016f4b8, GX__SetDispCopyDst_8016f4b8, (uint32_t w, uint32_t h), (w, h));
 
 // ============================================================================
