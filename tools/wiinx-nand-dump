@@ -1,0 +1,176 @@
+#!/usr/bin/env python3
+"""Read files out of a console's own NAND backup (BootMii's nand.bin).
+
+    tools/wiinx-nand-dump <nand.bin> ls  [path]          list a directory
+    tools/wiinx-nand-dump <nand.bin> get <path> <file>   copy one file out
+    tools/wiinx-nand-dump <nand.bin> extract <path> <dir>
+                                                         copy a whole tree out
+    --keys <keys.bin>   the console's keys, when the dump does not end with them
+
+What only one console has - its settings (setting.txt, SYSCONF), the Wii Menu's
+channel layout (iplsave.bin), play history, Miis, saves - is in its NAND and
+nowhere else; wiinx-fetch-nand can download the titles, but not these. This
+reads them from the backup BootMii makes, so a NAND for wii-nx can start from
+the console itself rather than from an empty one.
+
+The dump is the NAND's 0x8000 clusters of 8 pages, each page 2 KiB of data and
+64 bytes of spare (ECC), BootMii's 1 KiB key block appended. The filesystem
+(SFFS) is described by the newest of the superblocks in the last 256 clusters:
+a cluster table and a file table, unencrypted. A file's clusters are AES-128-CBC
+with the console's NAND key, each on its own with a zero IV.
+
+Nothing is written into the dump. Nothing read from it belongs in a repository:
+write it to the NAND on the SD card, or a folder that is not tracked.
+"""
+import os
+import struct
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from wiicrypto import aes_cbc_decrypt  # noqa: E402
+
+PAGE = 0x800
+SPARE = 0x40
+PAGES_PER_CLUSTER = 8
+CLUSTER = PAGE * PAGES_PER_CLUSTER
+RAW_CLUSTER = (PAGE + SPARE) * PAGES_PER_CLUSTER
+CLUSTERS = 0x8000
+DUMP_SIZE = CLUSTERS * RAW_CLUSTER            # 0x21000000
+KEY_BLOCK = 0x400                             # BootMii's keys.bin, appended
+NAND_KEY_OFFSET = 0x158                       # in the key block (OTP + 0x58)
+SUPERBLOCK_CLUSTERS = 16
+SUPERBLOCKS_START = CLUSTERS - 256
+FST_ENTRIES = 0x17FF
+FAT_LAST = 0xFFFB
+
+
+class Nand:
+    def __init__(self, path, keys_path=None):
+        self.file = open(path, "rb")
+        size = os.path.getsize(path)
+        if size < DUMP_SIZE:
+            sys.exit(f"{path}: {size} bytes, not a NAND dump with spare data ({DUMP_SIZE})")
+        if keys_path:
+            keys = open(keys_path, "rb").read()
+        elif size >= DUMP_SIZE + KEY_BLOCK:
+            self.file.seek(DUMP_SIZE)
+            keys = self.file.read(KEY_BLOCK)
+        else:
+            sys.exit(f"{path} carries no key block: pass --keys <keys.bin>")
+        self.key = keys[NAND_KEY_OFFSET:NAND_KEY_OFFSET + 16]
+        if len(self.key) != 16 or self.key == bytes(16):
+            sys.exit("no NAND key in the key block")
+        self._load_superblock()
+
+    def cluster(self, index, decrypt=True):
+        self.file.seek(index * RAW_CLUSTER)
+        raw = self.file.read(RAW_CLUSTER)
+        data = b"".join(raw[p * (PAGE + SPARE):p * (PAGE + SPARE) + PAGE] for p in range(PAGES_PER_CLUSTER))
+        return aes_cbc_decrypt(self.key, bytes(16), data) if decrypt else data
+
+    def _load_superblock(self):
+        best = None
+        for start in range(SUPERBLOCKS_START, CLUSTERS, SUPERBLOCK_CLUSTERS):
+            head = self.cluster(start, decrypt=False)[:8]
+            if head[:4] != b"SFFS":
+                continue
+            version = struct.unpack(">I", head[4:8])[0]
+            if best is None or version > best[0]:
+                best = (version, start)
+        if best is None:
+            sys.exit("no SFFS superblock: is this a Wii NAND dump?")
+        data = b"".join(self.cluster(best[1] + i, decrypt=False) for i in range(SUPERBLOCK_CLUSTERS))
+        self.version = best[0]
+        self.fat = struct.unpack(">%dH" % CLUSTERS, data[0x0C:0x0C + 2 * CLUSTERS])
+        fst = 0x0C + 2 * CLUSTERS
+        self.entries = []
+        for i in range(FST_ENTRIES):
+            e = data[fst + i * 0x20:fst + (i + 1) * 0x20]
+            name = e[:12].split(b"\0")[0].decode("latin1")
+            mode, attr, sub, sib, size, uid, gid = struct.unpack(">BBHHIIH", e[12:28])
+            self.entries.append({"name": name, "type": mode & 3, "mode": mode, "attr": attr,
+                                 "sub": sub, "sib": sib, "size": size, "uid": uid, "gid": gid})
+
+    def children(self, index):
+        out, child, guard = [], self.entries[index]["sub"], 0
+        while child != 0xFFFF and child < FST_ENTRIES and guard < FST_ENTRIES:
+            out.append(child)
+            child = self.entries[child]["sib"]
+            guard += 1
+        return out
+
+    def find(self, path):
+        index = 0
+        for part in [p for p in path.split("/") if p]:
+            match = [c for c in self.children(index) if self.entries[c]["name"] == part]
+            if not match:
+                return None
+            index = match[0]
+        return index
+
+    def read(self, index):
+        entry = self.entries[index]
+        out, cluster, guard = bytearray(), entry["sub"], 0
+        while len(out) < entry["size"] and cluster < CLUSTERS and guard < CLUSTERS:
+            out += self.cluster(cluster)
+            cluster = self.fat[cluster]
+            guard += 1
+            if cluster >= FAT_LAST:
+                break
+        return bytes(out[:entry["size"]])
+
+
+def main(argv):
+    keys = None
+    if "--keys" in argv:
+        at = argv.index("--keys")
+        keys = argv[at + 1]
+        del argv[at:at + 2]
+    if len(argv) < 2:
+        print(__doc__.strip())
+        return 2
+    nand = Nand(argv[0], keys)
+    command = argv[1]
+    if command == "ls":
+        path = argv[2] if len(argv) > 2 else "/"
+        index = nand.find(path)
+        if index is None:
+            sys.exit(f"{path}: not in the NAND")
+        for child in nand.children(index):
+            e = nand.entries[child]
+            kind = "d" if e["type"] == 2 else "-"
+            print(f"{kind} {e['size']:>10}  uid={e['uid']:08X} gid={e['gid']:04X}  {e['name']}")
+        return 0
+    if command == "get" and len(argv) == 4:
+        index = nand.find(argv[2])
+        if index is None or nand.entries[index]["type"] != 1:
+            sys.exit(f"{argv[2]}: not a file in the NAND")
+        data = nand.read(index)
+        with open(argv[3], "wb") as out:
+            out.write(data)
+        print(f"{argv[2]}: {len(data)} bytes -> {argv[3]}")
+        return 0
+    if command == "extract" and len(argv) == 4:
+        index = nand.find(argv[2])
+        if index is None:
+            sys.exit(f"{argv[2]}: not in the NAND")
+
+        def walk(i, dest):
+            e = nand.entries[i]
+            if e["type"] == 1:
+                with open(dest, "wb") as out:
+                    out.write(nand.read(i))
+                print(f"{e['size']:>10}  {dest}")
+            elif e["type"] == 2:
+                os.makedirs(dest, exist_ok=True)
+                for c in nand.children(i):
+                    walk(c, os.path.join(dest, nand.entries[c]["name"]))
+
+        walk(index, argv[3])
+        return 0
+    print(__doc__.strip())
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))
