@@ -391,6 +391,34 @@ def touching(dol, address, register):
     return None
 
 
+def after_helper(dol, helper, sig):
+    """The native a helper signature stands for: the first function after it
+    whose masked code is `entry_body`.
+
+    Some natives are too plain to sign - NANDCreate and NANDCreateDir are the
+    same instructions, masked - but each follows its own SDK helper (nandCreate,
+    nandCreateDir), which is distinctive. Such a signature matches the helper and
+    carries the native's body; how far behind the helper the native sits changes
+    between builds (GXSetViewportJitter is sometimes between __GXSetViewport and
+    GXSetViewport), so it is looked for rather than assumed. Binding the helper
+    itself instead was how NANDOpen came to be called with nandOpen's arguments.
+    """
+    def word(at):
+        code = dol.read(at, 4)
+        return None if code is None else struct.unpack(">I", code)[0]
+    def starts_function(at):
+        # after a blr, or after the zero words that align a function past one
+        back = at - 4
+        while word(back) == 0:
+            back -= 4
+        return word(back) == 0x4E800020
+    for at in range(helper + sig["size"], helper + sig["size"] + 0x400, 4):
+        if starts_function(at) and (code := dol.read(at, sig["entry_size"])) is not None \
+                and masked_hash(code) == sig["entry_body"]:
+            return at
+    return None
+
+
 def masked_hash(code):
     """Hash a function with everything that legitimately moves blanked out.
 
@@ -577,6 +605,8 @@ def scan_with(dol, signatures):
                 if (code := dol.read(a, sig["size"])) is not None and masked_hash(code) == sig["body"]]
         if "touches" in sig and len(hits) == 1:
             hits = [h for h in [touching(dol, hits[0], sig["touches"])] if h]
+        if "entry_body" in sig:
+            hits = [e for e in (after_helper(dol, h, sig) for h in hits) if e]
         if len(hits) == 1:
             matched.append((sig, hits[0]))
         elif sig.get("siblings"):

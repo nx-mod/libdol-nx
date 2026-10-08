@@ -2,6 +2,150 @@
  "about": "Code signatures for libwii-nx natives: hashes of masked instructions, never code. `registration` is the name the runtime registers the native under, which a game's bindings.json maps to its own address. Add entries with tools/wiinx-scan sign.",
  "natives": [
   {
+   "name": "GX::SetProjection",
+   "build": "any",
+   "size": 100,
+   "start": "064cb4ad3aa741ee",
+   "body": "540d5d1abafd7961",
+   "signed_from": "RMCP01",
+   "registration": "GX__SetProjection_8017301c"
+  },
+  {
+   "name": "GXSetProjection",
+   "build": "any",
+   "size": 112,
+   "start": "6438e0f63ff3e6ba",
+   "body": "a7c4959e86b4847c",
+   "signed_from": "SMNP01",
+   "registration": "GX__SetProjection_8017301c"
+  },
+  {
+   "name": "GXSetViewport",
+   "build": "any",
+   "size": 144,
+   "start": "4edfcd8b5e38a868",
+   "body": "3729dbdbf2aee78e",
+   "signed_from": "RMCP01",
+   "registration": "GX__SetViewport_801733b4",
+   "helper": "__GX::SetViewport",
+   "entry_size": 44,
+   "entry_body": "64ed14fede5ff4e9"
+  },
+  {
+   "name": "GXSetViewport",
+   "build": "any",
+   "size": 144,
+   "start": "eee285fd6a7024c8",
+   "body": "30643fc8a70d90c5",
+   "signed_from": "SMNP01",
+   "registration": "GX__SetViewport_801733b4",
+   "helper": "__GXSetViewport",
+   "entry_size": 48,
+   "entry_body": "7911472302eae40e"
+  },
+  {
+   "name": "NAND::GetType",
+   "build": "any",
+   "size": 68,
+   "start": "997534e5177c838f",
+   "body": "f9d44f3a2daa195d",
+   "signed_from": "RMCP01",
+   "registration": "NANDGetType_HLE"
+  },
+  {
+   "name": "NAND::Open",
+   "build": "any",
+   "size": 140,
+   "start": "85b88ba16d7659b6",
+   "body": "b6995f1f2d2d73e5",
+   "signed_from": "RMCP01",
+   "registration": "NANDOpen_HLE"
+  },
+  {
+   "name": "NANDCreate",
+   "build": "any",
+   "size": 272,
+   "start": "76f834a4a4afbbb7",
+   "body": "1c1ebdeb89e91f3d",
+   "signed_from": "SMNP01",
+   "registration": "NANDCreate_HLE"
+  },
+  {
+   "name": "NANDCreate",
+   "build": "any",
+   "size": 296,
+   "start": "18f497985a02b1ab",
+   "body": "4eef978a9940b839",
+   "signed_from": "RMCP01",
+   "registration": "NANDCreate_HLE",
+   "helper": "nandCreate",
+   "entry_size": 116,
+   "entry_body": "5543ddb6bca621e3"
+  },
+  {
+   "name": "NANDCreateDir",
+   "build": "any",
+   "size": 300,
+   "start": "18f497985a02b1ab",
+   "body": "2cfecfe018eb7ab0",
+   "signed_from": "RMCP01",
+   "registration": "NANDCreateDir_HLE",
+   "helper": "nandCreateDir",
+   "entry_size": 116,
+   "entry_body": "5543ddb6bca621e3"
+  },
+  {
+   "name": "NANDGetStatus",
+   "build": "any",
+   "size": 340,
+   "start": "bbd63a89a7a04851",
+   "body": "b0cc046f72926fe7",
+   "signed_from": "RMCP01",
+   "registration": "NANDGetStatus_HLE",
+   "helper": "nandGetStatus",
+   "entry_size": 100,
+   "entry_body": "838b4473ad1d095c"
+  },
+  {
+   "name": "NANDGetType",
+   "build": "any",
+   "size": 80,
+   "start": "997534e5177c838f",
+   "body": "3f83e47e4648e472",
+   "signed_from": "SMNP01",
+   "registration": "NANDGetType_HLE"
+  },
+  {
+   "name": "NANDMove",
+   "build": "any",
+   "size": 112,
+   "start": "ad54f0fb6d5b2639",
+   "body": "9a1af41a3f2db31d",
+   "signed_from": "SMNP01",
+   "registration": "NANDMove_HLE"
+  },
+  {
+   "name": "NANDMove",
+   "build": "any",
+   "size": 424,
+   "start": "754151cc5eace40b",
+   "body": "f5937daf5c17a029",
+   "signed_from": "RMCP01",
+   "registration": "NANDMove_HLE",
+   "helper": "nandMove",
+   "entry_size": 100,
+   "entry_body": "838b4473ad1d095c"
+  },
+  {
+   "name": "NANDOpen",
+   "build": "any",
+   "size": 144,
+   "start": "85b88ba16d7659b6",
+   "body": "b42631a96b846511",
+   "signed_from": "SMNP01",
+   "registration": "NANDOpen_HLE"
+  },
+  {
    "name": "__AIClockInit",
    "build": "any",
    "size": 544,
@@ -2745,27 +2889,6 @@
    "spans": 3
   },
   {
-   "name": "__GXSetProjection",
-   "build": "any",
-   "size": 68,
-   "start": "356a6bb26dd4b1f1",
-   "body": "dd38c3e8a29712df",
-   "signed_from": [
-    "RMCP01",
-    "RSPE01"
-   ],
-   "registration": "GX__SetProjection_8017301c"
-  },
-  {
-   "name": "__GXSetProjection",
-   "build": "any",
-   "size": 80,
-   "start": "8c33b630c2254a1f",
-   "body": "bd8dfffbba521ede",
-   "signed_from": "SMNE01",
-   "registration": "GX__SetProjection_8017301c"
-  },
-  {
    "name": "GX::SetProjectionv",
    "build": "any",
    "size": 80,
@@ -3261,27 +3384,6 @@
    ],
    "registration": "GX__SetViewportJitter_80173378",
    "spans": 3
-  },
-  {
-   "name": "__GXSetViewport",
-   "build": "any",
-   "size": 144,
-   "start": "4edfcd8b5e38a868",
-   "body": "3729dbdbf2aee78e",
-   "signed_from": [
-    "RMCP01",
-    "RSPE01"
-   ],
-   "registration": "GX__SetViewport_801733b4"
-  },
-  {
-   "name": "__GXSetViewport",
-   "build": "any",
-   "size": 144,
-   "start": "eee285fd6a7024c8",
-   "body": "30643fc8a70d90c5",
-   "signed_from": "SMNE01",
-   "registration": "GX__SetViewport_801733b4"
   },
   {
    "name": "GX::SetVtxAttrFmt",
@@ -3897,39 +3999,6 @@
    "registration": "NANDClose_HLE"
   },
   {
-   "name": "nandCreateDir",
-   "build": "any",
-   "size": 300,
-   "start": "18f497985a02b1ab",
-   "body": "2cfecfe018eb7ab0",
-   "signed_from": [
-    "RSPE01",
-    "RMCP01"
-   ],
-   "registration": "NANDCreateDir_HLE"
-  },
-  {
-   "name": "nandCreate",
-   "build": "any",
-   "size": 272,
-   "start": "76f834a4a4afbbb7",
-   "body": "1c1ebdeb89e91f3d",
-   "signed_from": "SMNE01",
-   "registration": "NANDCreate_HLE"
-  },
-  {
-   "name": "nandCreate",
-   "build": "any",
-   "size": 296,
-   "start": "18f497985a02b1ab",
-   "body": "4eef978a9940b839",
-   "signed_from": [
-    "RSPE01",
-    "RMCP01"
-   ],
-   "registration": "NANDCreate_HLE"
-  },
-  {
    "name": "NAND::Delete",
    "build": "any",
    "size": 176,
@@ -4005,36 +4074,6 @@
    "registration": "NANDGetLength_HLE"
   },
   {
-   "name": "nandGetStatus",
-   "build": "any",
-   "size": 340,
-   "start": "bbd63a89a7a04851",
-   "body": "b0cc046f72926fe7",
-   "signed_from": [
-    "RSPE01",
-    "RMCP01"
-   ],
-   "registration": "NANDGetStatus_HLE"
-  },
-  {
-   "name": "nandGetStatus",
-   "build": "any",
-   "size": 352,
-   "start": "bbd63a89a7a04851",
-   "body": "6f09198743836e1c",
-   "signed_from": "SMNE01",
-   "registration": "NANDGetStatus_HLE"
-  },
-  {
-   "name": "nandGetType",
-   "build": "any",
-   "size": 724,
-   "start": "a218f4ad60fe5865",
-   "body": "2114a2f22e51f079",
-   "signed_from": "RMCP01",
-   "registration": "NANDGetType_HLE"
-  },
-  {
    "name": "NAND::Init",
    "build": "any",
    "size": 304,
@@ -4062,27 +4101,6 @@
    "registration": "NANDInit_HLE"
   },
   {
-   "name": "nandMove",
-   "build": "any",
-   "size": 424,
-   "start": "754151cc5eace40b",
-   "body": "f5937daf5c17a029",
-   "signed_from": [
-    "RSPE01",
-    "RMCP01"
-   ],
-   "registration": "NANDMove_HLE"
-  },
-  {
-   "name": "nandMove",
-   "build": "any",
-   "size": 432,
-   "start": "754151cc5eace40b",
-   "body": "7f2596b056df7b32",
-   "signed_from": "SMNE01",
-   "registration": "NANDMove_HLE"
-  },
-  {
    "name": "NAND::OpenAsync",
    "build": "any",
    "size": 128,
@@ -4102,27 +4120,6 @@
     "RSPE01"
    ],
    "registration": "NANDOpenAsync_HLE"
-  },
-  {
-   "name": "nandOpen",
-   "build": "any",
-   "size": 276,
-   "start": "41ec807d03917339",
-   "body": "d76cf360ec9f8ce9",
-   "signed_from": [
-    "RSPE01",
-    "RMCP01"
-   ],
-   "registration": "NANDOpen_HLE"
-  },
-  {
-   "name": "nandOpen",
-   "build": "any",
-   "size": 272,
-   "start": "c264f9ba8b411323",
-   "body": "5638276ebf745b1e",
-   "signed_from": "SMNE01",
-   "registration": "NANDOpen_HLE"
   },
   {
    "name": "NANDPrivateCreateAsync_HLE",

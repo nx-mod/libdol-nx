@@ -74,18 +74,50 @@ def canonical(name):
     return name.replace("::", "").replace("_", "").lower()
 
 
+def spelled(name):
+    """A name with only its spelling between maps removed: GX::Begin and
+    GX__Begin_8016xxxx are GXBegin, but __GXBegin and nandOpen stay themselves."""
+    name = re.sub(r"(_HLE)?(_8[0-9a-fA-F]{7})?$", "", name)
+    name = re.sub(r"_HLE$", "", name)
+    return re.sub(r"(?<=\w)(::|__)", "", name)
+
+
 def by_name(src_root, entries, known):
-    """{address in this game: registration}, matched by name through its map."""
+    """{address in this game: registration}, matched by name through its map.
+
+    canonical() folds case and underscores, so the SDK's internal helper and the
+    public function it serves fold together - nandOpen and NAND::Open,
+    __GXSetViewport and GX::SetViewport - and the helper comes first in the map.
+    A folded name that more than one function shares is settled by the exact
+    spelling, or not at all: signing the helper binds every game's public call to
+    it, with the wrong arguments."""
     index = {}
     for address, name in entries:
-        index.setdefault(canonical(name), address)
+        index.setdefault(canonical(name), []).append((address, name))
+    def internal(name):
+        # the SDK's own convention: helpers are __GXFoo or nandFoo, public
+        # functions GXFoo, NANDFoo, GX::Foo
+        return name.startswith("_") or name[:1].islower()
+
     found = {}
     for registration in list(registrations(src_root).values()) + sorted(library_natives(src_root)):
-        keys = [canonical(registration)]
-        keys += [canonical(name) for name, reg in known if reg == registration]
-        for key in keys:
-            if key in index:
-                found[index[key]] = registration
+        names = [registration] + [name for name, reg in known if reg == registration]
+        # what the native is known to be: a helper if any game names it as one
+        # (OS____GetDIConfig is __OSGetDIConfig), public otherwise
+        public = not any(internal(spelled(n)) for n in names)
+        for name in names:
+            candidates = index.get(canonical(name), [])
+            # a public native never falls back to a helper: a game whose link
+            # dropped NANDGetStatus still has nandGetStatus, which is not it
+            if public:
+                candidates = [c for c in candidates if not internal(spelled(c[1]))]
+            if len({spelled(c[1]) for c in candidates}) > 1:
+                wanted = {spelled(n) for n in names}
+                candidates = [c for c in candidates if spelled(c[1]) in wanted]
+            # (the same name twice - a function and a thunk the map named after
+            # it - is the first, as before)
+            if candidates and len({spelled(c[1]) for c in candidates}) == 1:
+                found[candidates[0][0]] = registration
                 break
     return found
 
