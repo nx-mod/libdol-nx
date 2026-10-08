@@ -1254,6 +1254,11 @@
     "library": "libdol-nx",
     "native": "GX__SetCopyClamp_8016f618"
   },
+  "0x8016F8FC": {
+    "file": "libdol-nx/src/platform/gx/gx_copy.cpp",
+    "library": "libdol-nx",
+    "native": "GX__SetDispCopyYScale_8016f8fc"
+  },
   "0x8016FA40": {
     "file": "libdol-nx/src/platform/gx/gx_copy.cpp",
     "library": "libdol-nx",
@@ -2828,6 +2833,21 @@
     "file": "libwii-nx/src/input/wpad.cpp",
     "library": "libwii-nx",
     "native": "WPADProbe_HLE"
+  },
+  "0x801C0A1C": {
+    "file": "libwii-nx/src/input/wpad.cpp",
+    "library": "libwii-nx",
+    "native": "WPADSetSamplingCallback_HLE"
+  },
+  "0x801C0A84": {
+    "file": "libwii-nx/src/input/wpad.cpp",
+    "library": "libwii-nx",
+    "native": "WPADSetConnectCallback_HLE"
+  },
+  "0x801C0AEC": {
+    "file": "libwii-nx/src/input/wpad.cpp",
+    "library": "libwii-nx",
+    "native": "WPADSetExtensionCallback_HLE"
   },
   "0x801C0B54": {
     "file": "libwii-nx/src/input/wpad.cpp",

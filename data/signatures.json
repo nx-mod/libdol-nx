@@ -11,6 +11,24 @@
    "registration": "GX__SetProjection_8017301c"
   },
   {
+   "name": "GXSetDispCopyYScale",
+   "build": "any",
+   "size": 204,
+   "start": "cf70bd040ade60c8",
+   "body": "f6673dbe48002248",
+   "signed_from": "RMCP01",
+   "registration": "GX__SetDispCopyYScale_8016f8fc"
+  },
+  {
+   "name": "GXSetDispCopyYScale",
+   "build": "any",
+   "size": 208,
+   "start": "babc9f13758b54b7",
+   "body": "d714d2ad65a5a122",
+   "signed_from": "SMNP01",
+   "registration": "GX__SetDispCopyYScale_8016f8fc"
+  },
+  {
    "name": "GXSetProjection",
    "build": "any",
    "size": 112,

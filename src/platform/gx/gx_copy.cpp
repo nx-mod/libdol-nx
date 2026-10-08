@@ -91,10 +91,10 @@ void SwitchBootLogExternal(const char* text) noexcept;
 static void LogCopySetting(const char* what, uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
 #if defined(__SWITCH__)
     static int n = 0;
-    static char last[2][96] = {};
+    static char last[3][96] = {};
     char line[96];
     std::snprintf(line, sizeof(line), "[gx] %s %u %u %u %u", what, a, b, c, d);
-    const int slot = what[9] == 's' ? 0 : 1;
+    const int slot = what[9] == 's' ? 0 : what[9] == 'd' ? 1 : 2;
     if (n < 6 || std::strcmp(line, last[slot]) != 0) {
         ++n;
         std::snprintf(last[slot], sizeof(last[slot]), "%s", line);
@@ -142,6 +142,18 @@ extern "C" void GX__SetCopyFilter_8016fa40(uint32_t aa, uint32_t spa, uint32_t v
     GXSetCopyFilter((GXBool)aa, sp, (GXBool)vf, vfb);
 }
 PPC_NATIVE_OVERRIDE_VOID(8016fa40, GX__SetCopyFilter_8016fa40, (uint32_t aa, uint32_t spa, uint32_t vf, uint32_t vfa), (aa, spa, vf, vfa));
+
+// GXSetDispCopyYScale(vscale) -> the XFB lines the display copy makes. The SDK's
+// own counts them from the copy source in its GX state, which the native
+// GXSetDispCopySrc never writes: it read a height of 0 and answered 1 line, the
+// Wii Menu passed that to GXSetDispCopyDst, and every frame was copied into a
+// single line across the middle of the screen. Aurora keeps the real source.
+extern "C" uint32_t GX__SetDispCopyYScale_8016f8fc(float vscale) {
+    const uint32_t lines = GXSetDispCopyYScale(vscale);
+    LogCopySetting("dispcopy yscale lines", lines, static_cast<uint32_t>(vscale * 1000.0f), 0, 0);
+    return lines;
+}
+PPC_NATIVE_OVERRIDE(8016f8fc, GX__SetDispCopyYScale_8016f8fc, uint32_t, (float vscale), (vscale));
 
 extern "C" void GX__SetDispCopyGamma_8016fc24(uint32_t g) { GXSetDispCopyGamma((GXGamma)g); }
 PPC_NATIVE_OVERRIDE_VOID(8016fc24, GX__SetDispCopyGamma_8016fc24, (uint32_t g), (g));
