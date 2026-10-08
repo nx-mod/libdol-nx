@@ -1314,6 +1314,7 @@ int RunTranslateRecursive(string[] argsTail)
                 .Where(static pair => pair.Value == 0)
                 .Select(static pair => pair.Key));
             var processedComponents = 0;
+            var demotedStateFree = new List<uint>();
             while (readyComponents.Count != 0)
             {
                 var componentIndex = readyComponents.Min;
@@ -1332,7 +1333,26 @@ int RunTranslateRecursive(string[] argsTail)
                     changed = false;
                     foreach (var address in members)
                     {
-                        var refined = RefineStateFreeContract(address);
+                        if (!stateFreeAbiFunctions.Contains(address)) continue;
+                        GuestAbiContract refined;
+                        try
+                        {
+                            refined = RefineStateFreeContract(address);
+                        }
+                        catch (InvalidOperationException error) when (error.Message.Contains("retained CpuContext access", StringComparison.Ordinal))
+                        {
+                            // Admission works from the planned contracts; lowering can
+                            // still leave a call that needs CpuContext (first seen in the
+                            // Wii Menu's wwwlib module, 0x80465AD4). State-free is an
+                            // optimisation, so the function keeps the ordinary ABI, and
+                            // callers refined after it then do the same in their turn.
+                            stateFreeAbiFunctions.Remove(address);
+                            stateFreeAbiContracts.Remove(address);
+                            stateFreeCallSymbols.Remove(address);
+                            demotedStateFree.Add(address);
+                            changed = true;
+                            continue;
+                        }
                         if (stateFreeAbiContracts[address] == refined) continue;
                         stateFreeAbiContracts[address] = refined;
                         changed = true;
@@ -1345,6 +1365,10 @@ int RunTranslateRecursive(string[] argsTail)
             }
             if (processedComponents != eligibleComponents.Count)
                 throw new InvalidOperationException("State-free component graph was not acyclic after SCC condensation.");
+            if (demotedStateFree.Count != 0)
+                Console.WriteLine(
+                    $"[translator] State-free ABI: {demotedStateFree.Count:N0} function(s) kept the ordinary ABI " +
+                    $"because lowering still needed CpuContext (first 0x{demotedStateFree.Min():X8}).");
 
             // A single union signature recreates CpuContext traffic as Win x64 stack args/hidden
             // struct-return. Materialize compact variants instead; the four-input/two-output cap
