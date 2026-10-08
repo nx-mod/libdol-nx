@@ -259,6 +259,19 @@ void bind_textures(const State& state, const TevConfig& tev, const CommandProces
 
 } // namespace
 
+void shutdown_gx() {
+  for (auto& [key, cached] : g_textures) {
+    destroy(cached->view);
+    destroy(cached->texture);
+  }
+  g_textures.clear();
+  for (auto& [key, sampler] : g_samplers) {
+    destroy(*sampler);
+  }
+  g_samplers.clear();
+  g_shaderPairs.clear();
+}
+
 bool draw_gx(const State& state, const Draw& draw, uint32_t width, uint32_t height,
              const CommandProcessor::Memory& memory) {
   DkPrimitive primitive;

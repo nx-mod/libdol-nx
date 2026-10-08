@@ -195,5 +195,9 @@ Texture& acquire_screen();
 void present();
 // the screen's swapchain and images gone (shutdown does it first)
 void shutdown_screen();
+// the GX renderer's textures and samplers, and the shaders' code memory, freed
+// (shutdown does both)
+void shutdown_gx();
+void shutdown_shaders();
 
 } // namespace dol::dk

@@ -134,7 +134,12 @@ bool initialize() {
 void shutdown() {
   if (g.queue)
     dkQueueWaitIdle(g.queue);
+  // (every memory block before the device: a program the homebrew loader
+  // runs shares its process, and a block left mapped - the shaders' code
+  // above all - crashes the loader when it takes over again)
   shutdown_screen();
+  shutdown_gx();
+  shutdown_shaders();
   if (g.commands)
     dkCmdBufDestroy(g.commands);
   if (g.transfer)

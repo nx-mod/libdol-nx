@@ -88,6 +88,19 @@ DkShader* load(const char* dksh, size_t size) {
 
 }  // namespace
 
+void shutdown_shaders() {
+  std::lock_guard<std::mutex> guard(g_shaders.lock);
+  for (auto& [key, loaded] : g_shaders.loaded) {
+    delete loaded;
+  }
+  g_shaders.loaded.clear();
+  if (g_shaders.code) {
+    dkMemBlockDestroy(g_shaders.code);
+    g_shaders.code = nullptr;
+  }
+  g_shaders.code_used = 0;
+}
+
 const DkShader* shader(ShaderStage stage, const char* glsl) {
     const uint64_t key = source_key(stage, glsl);
     std::lock_guard<std::mutex> guard(g_shaders.lock);
