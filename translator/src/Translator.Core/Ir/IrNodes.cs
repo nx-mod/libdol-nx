@@ -60,7 +60,15 @@ public sealed record IrResolvedStorePair(
     bool Descending = false)
     : IrInstruction("resolved_store_pair");
 
-public sealed record IrCall(string Destination, string Target, IReadOnlyList<IrValue> Arguments) : IrInstruction("call");
+public sealed record IrCall(string Destination, string Target, IReadOnlyList<IrValue> Arguments) : IrInstruction("call")
+{
+    /// <summary>
+    /// A `b` (no link) to another function: the caller's next instruction is a
+    /// return, nothing of this frame is used again, and it is emitted as a host
+    /// tail call so a chain of such jumps does not grow the host stack.
+    /// </summary>
+    public bool IsTailCall { get; init; }
+}
 
 /// <summary>
 /// Indirect call through a register or computed address (e.g., blrl/bctrl).

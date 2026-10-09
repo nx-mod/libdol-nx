@@ -315,6 +315,18 @@ public sealed partial class CxxLinearCodeGenerator
                         break;
                     }
 
+                    // A `bl` into another function's code that never returns to
+                    // this caller (it reloads the link register before its `blr`)
+                    // is a jump: the guest stack does not grow, so the host stack
+                    // must not either. Everything goes to the context first; the
+                    // target resumes from it and this frame is gone.
+                    if (call.IsTailCall || (s_tailJumpCallTargets is { } tailJumpTargets && tailJumpTargets.Contains(addr)))
+                    {
+                        AppendFlush(sb, pad);
+                        sb.AppendLine($"{pad}MKW_TAIL_JUMP(0x{addr:X8}u, ctx);");
+                        break;
+                    }
+
                     // Guest call boundary: CpuContext becomes authoritative for the callee. Argument normalization
                     // and state-free marshalling both read/write CpuContext directly, so the flush choice below
                     // can't be narrowed when either is present; normalization is built into its own buffer first
@@ -515,8 +527,9 @@ public sealed partial class CxxLinearCodeGenerator
                     // and this frame never observes registers again, so the
                     // locals must not be written back afterwards.
                     AppendFlush(sb, pad);
-                    sb.AppendLine($"{pad}InvokeIndirectJump({jumpTarget}, ctx);");
-                    sb.AppendLine($"{pad}return;");
+                    // A host tail call (MKW_TAIL_JUMP), so a dispatch loop of
+                    // jumps runs in constant host stack.
+                    sb.AppendLine($"{pad}MKW_TAIL_JUMP({jumpTarget}, ctx);");
                 }
                 break;
             case IrComment comment:

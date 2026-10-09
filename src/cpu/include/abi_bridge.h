@@ -659,6 +659,59 @@ inline void InvokeIndirectJump(uint32_t target, CpuContext* ctx) {
     std::exit(EXIT_FAILURE);
 }
 
+// Guest jumps as host tail calls.
+//
+// A guest `b`/`bctr` to another function uses no guest stack, and nor may its
+// translation: an interpreter whose handlers jump back into the middle of its
+// dispatch loop (the Wii Menu's JavaScript engine, wwwlib) otherwise nests one
+// host frame per interpreted instruction and overflows any stack. The
+// translator emits such jumps with MKW_TAIL_JUMP, which resolves the target to
+// an entry with the translated-function signature and calls it in tail
+// position, so the jumping frame is gone before the target runs. Nothing runs
+// after a jump, so the call guards of an ordinary dispatch do not apply.
+using GuestCpuEntry = void (*)(CpuContext*);
+
+inline uint32_t g_tailJumpTarget = 0;
+
+// The rare target with no raw entry (natives, dynamically registered code) is
+// reached through the ordinary dispatcher, from a frame of the same signature.
+inline void TailJumpUnresolved(CpuContext* cpu) {
+    InvokeIndirectJump(g_tailJumpTarget, cpu);
+}
+
+inline GuestCpuEntry ResolveTailJump(uint32_t target, CpuContext* cpu) {
+    if (TryGetCpuContext() != cpu) {
+        g_currentCpuContext = cpu;
+    }
+    const auto* record = TranslatedFunctionRegistry::FindRawByAddressPtr(target);
+    // A target whose ordinary dispatch restores registers afterwards (natives,
+    // translated code that writes nonvolatile FPRs) still needs that from a
+    // jump, so it goes through the dispatcher; everything else is entered here.
+    if (record && record->entry && !record->preserveNonvolatileGprs &&
+        record->nonvolatileFprWriteMask == 0) {
+        RecompMod::g_currentTranslatedExecutionAddress = target;
+        return record->entry;
+    }
+    g_tailJumpTarget = target;
+    return &TailJumpUnresolved;
+}
+
+#if defined(__clang__)
+#define MKW_MUSTTAIL [[clang::musttail]]
+#elif defined(__GNUC__) && __GNUC__ >= 15
+#define MKW_MUSTTAIL [[gnu::musttail]]
+#else
+#define MKW_MUSTTAIL
+#endif
+
+// `cpu` must be the translated function's own CpuContext parameter.
+#define MKW_TAIL_JUMP(target, cpu)                                              \
+    do {                                                                        \
+        const GuestCpuEntry mkw_tail_entry_ = ResolveTailJump((target), (cpu)); \
+        MKW_MUSTTAIL return mkw_tail_entry_(cpu);                               \
+    } while (0)
+
+
 inline void InvokeIndirectCpu(uint32_t target, CpuContext* ctx) {
     CpuContext* cpu = ctx ? ctx : &GetPersistentCpuContext();
     if (target == 0) {

@@ -36,6 +36,11 @@ public sealed record TranslationOptions(
     ulong ModRegistrationModuleId = 1,
     IReadOnlySet<uint>? NonReturningCallTargets = null,
     IReadOnlySet<uint>? LrContinuationCallTargets = null,
+    // Call targets that never return to their caller: entries in the middle of
+    // another function's code that overwrite the link register before any
+    // `blr`. A `bl` to one is a jump in disguise and is emitted as a host tail
+    // call, so an interpreter looping through them does not grow the host stack.
+    IReadOnlySet<uint>? TailJumpCallTargets = null,
     IReadOnlyDictionary<uint, uint>? LinkedCallFallthroughLrOverrides = null,
     IReadOnlySet<uint>? KnownFunctionEntryPoints = null,
     IReadOnlyDictionary<uint, GuestAbiContract>? GuestAbiContracts = null,
@@ -749,7 +754,8 @@ public sealed class FunctionTranslator
             gqrCalleeWriteMasks: options.GqrCalleeWriteMasks,
             gqrConstantsRequireRuntimeGuard: options.GqrConstantsRequireRuntimeGuard,
             enableLeafAbiSpillElision: options.EnableLeafAbiSpillElision,
-            modOverridableCallTargets: options.ModOverridableCallTargets);
+            modOverridableCallTargets: options.ModOverridableCallTargets,
+            tailJumpCallTargets: options.TailJumpCallTargets);
     }
 
     private static IrTracePpc CreateTrace(PpcInstruction instruction)
@@ -898,7 +904,7 @@ public sealed class FunctionTranslator
         {
             block = new IrBasicBlock(label, new IrInstruction[]
             {
-                new IrCall(string.Empty, $"0x{absoluteTarget:X8}", BuildAbiCallArgs()),
+                new IrCall(string.Empty, $"0x{absoluteTarget:X8}", BuildAbiCallArgs()) { IsTailCall = true },
                 new IrReturn(null)
             });
             return true;

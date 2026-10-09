@@ -1024,6 +1024,17 @@ int RunTranslateRecursive(string[] argsTail)
                 nativeGuestEffects.Contracts);
             var guestAbiContracts = interproceduralGuestAbi.Contracts
                 .ToDictionary(static pair => pair.Key, static pair => pair.Value);
+            // Entries in the middle of another function's code that overwrite the
+            // link register before they read it never return to whoever calls
+            // them: a `bl` to one is a jump (an interpreter's handlers re-entering
+            // its dispatch loop), emitted as a host tail call.
+            var tailJumpCallTargets = interiorEntryPoints
+                .Where(address => guestAbiContracts.TryGetValue(address, out var contract) &&
+                                  !contract.ReadsLrBeforeWrite)
+                .ToHashSet();
+            Console.WriteLine(
+                $"[translator] Tail-jump call targets: {tailJumpCallTargets.Count:N0} interior entr(ies) " +
+                "that never return to their caller.");
             var recursiveComponents = interproceduralGuestAbi.StronglyConnectedComponents
                 .Count(component => component.Count > 1 ||
                     guestAbiContracts[component[0]].DirectCallTargets.Contains(component[0]));
@@ -1234,7 +1245,8 @@ int RunTranslateRecursive(string[] argsTail)
                         StateFreeCallSymbols: stateFreeCallSymbols,
                         StateFreeCallSiteVariants: stateFreeCallSiteVariantsByCaller.GetValueOrDefault(address),
                          StateFreeEntryVariants: stateFreeEntryVariantsByTarget.GetValueOrDefault(address),
-                         ModOverridableCallTargets: modOverridableCallTargets),
+                         ModOverridableCallTargets: modOverridableCallTargets,
+                         TailJumpCallTargets: tailJumpCallTargets),
                     residentPolicy,
                     address);
             }

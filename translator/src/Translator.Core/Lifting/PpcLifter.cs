@@ -1918,7 +1918,10 @@ public sealed partial class PpcLifter
                     var tailCallArgs = AbiCallArguments;
                     return new IrInstruction[]
                     {
-                        new IrCall(string.Empty, TargetLabel(ins, validAddresses, preferFallthrough: false), tailCallArgs),
+                        new IrCall(string.Empty, TargetLabel(ins, validAddresses, preferFallthrough: false), tailCallArgs)
+                        {
+                            IsTailCall = true,
+                        },
                         new IrReturn(null)
                     };
                 }

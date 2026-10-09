@@ -15,7 +15,7 @@ public interface ICanonicalIrProvider
 /// </summary>
 public sealed class CanonicalIrStore : ICanonicalIrProvider
 {
-    public const int FormatVersion = 1;
+    public const int FormatVersion = 2;  // 2: tail calls keep their flag
     private readonly object _gate = new();
     private readonly Dictionary<uint, byte[]> _entries = new();
 
@@ -52,7 +52,8 @@ internal static class CanonicalIrBinaryCodec
     {
         Assign, Binary,
         Load, Store, Call, IndirectCall, SetCrField, Phi, Branch, Jump,
-        IndirectJump, JumpTable, Return, Comment, TracePpc, Undefined
+        IndirectJump, JumpTable, Return, Comment, TracePpc, Undefined,
+        TailCall,  // an IrCall with IsTailCall: a `b` to another function
     }
 
     public static byte[] Encode(IrFunction function)
@@ -166,7 +167,7 @@ internal static class CanonicalIrBinaryCodec
             case IrBinary x: writer.Write((byte)Op.Binary); Id(x.Destination); Value(x.Left); Value(x.Right); Id(x.Op); break;
             case IrLoad x: writer.Write((byte)Op.Load); Id(x.Destination); WriteAddress(writer, ids, x.Address); WriteVarInt(writer, x.SizeBytes); break;
             case IrStore x: writer.Write((byte)Op.Store); WriteAddress(writer, ids, x.Address); Value(x.Source); WriteVarInt(writer, x.SizeBytes); break;
-            case IrCall x: writer.Write((byte)Op.Call); Id(x.Destination); Id(x.Target); Values(x.Arguments); break;
+            case IrCall x: writer.Write((byte)(x.IsTailCall ? Op.TailCall : Op.Call)); Id(x.Destination); Id(x.Target); Values(x.Arguments); break;
             case IrIndirectCall x: writer.Write((byte)Op.IndirectCall); Id(x.Destination); Value(x.Target); Values(x.Arguments); break;
             case IrSetCrField x: writer.Write((byte)Op.SetCrField); WriteVarInt(writer, x.FieldIndex); Value(x.Left); Value(x.Right); writer.Write(x.IsUnsigned); break;
             case IrPhi x:
@@ -202,6 +203,7 @@ internal static class CanonicalIrBinaryCodec
             Op.Load => new IrLoad(Id(), ReadAddress(reader, strings), ReadVarInt(reader)),
             Op.Store => new IrStore(ReadAddress(reader, strings), Value(), ReadVarInt(reader)),
             Op.Call => new IrCall(Id(), Id(), Values()),
+            Op.TailCall => new IrCall(Id(), Id(), Values()) { IsTailCall = true },
             Op.IndirectCall => new IrIndirectCall(Id(), Value(), Values()),
             Op.SetCrField => new IrSetCrField(ReadVarInt(reader), Value(), Value(), reader.ReadBoolean()),
             Op.Phi => ReadPhi(reader, strings),
