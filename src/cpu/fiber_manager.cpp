@@ -35,6 +35,23 @@ std::unordered_map<uint32_t, GuestFiber> GuestFiberManager::s_fibers;
 std::vector<void*> GuestFiberManager::s_fibersPendingDelete;
 void* GuestFiberManager::s_schedulerFiber = nullptr;
 uint32_t GuestFiberManager::s_currentGuestThread = 0;
+
+namespace {
+// The ambient CPU context (g_currentCpuContext, what natives read and write as
+// "the guest registers") is one pointer for the host thread, which every guest
+// fiber on it shares. A fiber switched away while it pointed at that fiber's
+// own scratch context - a NAND completion or interrupt callback that blocked -
+// left the next fiber's natives writing registers into the first fiber's stack,
+// and into freed heap once that thread ended and its stack was released: guest
+// stack values in the fiber map's nodes, and the Wii Menu's web engine crashed.
+// Each fiber puts back the pointer it had when it resumes.
+void SwitchKeepingAmbientContext(void* target) {
+    CpuContext* const ambient = g_currentCpuContext;
+    HostContext::Switch(target);
+    g_currentCpuContext = ambient;
+}
+}  // namespace
+
 bool GuestFiberManager::s_initialized = false;
 MKW_THREAD_LOCAL CpuContext* GuestFiberManager::s_cpuContext = nullptr;
 
@@ -476,7 +493,7 @@ void GuestFiberManager::SwitchToThread(uint32_t guestThreadAddr, CpuContext* cpu
 #endif
 
     // Switch to the target fiber (the target fiber will load its own context)
-    HostContext::Switch(fiberHandle);
+    SwitchKeepingAmbientContext(fiberHandle);
 
     // When we return here, the fiber that issued SwitchToThread has resumed.
     // That does not automatically mean the previous guest thread became runnable
@@ -682,7 +699,7 @@ void GuestFiberManager::FiberProc(void* param)
                       << ", fn=0x" << startFn << ") after retries; continuing anyway." << std::dec << std::endl;
             break;
         }
-        HostContext::Switch(s_schedulerFiber);
+        SwitchKeepingAmbientContext(s_schedulerFiber);
     }
 
     // The deferral loop above yields to the scheduler and therefore can resume
