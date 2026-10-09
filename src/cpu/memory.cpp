@@ -686,6 +686,52 @@ void WriteExi32(uint32_t addr, uint32_t value) {
     g_exi[offset / 4].store(value, std::memory_order_relaxed);
 }
 
+// The serial interface's registers (SI: 0xCC006400 on a GameCube, its
+// 0xCD006400 mirror on a Wii), kept as a register file the same way: four
+// channels of output/input buffers (0x00-0x2C), SIPOLL (0x30), SICOMCSR (0x34),
+// SISR (0x38), SIEXILK (0x3C) and the I/O buffer (0x80-0xFF). Controllers reach
+// a game through libdol's PAD natives; this is for SDK code that drives the
+// registers itself - the Mii Channel's SIInit reads SICOMCSR before any of
+// that. A transfer is always finished (SICOMCSR's TSTART bit reads 0) and
+// nothing answers, so no wait spins and no device appears.
+constexpr uint32_t kSiSize = 0x100u;
+constexpr uint32_t kSiComCsr = 0x34u;
+constexpr uint32_t kSiStatus = 0x38u;
+constexpr uint32_t kSiComCsrStart = 1u << 0;
+constexpr uint32_t kSiComCsrDone = 1u << 31;  // TCINT: written 1 to clear
+std::array<std::atomic<uint32_t>, kSiSize / 4> g_si{};
+
+bool IsSi(uint32_t addr) {
+    const uint32_t offset = (addr & ~0x01000000u) - 0xCC006400u;  // either mirror
+    return offset < kSiSize && (addr & 3u) == 0;
+}
+
+uint32_t ReadSi32(uint32_t addr) {
+    const uint32_t offset = (addr & ~0x01000000u) - 0xCC006400u;
+    const uint32_t value = g_si[offset / 4].load(std::memory_order_relaxed);
+    return offset == kSiComCsr ? value & ~kSiComCsrStart : value;
+}
+
+void WriteSi32(uint32_t addr, uint32_t value) {
+    const uint32_t offset = (addr & ~0x01000000u) - 0xCC006400u;
+    if (offset == kSiStatus) {
+        return;  // error bits are written 1 to clear, and none is ever set
+    }
+    if (offset == kSiComCsr) {
+        const uint32_t old = g_si[offset / 4].load(std::memory_order_relaxed);
+        uint32_t next = (value & ~kSiComCsrDone) | (old & kSiComCsrDone);
+        if (value & kSiComCsrDone) {
+            next &= ~kSiComCsrDone;
+        }
+        if (value & kSiComCsrStart) {
+            next = (next & ~kSiComCsrStart) | kSiComCsrDone;  // done at once
+        }
+        g_si[offset / 4].store(next, std::memory_order_relaxed);
+        return;
+    }
+    g_si[offset / 4].store(value, std::memory_order_relaxed);
+}
+
 // Devices a console library registers (Memory::RegisterMmioDevice). Filled in
 // at static initialisation and only read after, so no lock.
 constexpr size_t kMaxMmioDevices = 16;
@@ -720,6 +766,10 @@ bool ReadConstantRegister32(uint32_t addr, uint32_t* value) {
     if (IsVi(addr) && (addr & 3u) == 0) {
         const uint32_t offset = addr - kViBase;
         *value = static_cast<uint32_t>(ReadVi16(offset)) << 16 | ReadVi16(offset + 2);
+        return true;
+    }
+    if (IsSi(addr)) {
+        *value = ReadSi32(addr);
         return true;
     }
     if (IsExi(addr)) {
@@ -841,6 +891,10 @@ void MemoryInline::Write32Slow(uint32_t addr, uint32_t val) {
         return;
     }
     if (IsMmioAddress(addr)) {
+        if (IsSi(addr)) {
+            WriteSi32(addr, val);
+            return;
+        }
         if (IsExi(addr)) {
             WriteExi32(addr, val);
             return;
