@@ -331,6 +331,29 @@ public sealed partial class CxxLinearCodeGenerator
                 body.AppendLine($"    goto {labelNames[func.EntryLabel]};");
                 body.AppendLine();
 
+                // Safe points. A guest thread spinning in a loop is preempted on the Wii by
+                // the next interrupt; ours only switch at OS calls, so one waiting loop froze
+                // every other thread (the Wii Menu's setup page, after a button). Each
+                // backward edge checks one flag the host sets every few milliseconds and, if
+                // set, publishes the registers and lets the runtime deliver what is due and
+                // reschedule. Leaf functions with a register-only variant go without.
+                var blockOrder = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                for (var blockIndex = 0; blockIndex < func.Blocks.Count; blockIndex++)
+                    blockOrder[func.Blocks[blockIndex].Label] = blockIndex;
+                var emitSafePoints = !emitStateFreeLeafVariant;
+                void EmitSafePointOnBackEdge(StringBuilder sb, string pad, string currentLabel, string targetLabel)
+                {
+                    if (!emitSafePoints ||
+                        !blockOrder.TryGetValue(currentLabel, out var current) ||
+                        !blockOrder.TryGetValue(targetLabel, out var target) ||
+                        target > current)
+                        return;
+                    sb.AppendLine($"{pad}if (__builtin_expect(g_guestSafePointRequest.load(std::memory_order_relaxed) != 0u, 0)) {{");
+                    AppendFlush(sb, pad + "    ");
+                    sb.AppendLine($"{pad}    GuestSafePoint(ctx);");
+                    AppendReload(sb, pad + "    ");
+                    sb.AppendLine($"{pad}}}");
+                }
                 foreach (var block in func.Blocks)
                 {
                     var localConstants = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase);
@@ -424,6 +447,7 @@ public sealed partial class CxxLinearCodeGenerator
 
                         case IrJump jump:
                             EmitNormalizePairedStateOnEdge(body, "    ", block.Label, jump.TargetLabel, pairedOut, pairedIn, pairedEdgeLiveness.In);
+                            EmitSafePointOnBackEdge(body, "    ", block.Label, jump.TargetLabel);
                             EmitGotoUnlessFallthrough(body, "    ", block.Label, jump.TargetLabel, nextBlockLabels, labelNames, signature.Name);
                             break;
 
@@ -439,9 +463,11 @@ public sealed partial class CxxLinearCodeGenerator
                             // only when it actually carries something.
                             var falseEdge = new StringBuilder();
                             EmitNormalizePairedStateOnEdge(falseEdge, "        ", block.Label, br.FalseLabel, pairedOut, pairedIn, pairedEdgeLiveness.In);
+                            EmitSafePointOnBackEdge(falseEdge, "        ", block.Label, br.FalseLabel);
                             EmitGotoUnlessFallthrough(falseEdge, "        ", block.Label, br.FalseLabel, nextBlockLabels, labelNames, signature.Name);
                             body.AppendLine($"    if ({cond}) {{");
                             EmitNormalizePairedStateOnEdge(body, "        ", block.Label, br.TrueLabel, pairedOut, pairedIn, pairedEdgeLiveness.In);
+                            EmitSafePointOnBackEdge(body, "        ", block.Label, br.TrueLabel);
                             EmitGotoUnlessFallthrough(body, "        ", block.Label, br.TrueLabel, nextBlockLabels, labelNames, signature.Name);
                             if (falseEdge.Length != 0)
                             {

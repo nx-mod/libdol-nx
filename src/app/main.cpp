@@ -1996,6 +1996,11 @@ void SwitchWatchdogMain(void*) {
             if (g_switchWatchStop.load(std::memory_order_acquire)) {
                 return;
             }
+            // A safe point every 2 ms: translated loops then let interrupts
+            // and the scheduler in (platform/os/os_safepoint.cpp).
+            if ((tick & 1) == 0) {
+                g_guestSafePointRequest.store(1, std::memory_order_relaxed);
+            }
             // Plain globals on Switch (see mkw_thread_local.h), so the watchdog
             // can read the main thread's values directly.
             ProfileSample(*const_cast<const volatile uint32_t*>(&RecompMod::g_currentTranslatedExecutionAddress),

@@ -659,6 +659,12 @@ inline void InvokeIndirectJump(uint32_t target, CpuContext* ctx) {
     std::exit(EXIT_FAILURE);
 }
 
+// Safe points: translated loops check this flag on every backward edge and,
+// when the host has raised it, call GuestSafePoint (platform/os/os_safepoint.cpp)
+// with their registers published - the stand-in for an interrupt arriving.
+inline std::atomic<uint32_t> g_guestSafePointRequest{0};
+extern "C" void GuestSafePoint(CpuContext* ctx);
+
 // Guest jumps as host tail calls.
 //
 // A guest `b`/`bctr` to another function uses no guest stack, and nor may its
