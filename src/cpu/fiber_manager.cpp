@@ -44,10 +44,20 @@ void GuestFiberManager::PurgePendingFibers() {
         std::lock_guard<std::mutex> lock(s_mutex);
         toDelete.swap(s_fibersPendingDelete);
     }
+    std::vector<void*> stillRunning;
     for (void* f : toDelete) {
-        if (f && !HostContext::IsCurrent(f)) {
+        if (!f) {
+            continue;
+        }
+        if (HostContext::IsCurrent(f)) {
+            stillRunning.push_back(f);  // freed on a later switch, not dropped
+        } else {
             HostContext::Destroy(f);
         }
+    }
+    if (!stillRunning.empty()) {
+        std::lock_guard<std::mutex> lock(s_mutex);
+        s_fibersPendingDelete.insert(s_fibersPendingDelete.end(), stillRunning.begin(), stillRunning.end());
     }
 }
 
@@ -250,8 +260,19 @@ bool GuestFiberManager::CreateGuestFiber(uint32_t guestThreadAddr, uint32_t entr
     auto existingIt = s_fibers.find(guestThreadAddr);
     if (existingIt != s_fibers.end()) {
         // Delete the old fiber if it exists and is not the scheduler fiber
+        // The old host stack may be the one running this very call (a thread
+        // whose OSThread is created again while it is still on the way out),
+        // so it is freed only once nothing executes on it. Freeing it here
+        // left the caller running on freed memory, its frames full of guest
+        // values; the allocator handed that memory to this map, and the Wii
+        // Menu's web engine - which reuses thread structures - crashed in
+        // IsTerminated on a node pointer half-overwritten by 0x80564C34.
         if (existingIt->second.fiber && !existingIt->second.isSchedulerFiber) {
-            HostContext::Destroy(existingIt->second.fiber);
+            if (HostContext::IsCurrent(existingIt->second.fiber)) {
+                s_fibersPendingDelete.push_back(existingIt->second.fiber);
+            } else {
+                HostContext::Destroy(existingIt->second.fiber);
+            }
         }
         s_fibers.erase(existingIt);
     }
