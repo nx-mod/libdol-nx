@@ -467,8 +467,10 @@ public sealed partial class CxxLinearCodeGenerator
                             // dispatcher: publish the locals and never write
                             // them back afterwards.
                             AppendFlush(body, "        ");
-                            body.AppendLine($"        InvokeIndirectJump({selectorExpr}, ctx);");
-                            body.AppendLine("        return;");
+                            // A host tail call: an interpreter dispatches most of
+                            // its handlers through this default (the Wii Menu's
+                            // JavaScript engine), once per instruction it runs.
+                            body.AppendLine($"        MKW_TAIL_JUMP({selectorExpr}, ctx);");
                             body.AppendLine("    }");
                             break;
 
