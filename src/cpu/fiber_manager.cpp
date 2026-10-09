@@ -315,7 +315,11 @@ bool GuestFiberManager::CreateGuestFiber(uint32_t guestThreadAddr, uint32_t entr
     // it can exhaust the guarded coroutine stack as unrelated host work (such
     // as a window resize) adds a little more nesting. Keep enough headroom for
     // those chains while the guest stack remains separately bounded.
-    constexpr size_t kHostStackSize = 1024 * 1024;
+    // 1 MiB was not enough either: translated frames are far larger than the
+    // PowerPC ones they stand for, and the Wii Menu's web engine (JavaScript,
+    // layout) ran its threads past it. Address space is plentiful; a guard page
+    // below each stack now turns any overflow into a clean fault.
+    constexpr size_t kHostStackSize = 8 * 1024 * 1024;
     gf.fiber = HostContext::Create(kHostStackSize, FiberProc,
                                    reinterpret_cast<void*>(static_cast<uintptr_t>(guestThreadAddr)));
     

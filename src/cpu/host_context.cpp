@@ -89,6 +89,7 @@ struct Context {
     void* savedStackPointer = nullptr;
     void* stack = nullptr;
     std::size_t stackSize = 0;
+    bool guarded = false;  // Switch: the lowest page is inaccessible
 };
 
 // Guest scheduling is confined to the initialized main host thread. Keeping
@@ -135,13 +136,21 @@ Handle Create(std::size_t stackSize, Entry entry, void* argument)
     //
     // These are cooperative stacks switched by our own mkw_co_switch, not
     // kernel threads, so any RW memory works and the stack region is not
-    // required. The cost is no guard page, so an overflow corrupts the heap
-    // instead of faulting; the 1 MiB size already carries generous headroom.
-    (void)guardSize;
-    context->stack = std::aligned_alloc(0x1000, stackSize);
+    // required. Heap memory has no guard page of its own, so the lowest page
+    // is made inaccessible: an overflow faults there, in its own crash report,
+    // instead of running on into whatever the heap put below. Without it the
+    // Wii Menu's web engine overflowed a 1 MiB stack and corrupted the fiber
+    // map with guest register values, then a return address with a double.
+    context->stack = std::aligned_alloc(0x1000, totalSize);
     if (!context->stack) {
         delete context;
         return nullptr;
+    }
+    context->guarded = R_SUCCEEDED(svcSetMemoryPermission(context->stack, guardSize, Perm_None));
+    if (!context->guarded) {
+        char line[96];
+        std::snprintf(line, sizeof(line), "[fiber] no guard page for a %zu KiB stack", stackSize / 1024);
+        SwitchBootLogExternal(line);
     }
 #else
     context->stack = mmap(nullptr, totalSize, PROT_READ | PROT_WRITE,
@@ -159,14 +168,10 @@ Handle Create(std::size_t stackSize, Entry entry, void* argument)
 #endif
     context->stackSize = totalSize;
 
-    // virtmemFindStack's guard pages sit outside the returned `stackSize`-byte
-    // slice on both sides (unlike the mmap path below, whose single guard is
-    // folded into `totalSize` at the low end); the usable region therefore
-    // ends at `stackSize`, not `totalSize` - using the latter here put the
-    // initial stack pointer `guardSize` bytes into the trailing unmapped
-    // guard page, so mkw_co_init's first register-save write faulted.
+    // Both paths keep one guard page at the low end of `totalSize` bytes, so
+    // the stack grows down from the top of the whole allocation.
 #if defined(__SWITCH__)
-    auto* stackTop = static_cast<char*>(context->stack) + stackSize;
+    auto* stackTop = static_cast<char*>(context->stack) + totalSize;  // guard at the low end
 #else
     auto* stackTop = static_cast<char*>(context->stack) + totalSize;
 #endif
@@ -182,6 +187,9 @@ void Destroy(Handle context)
     }
     if (nativeContext->stack) {
 #if defined(__SWITCH__)
+        if (nativeContext->guarded) {
+            svcSetMemoryPermission(nativeContext->stack, 0x1000, Perm_Rw);
+        }
         std::free(nativeContext->stack);
 #else
         munmap(nativeContext->stack, nativeContext->stackSize);
