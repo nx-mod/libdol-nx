@@ -4,7 +4,7 @@
     tools/wiinx-find-globals <game folder> [--out globals.json] [--bind] [--why]
 
 Reads <game>/recomp.yml (the executable and its r13/r2), <game>/bindings.json
-and <game>/functions.map. Each variable is read out of a function the bindings
+and the function map it names (functions.map otherwise). Each variable is read out of a function the bindings
 already located - the retrace queue is what VIWaitForRetrace sleeps on, the
 FIFO is what GXInit hands to GXSetCPUFifo - so nothing is guessed from one
 game's addresses. A few follow from a neighbour by a layout the SDK has kept
@@ -123,7 +123,11 @@ class Finder:
         self.dol = Dol(self.folder / dol)
         self.bindings = json.loads((self.folder / "bindings.json").read_text())
         self.names = {}
-        for line in (self.folder / "functions.map").read_text().splitlines():
+        # The project's own map when recomp.yml names one (Mario Kart Wii's is
+        # the decompilation's MAP.txt); functions.map from wiinx-scan otherwise.
+        named = re.search(r"function_map:\s*\n\s*path:\s*(\S+)", project)
+        functions_map = self.folder / (named.group(1) if named else "functions.map")
+        for line in functions_map.read_text().splitlines():
             if line.strip():
                 parts = line.split()
                 self.names[parts[1] if len(parts) > 1 else parts[0]] = int(parts[0], 16)
