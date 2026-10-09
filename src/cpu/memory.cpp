@@ -686,6 +686,30 @@ void WriteExi32(uint32_t addr, uint32_t value) {
     g_exi[offset / 4].store(value, std::memory_order_relaxed);
 }
 
+// The memory interface's registers (MI: 0xCC004000-0xCC0040FF, 16-bit), kept
+// as a register file. OSInit programs its protection regions and clears its
+// interrupt state (the Mii Channel writes 0xCC004020 there); nothing here ever
+// raises a protection fault, so the interrupt status (0x1E) reads 0.
+constexpr uint32_t kMiBase = 0xCC004000u;
+constexpr uint32_t kMiSize = 0x100u;
+constexpr uint32_t kMiInterruptStatus = 0x1Eu;
+std::array<std::atomic<uint16_t>, kMiSize / 2> g_mi{};
+
+bool IsMi(uint32_t addr) {
+    const uint32_t offset = (addr & ~0x01000000u) - kMiBase;
+    return offset < kMiSize && (addr & 1u) == 0;
+}
+
+uint16_t ReadMi16(uint32_t addr) {
+    const uint32_t offset = (addr & ~0x01000000u) - kMiBase;
+    return offset == kMiInterruptStatus ? 0 : g_mi[offset / 2].load(std::memory_order_relaxed);
+}
+
+void WriteMi16(uint32_t addr, uint16_t value) {
+    const uint32_t offset = (addr & ~0x01000000u) - kMiBase;
+    g_mi[offset / 2].store(value, std::memory_order_relaxed);
+}
+
 // The serial interface's registers (SI: 0xCC006400 on a GameCube, its
 // 0xCD006400 mirror on a Wii), kept as a register file the same way: four
 // channels of output/input buffers (0x00-0x2C), SIPOLL (0x30), SICOMCSR (0x34),
@@ -766,6 +790,10 @@ bool ReadConstantRegister32(uint32_t addr, uint32_t* value) {
     if (IsVi(addr) && (addr & 3u) == 0) {
         const uint32_t offset = addr - kViBase;
         *value = static_cast<uint32_t>(ReadVi16(offset)) << 16 | ReadVi16(offset + 2);
+        return true;
+    }
+    if (IsMi(addr) && (addr & 3u) == 0) {
+        *value = static_cast<uint32_t>(ReadMi16(addr)) << 16 | ReadMi16(addr + 2);
         return true;
     }
     if (IsSi(addr)) {
@@ -880,6 +908,10 @@ void MemoryInline::Write16Slow(uint32_t addr, uint16_t val) {
             WriteVi16(addr - kViBase, val);
             return;
         }
+        if (IsMi(addr)) {
+            WriteMi16(addr, val);
+            return;
+        }
         throw Memory::AccessViolation(addr, sizeof(val), "MMIO write blocked (non-GPU)");
     }
     WriteScalar(addr, val);
@@ -891,6 +923,11 @@ void MemoryInline::Write32Slow(uint32_t addr, uint32_t val) {
         return;
     }
     if (IsMmioAddress(addr)) {
+        if (IsMi(addr) && (addr & 3u) == 0) {
+            WriteMi16(addr, static_cast<uint16_t>(val >> 16));
+            WriteMi16(addr + 2, static_cast<uint16_t>(val));
+            return;
+        }
         if (IsSi(addr)) {
             WriteSi32(addr, val);
             return;
