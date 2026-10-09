@@ -617,10 +617,16 @@ void GuestFiberManager::FiberProc(void* param)
         entryArg = fiber->entryArg;
     }
     
-    // Get the CPU context
-    CpuContext* cpu = s_cpuContext;
-    if (!cpu) {
-        cpu = &GetPersistentCpuContext();
+    // A new thread runs on the persistent register file, the one every fiber
+    // on this host thread shares and the scheduler saves and restores. The
+    // switching caller's context is only a seed: it may be a scratch context
+    // on that caller's stack (NAND completions and interrupt callbacks run on
+    // one), and a thread that kept it wrote its registers into a dead frame -
+    // freed heap once that stack's fiber was destroyed - which corrupted the
+    // fiber map under the Wii Menu's web engine.
+    CpuContext* cpu = &GetPersistentCpuContext();
+    if (s_cpuContext != nullptr && s_cpuContext != cpu) {
+        *cpu = *s_cpuContext;
     }
     
     // Guest OSContext: r2 (TOC/SDA2) at 0x08, r13 (SDA) at 0x34. Both must load correctly or
