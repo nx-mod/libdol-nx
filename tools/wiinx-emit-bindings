@@ -191,9 +191,10 @@ def main(argv):
         handle.write("// Written by tools/wiinx-emit-bindings. Do not edit: it is\n"
                      "// regenerated from this game's bindings.json every translation.\n"
                      '#include "hle_stubs.h"\n'
-                     '#include "abi_bridge.h"\n'
-                     '#include "wiinx/accel/nw4r.hpp"\n'
-                     '#include "wiinx/accel/sdk.hpp"\n\n')
+                     '#include "abi_bridge.h"\n')
+        headers = sorted({version_header(version) for _, _, version, _ in emitted}
+                         | {"wiinx/accel/nw4r.hpp", "wiinx/accel/sdk.hpp"})
+        handle.write("".join(f'#include "{h}"\n' for h in headers) + "\n")
         for symbol, name, version, address in emitted:
             handle.write(
                 f'// {name}\n'
@@ -207,8 +208,36 @@ def main(argv):
     return 0
 
 
+def version_constants():
+    """Each build constant the accel headers declare: its namespace and header.
+    EGG's kEgg_Any is wiinx::egg's, in egg.hpp; guessing sdk for everything that
+    was not nw4r named a constant that does not exist."""
+    found = {}
+    accel = os.path.join(HERE, "..", "include", "wiinx", "accel")
+    for name in sorted(os.listdir(accel)) if os.path.isdir(accel) else []:
+        if not name.endswith(".hpp"):
+            continue
+        text = open(os.path.join(accel, name), errors="ignore").read()
+        namespace = re.search(r"namespace\s+(wiinx::\w+)\s*\{", text)
+        if not namespace:
+            continue
+        for constant in re.findall(r"constexpr\s+LibVersion\s+(k\w+)", text):
+            found.setdefault(constant, (namespace.group(1), f"wiinx/accel/{name}"))
+    return found
+
+
+VERSION_CONSTANTS = version_constants()
+
+
+def version_header(symbol):
+    """The accel header that declares a build constant."""
+    return VERSION_CONSTANTS.get(symbol, (None, "wiinx/accel/sdk.hpp"))[1]
+
+
 def version_expression(symbol):
     """How the generated file names a build constant."""
+    if symbol in VERSION_CONSTANTS:
+        return f"{VERSION_CONSTANTS[symbol][0]}::{symbol}"
     if symbol.startswith("kLyt") or symbol.startswith("kG3d"):
         return f"wiinx::nw4r::{symbol}"
     return f"wiinx::sdk::{symbol}"

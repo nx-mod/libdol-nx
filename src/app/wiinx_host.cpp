@@ -1,6 +1,7 @@
 // Hands the CPU runtime's guest memory and CPU to libdol-nx's natives, and
 // adds the native modules this program links. Called once at startup, after
 // guest memory and the renderer exist and before the game runs.
+#include "wiinx/accel/egg.hpp"
 #include "wiinx/accel/nw4r.hpp"
 #include "wiinx/accel/sdk.hpp"
 #include "wiinx/core/host.hpp"
@@ -61,4 +62,7 @@ void WiinxInstallHost() {
     wiinx::set_host(host);
     wiinx::add_natives(wiinx::sdk::natives());
     wiinx::add_natives(wiinx::nw4r::natives());
+    // EGG's too: a game that binds EGG::Decomp::decodeSZS finds it here, or
+    // its generated binding dereferences null the first time it decompresses.
+    wiinx::add_natives(wiinx::egg::natives());
 }
