@@ -210,6 +210,46 @@ int main() {
         Check("stages past the count do not", TevConfigKey(a) == TevConfigKey(b));
     }
 
+    std::printf("Indirect textures\n");
+    {
+        // stage 0 samples map 0 at coordinate 0, offset by indirect stage 0
+        // (map 1 at coordinate 1) through matrix 0, biased on s, t and u
+        TevConfig config;
+        config.texCoordCount = 2;
+        config.indStageCount = 1;
+        config.indStages[0] = IndStage{1, 1, 1, 1};
+        TevStage& s = config.stages[0];
+        s.texCoord = 0;
+        s.texMap = 0;
+        s.color = Color(TevColorArg::Zero, TevColorArg::Zero, TevColorArg::Zero, TevColorArg::TexC);
+        s.alpha = Alpha(TevAlphaArg::Zero, TevAlphaArg::Zero, TevAlphaArg::Zero, TevAlphaArg::TexA);
+        s.ind = 0u | (0u << 2) | (7u << 4) | (1u << 9) | (0u << 11) | (1u << 13);  // bt 0, ITF_8, STU, matrix 0, wrap s 256
+        const std::string glsl = TevFragmentGlsl(config);
+        Check("an indirect stage generates", !glsl.empty() && glsl.find("iindtex0") != std::string::npos);
+        Check("UAM compiles it", Compiles(glsl, "indirect"));
+        if (const char* dump = std::getenv("WIINX_TEV_DUMP")) {
+            if (std::FILE* f = std::fopen(dump, "w")) {
+                std::fputs(glsl.c_str(), f);
+                std::fclose(f);
+            }
+        }
+        // the dynamic S matrix, added to the previous stage's coordinate
+        TevConfig dynamic = config;
+        dynamic.stageCount = 2;
+        dynamic.stages[1] = config.stages[0];
+        dynamic.stages[1].ind = (1u << 9) | (1u << 11) | (1u << 20);
+        const std::string glsl2 = TevFragmentGlsl(dynamic);
+        Check("a dynamic matrix, added to the previous coordinate, generates",
+              glsl2.find("indcrd1.xx") != std::string::npos && glsl2.find("tevcoord = tevcoord +") != std::string::npos);
+        Check("UAM compiles that too", Compiles(glsl2, "indirect-dynamic"));
+        TevConfig other = config;
+        other.stages[0].ind ^= 1u << 9;
+        Check("a stage's indirect op changes the key", TevConfigKey(other) != TevConfigKey(config));
+        other = config;
+        other.indStages[0].scaleS = 3;
+        Check("an indirect stage's scale changes the key", TevConfigKey(other) != TevConfigKey(config));
+    }
+
     std::printf("Refusals\n");
     {
         TevConfig config;

@@ -135,7 +135,10 @@ internal sealed class TranslationProjectConfig
             abiDirectories,
             ResolvePath(workspaceRoot, dto.Runtime?.NativeRegistrationRoot ?? "runtime/src"),
             nativeBindings,
-            Directory.Exists(gameNativeRoot) ? gameNativeRoot : null);
+            Directory.Exists(gameNativeRoot) ? gameNativeRoot : null,
+            // libdol's own renderer is the default (WIINX_NATIVE_GX); a project
+            // lists its defines to say otherwise - `defines: []` is Aurora's build
+            (dto.Runtime?.Defines ?? ["WIINX_NATIVE_GX"]).Select(static d => d.Trim()).Where(static d => d.Length > 0).ToArray());
         var outputRoot = ResolvePath(workspaceRoot, dto.Output?.Root ?? "generated");
         var output = new ProjectOutput(
             outputRoot,
@@ -475,6 +478,7 @@ internal sealed class TranslationProjectConfig
         public string? NativeRegistrationRoot { get; init; }
         public string? NativeBindings { get; init; }
         public string? GameNativeRoot { get; init; }
+        public List<string>? Defines { get; init; }
     }
 
     private sealed class OutputDto
@@ -537,7 +541,8 @@ internal sealed record ProjectRuntime(
     IReadOnlyList<string> NativeAbiDirectories,
     string NativeRegistrationRoot,
     string? NativeBindings = null,
-    string? GameNativeRoot = null);
+    string? GameNativeRoot = null,
+    IReadOnlyList<string>? Defines = null);
 internal sealed record ProjectOutput(
     string Root,
     string Functions,

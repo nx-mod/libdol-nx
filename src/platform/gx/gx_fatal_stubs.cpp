@@ -30,6 +30,7 @@ namespace {
 #define GX_FATAL_STUB(addr, sym) \
     extern "C" void gx_stub_##addr(CpuContext* ctx) { (void)ctx; HaltGX(0x##addr, sym); }
 
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 GX_FATAL_STUB(8016b49c, "__GX__DefaultTexRegionCallback_8016b49c") PPC_NATIVE_OVERRIDE_VOID(8016b49c, gx_stub_8016b49c, (CpuContext* ctx), (ctx));
 GX_FATAL_STUB(8016b590, "__GX__DefaultTlutRegionCallback_8016b590") PPC_NATIVE_OVERRIDE_VOID(8016b590, gx_stub_8016b590, (CpuContext* ctx), (ctx));
 GX_FATAL_STUB(8016b5b4, "__GX__Shutdown_8016b5b4") PPC_NATIVE_OVERRIDE_VOID(8016b5b4, gx_stub_8016b5b4, (CpuContext* ctx), (ctx));
@@ -64,7 +65,9 @@ GX_FATAL_STUB(8016d5a8, "GX__SetVtxDesc_caseD_14_8016d5a8") PPC_NATIVE_OVERRIDE_
 GX_FATAL_STUB(8016d5b8, "GX__SetVtxDesc_caseD_15_8016d5b8") PPC_NATIVE_OVERRIDE_VOID(8016d5b8, gx_stub_8016d5b8, (CpuContext* ctx), (ctx));
 GX_FATAL_STUB(8016d814, "__GX__SetVCD_8016d814") PPC_NATIVE_OVERRIDE_VOID(8016d814, gx_stub_8016d814, (CpuContext* ctx), (ctx));
 GX_FATAL_STUB(8016d8c4, "__GX__CalculateVLim_8016d8c4") PPC_NATIVE_OVERRIDE_VOID(8016d8c4, gx_stub_8016d8c4, (CpuContext* ctx), (ctx));
+#endif
 // moved to gx_vertex.cpp: GX__GetVtxDesc_8016d9f0
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 GX_FATAL_STUB(8016da0c, "GX__GetVtxDesc_switch_8016da0c") PPC_NATIVE_OVERRIDE_VOID(8016da0c, gx_stub_8016da0c, (CpuContext* ctx), (ctx));
 GX_FATAL_STUB(8016da10, "GX__GetVtxDesc_caseD_0_8016da10") PPC_NATIVE_OVERRIDE_VOID(8016da10, gx_stub_8016da10, (CpuContext* ctx), (ctx));
 GX_FATAL_STUB(8016da20, "GX__GetVtxDesc_caseD_1_8016da20") PPC_NATIVE_OVERRIDE_VOID(8016da20, gx_stub_8016da20, (CpuContext* ctx), (ctx));
@@ -89,7 +92,9 @@ GX_FATAL_STUB(8016db68, "GX__GetVtxDesc_caseD_12_8016db68") PPC_NATIVE_OVERRIDE_
 GX_FATAL_STUB(8016db78, "GX__GetVtxDesc_caseD_13_8016db78") PPC_NATIVE_OVERRIDE_VOID(8016db78, gx_stub_8016db78, (CpuContext* ctx), (ctx));
 GX_FATAL_STUB(8016db88, "GX__GetVtxDesc_caseD_14_8016db88") PPC_NATIVE_OVERRIDE_VOID(8016db88, gx_stub_8016db88, (CpuContext* ctx), (ctx));
 GX_FATAL_STUB(8016db98, "GX__GetVtxDesc_caseD_15_8016db98") PPC_NATIVE_OVERRIDE_VOID(8016db98, gx_stub_8016db98, (CpuContext* ctx), (ctx));
+#endif
 // moved to gx_vertex.cpp: GX__GetVtxDescv_8016dba4
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 GX_FATAL_STUB(8016dc94, "GX__SetVtxAttrFmt_switch_8016dc94") PPC_NATIVE_OVERRIDE_VOID(8016dc94, gx_stub_8016dc94, (CpuContext* ctx), (ctx));
 GX_FATAL_STUB(8016dc98, "GX__SetVtxAttrFmt_caseD_9_8016dc98") PPC_NATIVE_OVERRIDE_VOID(8016dc98, gx_stub_8016dc98, (CpuContext* ctx), (ctx));
 GX_FATAL_STUB(8016dcb0, "GX__SetVtxAttrFmt_caseD_19_8016dcb0") PPC_NATIVE_OVERRIDE_VOID(8016dcb0, gx_stub_8016dcb0, (CpuContext* ctx), (ctx));
@@ -119,7 +124,9 @@ GX_FATAL_STUB(8016df60, "GX__SetVtxAttrFmtv_caseD_13_8016df60") PPC_NATIVE_OVERR
 GX_FATAL_STUB(8016df78, "GX__SetVtxAttrFmtv_caseD_14_8016df78") PPC_NATIVE_OVERRIDE_VOID(8016df78, gx_stub_8016df78, (CpuContext* ctx), (ctx));
 GX_FATAL_STUB(8016df8c, "GX__SetVtxAttrFmtv_caseD_15_8016df8c") PPC_NATIVE_OVERRIDE_VOID(8016df8c, gx_stub_8016df8c, (CpuContext* ctx), (ctx));
 GX_FATAL_STUB(8016dfcc, "__GX__SetVAT_8016dfcc") PPC_NATIVE_OVERRIDE_VOID(8016dfcc, gx_stub_8016dfcc, (CpuContext* ctx), (ctx));
+#endif
 // moved to gx_vertex.cpp: GX__GetVtxAttrFmt_8016e04c
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 GX_FATAL_STUB(8016e078, "GX__GetVtxAttrFmt_switch_8016e078") PPC_NATIVE_OVERRIDE_VOID(8016e078, gx_stub_8016e078, (CpuContext* ctx), (ctx));
 GX_FATAL_STUB(8016e07c, "GX__GetVtxAttrFmt_caseD_9_8016e07c") PPC_NATIVE_OVERRIDE_VOID(8016e07c, gx_stub_8016e07c, (CpuContext* ctx), (ctx));
 GX_FATAL_STUB(8016e0a4, "GX__GetVtxAttrFmt_caseD_19_8016e0a4") PPC_NATIVE_OVERRIDE_VOID(8016e0a4, gx_stub_8016e0a4, (CpuContext* ctx), (ctx));
@@ -134,7 +141,9 @@ GX_FATAL_STUB(8016e228, "GX__GetVtxAttrFmt_caseD_12_8016e228") PPC_NATIVE_OVERRI
 GX_FATAL_STUB(8016e250, "GX__GetVtxAttrFmt_caseD_13_8016e250") PPC_NATIVE_OVERRIDE_VOID(8016e250, gx_stub_8016e250, (CpuContext* ctx), (ctx));
 GX_FATAL_STUB(8016e278, "GX__GetVtxAttrFmt_caseD_14_8016e278") PPC_NATIVE_OVERRIDE_VOID(8016e278, gx_stub_8016e278, (CpuContext* ctx), (ctx));
 GX_FATAL_STUB(8016e2a0, "GX__GetVtxAttrFmt_caseD_15_8016e2a0") PPC_NATIVE_OVERRIDE_VOID(8016e2a0, gx_stub_8016e2a0, (CpuContext* ctx), (ctx));
+#endif
 // moved to gx_vertex.cpp: GX__GetVtxAttrFmtv_8016e2b8
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 GX_FATAL_STUB(8016e3a4, "GX__SetTexCoordGen2_switch_8016e3a4") PPC_NATIVE_OVERRIDE_VOID(8016e3a4, gx_stub_8016e3a4, (CpuContext* ctx), (ctx));
 GX_FATAL_STUB(8016e3a8, "GX__SetTexCoordGen2_caseD_0_8016e3a8") PPC_NATIVE_OVERRIDE_VOID(8016e3a8, gx_stub_8016e3a8, (CpuContext* ctx), (ctx));
 GX_FATAL_STUB(8016e3b4, "GX__SetTexCoordGen2_caseD_1_8016e3b4") PPC_NATIVE_OVERRIDE_VOID(8016e3b4, gx_stub_8016e3b4, (CpuContext* ctx), (ctx));
@@ -239,3 +248,4 @@ GX_FATAL_STUB(80173dd0, "GX__SetGPMetric_caseD_13_80173dd0") PPC_NATIVE_OVERRIDE
 GX_FATAL_STUB(80173de0, "GX__SetGPMetric_caseD_14_80173de0") PPC_NATIVE_OVERRIDE_VOID(80173de0, gx_stub_80173de0, (CpuContext* ctx), (ctx));
 GX_FATAL_STUB(80173dec, "GX__SetGPMetric_caseD_16_80173dec") PPC_NATIVE_OVERRIDE_VOID(80173dec, gx_stub_80173dec, (CpuContext* ctx), (ctx));
 GX_FATAL_STUB(80173df8, "GX__ClearGPMetric_80173df8") PPC_NATIVE_OVERRIDE_VOID(80173df8, gx_stub_80173df8, (CpuContext* ctx), (ctx));
+#endif

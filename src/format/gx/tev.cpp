@@ -18,7 +18,12 @@ layout (std140, binding = 0) uniform TevBlock {
     vec4 kcolor[4];
     vec4 fogColor;   // (w: the destination alpha)
     vec4 fogParams;  // A, C, B's magnitude, B's shift
+    ivec4 indMtx[6]; // the indirect matrices: two rows each, w the shift
 } tev;
+
+// an indirect matrix's product, shifted by its scale (Dolphin's indtevtrans)
+ivec2 tev_ind_scale(ivec2 v, int shift) { return shift >= 0 ? v >> shift : v << (-shift); }
+int tev_idot(ivec3 a, ivec3 b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
 
 float tev_wrap(float v) { float s = v * 255.0; return (s - floor(s / 256.0) * 256.0) / 255.0; }
 vec3 tev_wrap(vec3 v) { vec3 s = v * 255.0; return (s - floor(s / 256.0) * 256.0) / 255.0; }
@@ -77,6 +82,58 @@ struct Generator {
 
     bool HasTexture(const TevStage& stage) const {
         return stage.texMap < 8 && stage.texCoord < 8 && stage.texCoord < config.texCoordCount;
+    }
+
+    bool HasIndStage(unsigned i) const {
+        return i < config.indStageCount && config.indStages[i].texCoord < config.texCoordCount;
+    }
+
+    // A stage's indirect op and its texture sampled where it lands: Dolphin's
+    // PixelShaderGen, in GX's fixed point. The regular coordinate is wrapped,
+    // offset by the indirect texel through one of the three matrices (or the
+    // dynamic S/T forms), optionally added to the previous stage's, and kept
+    // to 24 bits.
+    std::string Indirect(const TevStage& stage, unsigned i) const {
+        const std::uint32_t ind = stage.ind;
+        const unsigned bt = ind & 3, fmt = (ind >> 2) & 3, bias = (ind >> 4) & 7;
+        const unsigned mtxIndex = (ind >> 9) & 3, mtxId = (ind >> 11) & 3;
+        const unsigned sw = (ind >> 13) & 7, tw = (ind >> 16) & 7;
+        const bool addPrev = (ind >> 20) & 1;
+        const std::string n = Num(i), m = "texMap" + Num(stage.texMap);
+        const std::string tc = "vTexCoord" + Num(stage.texCoord);
+        std::string s = "    vec2 dim" + n + " = vec2(textureSize(" + m + ", 0)) * 128.0;\n"
+                        "    ivec2 fixuv" + n + " = ivec2(floor(" + tc + ".xy / " + tc + ".z * dim" + n + "));\n"
+                        "    ivec2 indtrans" + n + " = ivec2(0);\n";
+        if (HasIndStage(bt) && mtxIndex != 0) {
+            static const char* kFmtShift[4] = {"0", "3", "4", "5"};
+            static const char* kBiasAdd[4] = {"-128", "1", "1", "1"};
+            s += "    ivec3 indcrd" + n + " = iindtex" + Num(bt) + " >> " + kFmtShift[fmt] + ";\n";
+            for (unsigned c = 0; c < 3; ++c) {
+                if (bias & (1u << c)) {
+                    s += "    indcrd" + n + "." + "xyz"[c] + " += " + kBiasAdd[fmt] + ";\n";
+                }
+            }
+            const std::string row = Num(2 * (mtxIndex - 1));
+            const std::string row1 = Num(2 * (mtxIndex - 1) + 1);
+            if (mtxId == 0) {
+                s += "    indtrans" + n + " = ivec2(tev_idot(tev.indMtx[" + row + "].xyz, indcrd" + n + "), tev_idot(tev.indMtx[" +
+                     row1 + "].xyz, indcrd" + n + ")) >> 3;\n";
+            } else {
+                s += "    indtrans" + n + " = (fixuv" + n + " * indcrd" + n + (mtxId == 1 ? ".xx" : ".yy") + ") >> 8;\n";
+            }
+            s += "    indtrans" + n + " = tev_ind_scale(indtrans" + n + ", tev.indMtx[" + row + "].w);\n";
+        }
+        static const char* kWrap[5] = {"(256 << 7)", "(128 << 7)", "(64 << 7)", "(32 << 7)", "(16 << 7)"};
+        const auto wrap = [&](unsigned w, const char* c) -> std::string {
+            if (w == 0) return "fixuv" + n + "." + c;
+            if (w >= 6) return "0";
+            return "(fixuv" + n + "." + c + " & (" + kWrap[w - 1] + " - 1))";
+        };
+        s += "    ivec2 wrapped" + n + " = ivec2(" + wrap(sw, "x") + ", " + wrap(tw, "y") + ");\n";
+        s += std::string("    tevcoord = ") + (addPrev ? "tevcoord + " : "") + "wrapped" + n + " + indtrans" + n + ";\n";
+        s += "    tevcoord = (tevcoord << 8) >> 8;\n";
+        s += "    vec4 sampled" + n + " = texture(" + m + ", vec2(tevcoord) / dim" + n + ");\n";
+        return s;
     }
 
     // what a stage reads as its texture when it has none: GX gives 0 with no
@@ -256,6 +313,11 @@ struct Generator {
                 samplerUsed[config.stages[i].texMap] = true;
             }
         }
+        for (unsigned i = 0; i < config.indStageCount && i < 4; ++i) {
+            if (HasIndStage(i)) {
+                samplerUsed[config.indStages[i].texMap & 7] = true;
+            }
+        }
         for (unsigned m = 0; m < 8; ++m) {
             if (samplerUsed[m]) {
                 s += "layout (binding = " + Num(m) + ") uniform sampler2D texMap" + Num(m) + ";\n";
@@ -265,12 +327,31 @@ struct Generator {
              "    vec4 prev = tev.tevreg[0];\n"
              "    vec4 reg0 = tev.tevreg[1];\n"
              "    vec4 reg1 = tev.tevreg[2];\n"
-             "    vec4 reg2 = tev.tevreg[3];\n";
+             "    vec4 reg2 = tev.tevreg[3];\n"
+             "    ivec2 tevcoord = ivec2(0);\n";
+        // The indirect stages' samples, as Dolphin reads them: the coordinate in
+        // GX's fixed point (7 fraction bits of texels), divided by the stage's
+        // scale, and the texel's alpha, blue and green as s, t and u.
+        for (unsigned i = 0; i < config.indStageCount && i < 4; ++i) {
+            if (!HasIndStage(i)) {
+                continue;
+            }
+            const IndStage& ind = config.indStages[i];
+            const std::string m = "texMap" + Num(ind.texMap & 7), tc = "vTexCoord" + Num(ind.texCoord);
+            s += "    ivec3 iindtex" + Num(i) + ";\n    {\n"
+                 "        vec2 dim = vec2(textureSize(" + m + ", 0)) * 128.0;\n"
+                 "        ivec2 fx = ivec2(floor(" + tc + ".xy / " + tc + ".z * dim)) >> ivec2(" +
+                 Num(ind.scaleS) + ", " + Num(ind.scaleT) + ");\n"
+                 "        vec4 v = texture(" + m + ", vec2(fx) / dim);\n"
+                 "        iindtex" + Num(i) + " = ivec3(round(vec3(v.a, v.b, v.g) * 255.0));\n    }\n";
+        }
         for (unsigned i = 0; i < config.stageCount; ++i) {
             const TevStage& stage = config.stages[i];
             const std::string n = Num(i);
             s += "\n    // stage " + n + "\n";
-            if (HasTexture(stage)) {
+            if (HasTexture(stage) && stage.ind != 0) {
+                s += Indirect(stage, i);
+            } else if (HasTexture(stage)) {
                 const std::string tc = "vTexCoord" + Num(stage.texCoord);
                 s += "    vec4 sampled" + n + " = texture(texMap" + Num(stage.texMap) + ", " + tc + ".xy / " + tc +
                      ".z);\n";
@@ -353,6 +434,12 @@ std::string TevConfigKey(const TevConfig& c) {
         }
         put(s.kcolorSel), put(s.kalphaSel), put(s.texCoord), put(s.texMap), put(static_cast<unsigned>(s.channel));
         put(s.rasSwap | s.texSwap << 2);
+        put(s.ind & 0xFF), put((s.ind >> 8) & 0xFF), put((s.ind >> 16) & 0x1F);
+    }
+    put(c.indStageCount);
+    for (unsigned i = 0; i < c.indStageCount && i < 4; ++i) {
+        const IndStage& s = c.indStages[i];
+        put(s.texCoord | s.texMap << 4), put(s.scaleS | s.scaleT << 4);
     }
     return k;
 }

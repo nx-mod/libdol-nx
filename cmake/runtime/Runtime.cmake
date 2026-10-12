@@ -169,7 +169,8 @@ set(MKW_TRANSLATED_PPC_FP_OPTIONS -fno-fast-math -ffp-contract=off)
 # libdol's own GX renderer in place of Aurora's (docs/deko3d.md): the game's
 # FIFO and display lists go to src/platform/gpu/gx_native_switch.cpp. Under
 # way: Aurora still owns the screen, so with this on nothing is shown yet.
-option(WIINX_NATIVE_GX "Draw GX with libdol's deko3d renderer (Switch; in progress)" OFF)
+# The default on the Switch (2026-10-12): Aurora and Dawn are not linked.
+option(WIINX_NATIVE_GX "Draw GX with libdol's deko3d renderer (Switch)" ON)
 
 # What the runtime links of Aurora. The Switch has its own PAD and SI
 # (src/platform/input/pad_sdk_switch.cpp, over native_input; docs/native.md).

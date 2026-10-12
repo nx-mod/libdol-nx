@@ -7,7 +7,7 @@ OS. Required by every game; depends on `cpu` and `core`.
 |----------|-------------------------------------------------------------|---------------------------------------------|
 | `os`     | threads, alarms, interrupts, time, caches, mutexes          | `os/`                                       |
 | `fs`     | disc reads (DVD), NAND saves, IOS/ES file access            | `storage/`, `ios.cpp`, `esp.cpp`            |
-| `gx`     | the GX FIFO and display lists into Aurora, decoded off-core | `gx/`                                       |
+| `gx`     | the GX FIFO and display lists, into the deko3d renderer     | `gx/`, `gpu/`                               |
 | `audio`  | AI/DSP/AX mixing into Switch audren                         | `audio/`, `../audio_backend.cpp`            |
 | `input`  | GameCube pad, Wii Remote (KPAD/WPAD) from Joy-Con           | `input/`                                    |
 | `system` | VI timing, SC settings, IPC, STM power                      | `vi.cpp`, `sc.cpp`                          |

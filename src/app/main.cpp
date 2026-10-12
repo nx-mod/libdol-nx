@@ -2384,10 +2384,22 @@ int RuntimeMain(int argc, char** argv) {
         // the same nwindow.
         SwitchConsoleEnd();
 #endif
+#if defined(WIINX_NATIVE_GX)
+        // libdol draws GX with deko3d on the console's own window, so Aurora
+        // must not build a Vulkan swapchain on it: its null backend keeps the
+        // input and events it still provides, and nothing else. deko3d itself
+        // comes up in GXInit, where the console's graphics do (gx_init.cpp).
+        auroraConfig.desiredBackend = BACKEND_NULL;
+        // and none of its pipelines: Aurora's cache of them is for its own
+        // renderer, and prewarming it took 5.7 s of every boot for nothing
+        static const std::string nullPipelineCache = auroraCachePath + "/native-gx-unused";
+        auroraConfig.pipelineCachePath = nullPipelineCache.c_str();
+#endif
         const AuroraInfo auroraInfo = aurora_initialize(0, nullptr, &auroraConfig);
 #if defined(__SWITCH__)
         SwitchDurableLog("[boot] aurora_initialize returned");
 #endif
+
         RT_LOG(RT_TAG_RUNTIME) << "[boot] aurora_initialize done, fb="
                   << auroraInfo.windowSize.native_fb_width << "x"
                   << auroraInfo.windowSize.native_fb_height << std::endl;

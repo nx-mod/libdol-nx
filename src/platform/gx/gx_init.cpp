@@ -1,6 +1,9 @@
 // gx_init.cpp - GX Initialization and FIFO Management
 #include "gx_internal.h"
 #include "runtime_log.h"
+#if defined(WIINX_NATIVE_GX)
+#include "../gpu/gx_native.h"
+#endif
 
 #include <cstdio>
 
@@ -44,7 +47,15 @@ extern "C" uint32_t GX__Init_8016b850(uint32_t fifoBase, uint32_t fifoSize)
     const uint32_t kGXDataAddr = gx.gxData;
     constexpr uint32_t kGXDataSize = 0x600u;
 
+#if defined(WIINX_NATIVE_GX)
+    // The console's graphics come up here, as on the hardware: libdol's own
+    // renderer, on deko3d. GX's register defaults are wiinx::gx::State's.
+    if (!dol::gx_native::initialize()) {
+        RT_LOGF(RT_TAG_GX, "GXInit: deko3d could not start\n");
+    }
+#else
     GXInit(GuestToHostPtr(fifoBase, fifoSize), fifoSize);
+#endif
 
     // Initialize GXData structure in guest memory
     if (kGXDataAddr != 0 && gx.gxDataPtr != 0) try {
@@ -101,7 +112,16 @@ extern "C" uint32_t GX__Init_8016b850(uint32_t fifoBase, uint32_t fifoSize)
 
     return kFifoObjAddr;
 }
+// With libdol's own renderer the SDK's GXInit runs as the game's code: it sets
+// up what the rest of the SDK relies on - the texture and TLUT region
+// callbacks and tables, which GXLoadTexObj and GXLoadTlut call through (left
+// null, the first texture load jumped to address 0) - and writes GX's default
+// registers, which wiinx::gx::State then holds. Its FIFO, PE and interrupt
+// setup still land in libdol's natives below. deko3d comes up at the
+// renderer's first use (gx_native.h).
+#if !defined(WIINX_NATIVE_GX)
 PPC_NATIVE_OVERRIDE(8016b850, GX__Init_8016b850, uint32_t, (uint32_t fifoBase, uint32_t fifoSize), (fifoBase, fifoSize));
+#endif
 
 // ============================================================================
 // FIFO Management

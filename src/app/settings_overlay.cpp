@@ -1470,6 +1470,12 @@ void ReleaseControllers() noexcept {
 }
 
 void Draw() noexcept {
+#if defined(WIINX_NATIVE_GX)
+    // The overlay is ImGui on Aurora's renderer, and with libdol drawing GX on
+    // deko3d Aurora runs on its null backend, with no ImGui frame to draw into.
+    // It comes back drawn by deko3d (docs/deko3d.md, "What comes next").
+    return;
+#endif
     // Wait for the frame worker's DONE phase: it has replayed the previous frame's ImGui draw lists
     // and started the next ImGui frame, so all overlay callers can now safely issue ImGui commands.
     aurora_wait_for_frame_worker();

@@ -42,7 +42,9 @@ extern "C" void GX__ClearVtxDesc_8016dc34() {
     // GXClearVtxDesc resets descriptors only; array base/stride state persists.
     GXClearVtxDesc();
 }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(8016dc34, GX__ClearVtxDesc_8016dc34, (), ());
+#endif
 
 extern "C" void GX__SetVtxDesc_8016d3a4(uint32_t a, uint32_t t) {
     const uint32_t attr = CanonicalVtxAttr(a);
@@ -56,7 +58,9 @@ extern "C" void GX__SetVtxDesc_8016d3a4(uint32_t a, uint32_t t) {
     if(IsMatrixIndexAttr((GXAttr)attr)) return;
     GXSetVtxDesc((GXAttr)a, (t==GX_INDEX8||t==GX_INDEX16)?GX_DIRECT:(GXAttrType)t);
 }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(8016d3a4, GX__SetVtxDesc_8016d3a4, (uint32_t a, uint32_t t), (a, t));
+#endif
 
 extern "C" void GX__SetVtxDescv_8016d608(uint32_t la) {
     if(!la) return; uint32_t p=la;
@@ -67,7 +71,9 @@ extern "C" void GX__SetVtxDescv_8016d608(uint32_t la) {
         p+=8;
     }
 }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(8016d608, GX__SetVtxDescv_8016d608, (uint32_t la), (la));
+#endif
 
 extern "C" void GX__GetVtxDesc_8016d9f0(uint32_t a, uint32_t tp) {
     GXAttrType type = GX_NONE;
@@ -79,7 +85,9 @@ extern "C" void GX__GetVtxDesc_8016d9f0(uint32_t a, uint32_t tp) {
         Memory::Write32(tp, static_cast<uint32_t>(type));
     }
 }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(8016d9f0, GX__GetVtxDesc_8016d9f0, (uint32_t a, uint32_t tp), (a, tp));
+#endif
 
 extern "C" void GX__GetVtxDescv_8016dba4(uint32_t la) {
     if (!la) {
@@ -97,7 +105,9 @@ extern "C" void GX__GetVtxDescv_8016dba4(uint32_t la) {
     p += 8;
     Memory::Write32(p, GX_VA_NULL);
 }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(8016dba4, GX__GetVtxDescv_8016dba4, (uint32_t la), (la));
+#endif
 
 // ============================================================================
 // Vertex Attribute Format
@@ -141,7 +151,9 @@ extern "C" void GX__SetVtxAttrFmt_8016dc68(uint32_t vf, uint32_t a, uint32_t c, 
     }
     GXSetVtxAttrFmt((GXVtxFmt)vf, (GXAttr)a, (GXCompCnt)c, (GXCompType)t, (u8)fr);
 }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(8016dc68, GX__SetVtxAttrFmt_8016dc68, (uint32_t vf, uint32_t a, uint32_t c, uint32_t t, uint32_t fr), (vf, a, c, t, fr));
+#endif
 
 extern "C" void GX__SetVtxAttrFmtv_8016de08(uint32_t vf, uint32_t la) {
     if(!la) return; uint32_t p=la;
@@ -154,7 +166,9 @@ extern "C" void GX__SetVtxAttrFmtv_8016de08(uint32_t vf, uint32_t la) {
         p+=16;
     }
 }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(8016de08, GX__SetVtxAttrFmtv_8016de08, (uint32_t vf, uint32_t la), (vf, la));
+#endif
 
 extern "C" void GX__GetVtxAttrFmt_8016e04c(uint32_t vf, uint32_t a, uint32_t cp, uint32_t tp, uint32_t fp) {
     VtxAttrFmt fmt{};
@@ -172,7 +186,9 @@ extern "C" void GX__GetVtxAttrFmt_8016e04c(uint32_t vf, uint32_t a, uint32_t cp,
         Memory::Write8(fp, fmt.frac);
     }
 }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(8016e04c, GX__GetVtxAttrFmt_8016e04c, (uint32_t vf, uint32_t a, uint32_t cp, uint32_t tp, uint32_t fp), (vf, a, cp, tp, fp));
+#endif
 
 extern "C" void GX__GetVtxAttrFmtv_8016e2b8(uint32_t vf, uint32_t la) {
     if (!la) {
@@ -193,7 +209,9 @@ extern "C" void GX__GetVtxAttrFmtv_8016e2b8(uint32_t vf, uint32_t la) {
     }
     Memory::Write32(p, GX_VA_NULL);
 }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(8016e2b8, GX__GetVtxAttrFmtv_8016e2b8, (uint32_t vf, uint32_t la), (vf, la));
+#endif
 
 // ============================================================================
 // Vertex Arrays
@@ -203,12 +221,16 @@ extern "C" void GX__SetArray_8016e32c(uint32_t a, uint32_t ba, uint32_t str) {
     const uint32_t attr = CanonicalVtxAttr(a);
     if(attr<26){ g_hleGxState.vtxArray[attr].base=ba; g_hleGxState.vtxArray[attr].stride=str; }
 }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(8016e32c, GX__SetArray_8016e32c, (uint32_t a, uint32_t ba, uint32_t str), (a, ba, str));
+#endif
 
 // Switch-artifact entry point for the same SDK function; forwards rather than
 // repeating the body.
 extern "C" void GX__SetArray_8016e1c4(uint32_t a, uint32_t b, uint32_t s) { GX__SetArray_8016e32c(a, b, s); }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(8016e1c4, GX__SetArray_8016e1c4, (uint32_t a, uint32_t b, uint32_t s), (a, b, s));
+#endif
 
 // ============================================================================
 // Texture Coordinate Generation
@@ -217,7 +239,9 @@ PPC_NATIVE_OVERRIDE_VOID(8016e1c4, GX__SetArray_8016e1c4, (uint32_t a, uint32_t 
 extern "C" void GX__SetNumTexGens_8016e5a4(uint32_t n) {
     GXSetNumTexGens((u8)n);
 }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(8016e5a4, GX__SetNumTexGens_8016e5a4, (uint32_t n), (n));
+#endif
 
 extern "C" void GX__SetTexCoordGen2_8016e37c(uint32_t dc, uint32_t f, uint32_t sp, uint32_t m, uint32_t n, uint32_t pm) {
     if (sp >= static_cast<uint32_t>(GX_MAX_TEXGENSRC)) {
@@ -247,24 +271,32 @@ extern "C" void GX__SetTexCoordGen2_8016e37c(uint32_t dc, uint32_t f, uint32_t s
 #endif
     GXSetTexCoordGen2((GXTexCoordID)dc, (GXTexGenType)f, (GXTexGenSrc)sp, m, (GXBool)n, pm);
 }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(8016e37c, GX__SetTexCoordGen2_8016e37c, (uint32_t dc, uint32_t f, uint32_t sp, uint32_t m, uint32_t n, uint32_t pm), (dc, f, sp, m, n, pm));
+#endif
 
 extern "C" void GX__EnableTexOffsets_8016f37c(uint32_t coord, uint32_t lineEnable, uint32_t pointEnable) {
     GXEnableTexOffsets(static_cast<GXTexCoordID>(coord),
                        lineEnable ? GX_TRUE : GX_FALSE,
                        pointEnable ? GX_TRUE : GX_FALSE);
 }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(8016f37c, GX__EnableTexOffsets_8016f37c, (uint32_t coord, uint32_t lineEnable, uint32_t pointEnable), (coord, lineEnable, pointEnable));
+#endif
 
 extern "C" void GX__SetLineWidth_8016f314(uint32_t width, uint32_t texOffsets) {
     GXSetLineWidth(static_cast<u8>(width), static_cast<GXTexOffset>(texOffsets));
 }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(8016f314, GX__SetLineWidth_8016f314, (uint32_t width, uint32_t texOffsets), (width, texOffsets));
+#endif
 
 extern "C" void GX__SetPointSize_8016f348(uint32_t pointSize, uint32_t texOffsets) {
     GXSetPointSize(static_cast<u8>(pointSize), static_cast<GXTexOffset>(texOffsets));
 }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(8016f348, GX__SetPointSize_8016f348, (uint32_t pointSize, uint32_t texOffsets), (pointSize, texOffsets));
+#endif
 
 // ============================================================================
 // Begin/End Drawing
@@ -336,13 +368,19 @@ extern "C" void GX__Begin_8016f0f0(uint32_t t, uint32_t vf, uint32_t nv) {
     g_hleGxState.fifoReadOffset = 0;
     g_hleGxState.fifoByteCount=0; g_hleGxState.ResetVertex();
 }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(8016f0f0, GX__Begin_8016f0f0, (uint32_t t, uint32_t vf, uint32_t nv), (t, vf, nv));
+#endif
 
 extern "C" void GX__End_80044b30() { g_hleGxState.inBegin=false; GXEnd(); }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(80044b30, GX__End_80044b30, (), ());
+#endif
 
 extern "C" void GX__End_80048c30() { GX__End_80044b30(); }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(80048c30, GX__End_80048c30, (), ());
+#endif
 
 extern "C" void GX__DrawSphere_80172a30(uint32_t numMajor, uint32_t numMinor) {
     constexpr uint32_t kAttrCount = 26;
@@ -447,4 +485,6 @@ extern "C" void GX__DrawSphere_80172a30(uint32_t numMajor, uint32_t numMinor) {
         GX__SetVtxAttrFmt_8016dc68(GX_VTXFMT3, attr, static_cast<uint32_t>(fmt.cnt), static_cast<uint32_t>(fmt.type), fmt.frac);
     }
 }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(80172a30, GX__DrawSphere_80172a30, (uint32_t numMajor, uint32_t numMinor), (numMajor, numMinor));
+#endif

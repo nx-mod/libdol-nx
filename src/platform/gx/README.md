@@ -4,8 +4,11 @@ Graphics: the command stream a game writes, turned into draw calls.
 
 A game does not call a graphics API. It writes commands into a FIFO in memory -
 vertex data, register writes, display lists - and expects hardware to consume
-them. This reads that stream and hands the result to
-[aurora-nx](https://github.com/nx-mod/aurora-nx), which renders through WebGPU.
+them. On the Switch the stream goes to libdol's own renderer (`../gpu`,
+[docs/deko3d.md](../../../docs/deko3d.md)), and the SDK's own GX setters write
+it - the natives here that only fed Aurora are left out of that build
+(`#if !defined(WIINX_NATIVE_GX)`). With `runtime.defines: []` the result goes
+to [aurora-nx](https://github.com/nx-mod/aurora-nx), which renders through WebGPU.
 
 | File | Is |
 |---|---|

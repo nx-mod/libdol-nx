@@ -335,6 +335,33 @@ int main() {
         Check("a map never bound reads as nothing", state.Texture(7).address == 0);
     }
 
+    std::printf("Indirect textures from BP registers\n");
+    {
+        State state;
+        state.ApplyBP(0x00u << 24 | 1u << 16);                  // GENMODE: one indirect stage
+        state.ApplyBP(0x27u << 24 | (2u << 3 | 1u));            // RAS1_IREF: stage 0 is map 1, coordinate 2
+        state.ApplyBP(0x25u << 24 | (3u | 2u << 4));            // RAS1_SS0: stage 0 scales s/8, t/4
+        state.ApplyBP(0x10u << 24 | (1u << 9 | 7u << 4));       // TEV stage 0: matrix 0, bias STU
+        // matrix 0: ma = -1, mb = 2, mc = 3, md = -4, me = 0, mf = 5, scale 17 (shift 0)
+        const auto pair = [](int lo, int hi, unsigned s) {
+            return (static_cast<std::uint32_t>(lo) & 0x7FF) | (static_cast<std::uint32_t>(hi) & 0x7FF) << 11 | s << 22;
+        };
+        state.ApplyBP(0x06u << 24 | pair(-1, 2, 17 & 3));
+        state.ApplyBP(0x07u << 24 | pair(3, -4, (17 >> 2) & 3));
+        state.ApplyBP(0x08u << 24 | pair(0, 5, (17 >> 4) & 3));
+        const TevConfig tev = state.Tev();
+        Check("GENMODE's count", tev.indStageCount == 1);
+        Check("RAS1_IREF's map and coordinate", tev.indStages[0].texMap == 1 && tev.indStages[0].texCoord == 2);
+        Check("RAS1_SS0's scales", tev.indStages[0].scaleS == 3 && tev.indStages[0].scaleT == 2);
+        Check("the stage's TevStageIndirect", tev.stages[0].ind == (1u << 9 | 7u << 4));
+        const std::vector<std::uint8_t> block = state.TevUniforms();
+        std::int32_t rows[2][4] = {};
+        std::memcpy(rows, block.data() + 160, sizeof(rows));
+        Check("matrix 0's first row (ma, mc, me, shift)", rows[0][0] == -1 && rows[0][1] == 3 && rows[0][2] == 0 &&
+                                                            rows[0][3] == 0);
+        Check("and its second (mb, md, mf, shift)", rows[1][0] == 2 && rows[1][1] == -4 && rows[1][2] == 5);
+    }
+
     std::printf(gFailures ? "%d FAILED\n" : "all passed\n", gFailures);
     return gFailures ? 1 : 0;
 }

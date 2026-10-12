@@ -167,6 +167,10 @@ if(MKW_PLATFORM_SWITCH AND WIINX_NATIVE_GX)
     target_compile_definitions(wiinx_platform PRIVATE WIINX_NATIVE_GX=1)
 endif()
 wiinx_add_runtime_layer(wiinx_app ${WIINX_APP_SOURCES})
+if(MKW_PLATFORM_SWITCH AND WIINX_NATIVE_GX)
+    # app/main.cpp starts Aurora on its null backend, so deko3d has the window
+    target_compile_definitions(wiinx_app PRIVATE WIINX_NATIVE_GX=1)
+endif()
 target_precompile_headers(wiinx_cpu PRIVATE "${MKW_RUNTIME_SOURCE_DIR}/src/cpu/include/mkw_pch.h")
 target_precompile_headers(wiinx_platform REUSE_FROM wiinx_cpu)
 target_precompile_headers(wiinx_app REUSE_FROM wiinx_cpu)
@@ -265,8 +269,13 @@ function(mkw_configure_product target)
     target_link_libraries(${target} PRIVATE
         mkw_platform mkw_base_shared mkw::pugixml mkw::toml11 mkw::cryptopp)
 
-    target_link_libraries(${target} PRIVATE
-        ${WIINX_AURORA_LIBRARIES})
+    # With libdol's own renderer the product links no Aurora at all (nor Dawn,
+    # cmake/game): the layers still see its headers while the last of its
+    # types leave them, and nothing of its code is in the program.
+    if(NOT (MKW_PLATFORM_SWITCH AND WIINX_NATIVE_GX))
+        target_link_libraries(${target} PRIVATE
+            ${WIINX_AURORA_LIBRARIES})
+    endif()
     if(MKW_PLATFORM_MACOS)
         target_link_libraries(${target} PRIVATE
             "${MKW_IOKIT_FRAMEWORK}" "${MKW_COREFOUNDATION_FRAMEWORK}")

@@ -48,6 +48,14 @@ public sealed record RuntimeNativeIndex(
 public static class RuntimeNativeIndexBuilder
 {
     /// <summary>
+    /// The runtime's build options that decide which natives it compiles
+    /// (recomp.yml <c>runtime.defines</c>, e.g. WIINX_NATIVE_GX). Set before the
+    /// index is built; native sources are read as that build compiles them.
+    /// </summary>
+    public static void SetBuildDefines(IEnumerable<string> defines) =>
+        NativeSourceParsing.Defines = defines.ToHashSet(StringComparer.Ordinal);
+
+    /// <summary>
     /// Scans the runtime for the guest functions it replaces.
     /// </summary>
     /// <param name="nativeSourceDirectory">The runtime's sources.</param>

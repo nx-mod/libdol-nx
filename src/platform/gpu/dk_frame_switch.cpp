@@ -142,6 +142,11 @@ bool initialize_screen(DkImageFormat format) {
   return s.swapchain != nullptr;
 }
 
+void screen_image_size(uint32_t* width, uint32_t* height) {
+  *width = kScreenWidth;
+  *height = kScreenHeight;
+}
+
 Texture& acquire_screen() {
   uint32_t width, height;
 
@@ -172,12 +177,19 @@ void shutdown_screen() {
   s = Screen{};
 }
 
+// Diagnosis: the GPU finishes each frame before the next is recorded. Waiting
+// after every draw made a fault go away, which says the CPU overwrites
+// something the GPU still reads; this says whether that is across frames.
+constexpr bool kWaitEachFrame = false;
+
 void present() {
   submit();
   if (s.acquired >= 0)
     dkQueuePresentImage(queue(), s.swapchain, s.acquired);
   s.acquired = -1;
   frame_end();
+  if (kWaitEachFrame)
+    wait_idle();
 }
 
 } // namespace dol::dk

@@ -27,12 +27,13 @@ extern "C" void __GXSetSUTexRegs();
 // FIFO Write Helpers
 // ============================================================================
 
+#if defined(WIINX_NATIVE_GX)
+namespace { void NativeFifoWrite(uint32_t value, uint32_t size); }
+#endif
 extern "C" void GX_HLE_FIFO_WriteFloat(float val) {
     u32 raw; std::memcpy(&raw, &val, 4);
 #if defined(WIINX_NATIVE_GX)
-    const uint8_t bytes[4] = {static_cast<uint8_t>(raw >> 24), static_cast<uint8_t>(raw >> 16),
-                              static_cast<uint8_t>(raw >> 8), static_cast<uint8_t>(raw)};
-    dol::gx_native::write(bytes, 4);
+    NativeFifoWrite(raw, 4);
 #else
     try { HleFifoWrite(raw, 4); } catch (...) { RT_LOGF(RT_TAG_GX, "FIFO write float failed\n"); }
 #endif
@@ -40,16 +41,23 @@ extern "C" void GX_HLE_FIFO_WriteFloat(float val) {
 
 #if defined(WIINX_NATIVE_GX)
 // libdol's own renderer takes the gather pipe's bytes as they are (gx_native.h)
-extern "C" void GX_HLE_FIFO_Write32(uint32_t val) {
-    const uint8_t bytes[4] = {static_cast<uint8_t>(val >> 24), static_cast<uint8_t>(val >> 16),
-                              static_cast<uint8_t>(val >> 8), static_cast<uint8_t>(val)};
-    dol::gx_native::write(bytes, 4);
+// - unless GXBeginDisplayList is recording, when they go into the list, as the
+// burst path already does: run here, a recorded list would have drawn at once
+// and been empty when the game called it.
+namespace {
+void NativeFifoWrite(uint32_t value, uint32_t size) {
+    if (IsDisplayListActive()) {
+        WriteDisplayListData(value, size);
+        return;
+    }
+    const uint8_t bytes[4] = {static_cast<uint8_t>(value >> 24), static_cast<uint8_t>(value >> 16),
+                              static_cast<uint8_t>(value >> 8), static_cast<uint8_t>(value)};
+    dol::gx_native::write(bytes + (4 - size), size);
 }
-extern "C" void GX_HLE_FIFO_Write16(uint16_t val) {
-    const uint8_t bytes[2] = {static_cast<uint8_t>(val >> 8), static_cast<uint8_t>(val)};
-    dol::gx_native::write(bytes, 2);
-}
-extern "C" void GX_HLE_FIFO_Write8(uint8_t val) { dol::gx_native::write(&val, 1); }
+}  // namespace
+extern "C" void GX_HLE_FIFO_Write32(uint32_t val) { NativeFifoWrite(val, 4); }
+extern "C" void GX_HLE_FIFO_Write16(uint16_t val) { NativeFifoWrite(val, 2); }
+extern "C" void GX_HLE_FIFO_Write8(uint8_t val) { NativeFifoWrite(val, 1); }
 #else
 extern "C" void GX_HLE_FIFO_Write32(uint32_t val) { HleFifoWrite(val, 4); }
 extern "C" void GX_HLE_FIFO_Write16(uint16_t val) { HleFifoWrite(static_cast<u32>(val), 2); }
@@ -82,7 +90,12 @@ extern "C" void GX__DrawDone_8016eab0() {
 #if defined(__SWITCH__)
     const auto drawDoneStart = std::chrono::steady_clock::now();
 #endif
-    GXDrawDone(); GX__FinishInterruptHandler_8016ed94();
+#if defined(WIINX_NATIVE_GX)
+    dol::gx_native::flush();  // every draw so far made; the GPU keeps their order
+#else
+    GXDrawDone();
+#endif
+    GX__FinishInterruptHandler_8016ed94();
 #if defined(__SWITCH__)
     g_gxDrawDoneCalls.fetch_add(1, std::memory_order_relaxed);
     g_gxDrawDoneUs.fetch_add(
@@ -106,7 +119,9 @@ PPC_NATIVE_OVERRIDE_VOID(8016eb70, GX__PixModeSync_8016eb70, (), ());
 // ============================================================================
 
 extern "C" void __GX__InitRevisionBits_8016b720() {}
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(8016b720, __GX__InitRevisionBits_8016b720, (), ());
+#endif
 
 // ============================================================================
 // Texture State Management - Aurora handles internally
@@ -116,19 +131,25 @@ extern "C" void __GX__SetSUTexRegs_801712f0() {
     __GXSetSUTexRegs();
     try { uint32_t gd = GuestGxData(); if (gd) Memory::Write16(gd + 2, 0); } catch (...) {}
 }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(801712f0, __GX__SetSUTexRegs_801712f0, (), ());
+#endif
 
 extern "C" void __GX__SetTmemConfig_80171458(uint32_t mode) {
     // TMEM layout configuration - Aurora manages internally
     (void)mode;
 }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(80171458, __GX__SetTmemConfig_80171458, (uint32_t mode), (mode));
+#endif
 
 extern "C" void __GX__FlushTextureState_80171c28() {
     // BP texture state flush - Aurora handles via API
     try { uint32_t gd = GuestGxData(); if (gd) Memory::Write16(gd + 2, 0); } catch (...) {}
 }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(80171c28, __GX__FlushTextureState_80171c28, (), ());
+#endif
 
 // ============================================================================
 // Copy Configuration - No-ops for features Aurora doesn't use
@@ -144,7 +165,9 @@ extern "C" void GX__SetDispCopyFrame2Field_8016f5f8(uint32_t f) {
         }
     } catch (...) {}
 }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(8016f5f8, GX__SetDispCopyFrame2Field_8016f5f8, (uint32_t f), (f));
+#endif
 
 extern "C" void GX__SetCopyClamp_8016f618(uint32_t c) {
     GXSetCopyClamp(static_cast<GXFBClamp>(c));
@@ -157,7 +180,9 @@ extern "C" void GX__SetCopyClamp_8016f618(uint32_t c) {
         }
     } catch (...) {}
 }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(8016f618, GX__SetCopyClamp_8016f618, (uint32_t c), (c));
+#endif
 
 extern "C" void GX__ClearBoundingBox_8016fecc() {
     GXClearBoundingBox();
@@ -166,7 +191,9 @@ extern "C" void GX__ClearBoundingBox_8016fecc() {
         if (gd) Memory::Write16(gd + 2, 0);
     } catch (...) {}
 }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(8016fecc, GX__ClearBoundingBox_8016fecc, (), ());
+#endif
 
 // ============================================================================
 // FIFO/State Management - No-ops
@@ -175,7 +202,9 @@ PPC_NATIVE_OVERRIDE_VOID(8016fecc, GX__ClearBoundingBox_8016fecc, (), ());
 extern "C" void GX__SetDirtyState_8016ee78() {
     try { uint32_t gd = GuestGxData(); if (gd) Memory::Write32(gd + 0x5FCu, 0); } catch (...) {}
 }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(8016ee78, GX__SetDirtyState_8016ee78, (), ());
+#endif
 
 extern "C" void GX__ResetWriteGatherPipe_8016e6b0() {
     // WPAR reset - not needed on host

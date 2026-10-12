@@ -1,3 +1,6 @@
+#if defined(WIINX_NATIVE_GX)
+#include "../gpu/gx_native.h"
+#endif
 #include <cstdio>
 #include <cstring>
 // gx_copy.cpp - Framebuffer Copy Operations
@@ -163,6 +166,17 @@ PPC_NATIVE_OVERRIDE_VOID(8016fc24, GX__SetDispCopyGamma_8016fc24, (uint32_t g), 
 // ============================================================================
 
 extern "C" void GX__CopyDisp_8016fc38(uint32_t da, uint32_t c) {
+#if defined(WIINX_NATIVE_GX)
+    // libdol's own renderer draws the EFB straight onto the screen, so the
+    // display copy is the frame's end: VI presents it and paces to the retrace.
+    // (The copy's clear is the next frame's: begin_frame clears with the copy
+    // clear registers.)
+    (void)c;
+    ++g_gxFrameCount;
+    VI_HLE_SetXfbReady(da);
+    VI_HLE_PresentFrame(/*presentedXfb=*/true, /*paceToRetrace=*/true);
+    return;
+#endif
     SWITCH_PHASE("CopyDisp EnsureAuroraFrameActive");
     EnsureAuroraFrameActive();
     // GX copies are FIFO-ordered on hardware. Drain submitted draws before
@@ -195,6 +209,22 @@ PPC_NATIVE_OVERRIDE_VOID(8016fc38, GX__CopyDisp_8016fc38, (uint32_t da, uint32_t
 
 
 extern "C" void GX__CopyTex_8016fd74(uint32_t da, uint32_t c) {
+#if defined(WIINX_NATIVE_GX)
+    {
+        // The destination is the size GXSetTexCopyDst gave. A copy that
+        // box-filters to a mip level halves the source; a destination still the
+        // source's size has not been halved yet, so it is halved here.
+        const TexCopyState& copy = g_texCopyState;
+        uint16_t width = copy.dstWidth, height = copy.dstHeight;
+        if (copy.dstMipmap && width == copy.srcWidth && height == copy.srcHeight) {
+            width = static_cast<uint16_t>((width + 1) / 2);
+            height = static_cast<uint16_t>((height + 1) / 2);
+        }
+        dol::gx_native::copy_tex(da, copy.srcLeft, copy.srcTop, copy.srcWidth, copy.srcHeight,
+                                 width, height, c != 0);
+        return;
+    }
+#endif
     EnsureAuroraFrameActive();
     // Match GX FIFO ordering: texture copies observe all prior draws. Threaded
     // decode queues the copy in stream order, which gives that already.

@@ -87,6 +87,9 @@ void BeginNextAuroraFrameWithRetry(std::chrono::milliseconds timeout) {
 }
 
 void EnsureAuroraFrameActive() {
+#if defined(WIINX_NATIVE_GX)
+    return;  // the native renderer opens its own frames (gx_native.h)
+#endif
     if (!g_auroraFrameActive.load(std::memory_order_acquire)) {
         BeginNextAuroraFrameWithRetry();
     }

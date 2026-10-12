@@ -154,8 +154,25 @@ if [ -f "$cache" ]; then
     done
 fi
 
+# The runtime is built as recomp.yml's runtime.defines say, the same list the
+# translator read: natives a define leaves out of the runtime are translated,
+# and a runtime built otherwise would replace functions the game has not got,
+# or miss ones it has ("omits translated winner").
+# libdol's own renderer is the default; a runtime.defines list without
+# WIINX_NATIVE_GX (`defines: []`) is Aurora's build. The translator reads the
+# same rule (TranslationProjectConfig).
+runtime_block=$(sed -n '/^runtime:/,/^[a-z]/p' "$game/recomp.yml")
+native_gx=ON
+if echo "$runtime_block" | grep -q '^[[:space:]]*defines:' && ! echo "$runtime_block" | grep -q 'WIINX_NATIVE_GX'; then
+    native_gx=OFF
+    echo "== Aurora draws GX (runtime.defines leaves out WIINX_NATIVE_GX)"
+else
+    echo "== WIINX_NATIVE_GX: libdol's deko3d renderer draws GX"
+fi
+
 echo "== building $(basename "$game")"
 cmake -S "$libwiinx/cmake/game" -B "$game/build" -G Ninja \
+    -DWIINX_NATIVE_GX="$native_gx" \
     -DCMAKE_TOOLCHAIN_FILE="$DEVKITPRO/cmake/Switch.cmake" \
     -DWIINX_GAME_DIR="$game" -DWIINX_DAWN_DIR="$dawn" \
     -DWIINX_AURORA_DIR="$aurora" \

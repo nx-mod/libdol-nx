@@ -45,17 +45,27 @@ DkQueue queue();
 // the commands the frame records, closed into a list and submitted by submit()
 DkCmdBuf commands();
 void submit();
+// the frame's commands so far as one list, queued (flushed with the queue's own)
+void submit_list();
 // `size` bytes of the frame's staging memory: what a write to a buffer or
 // texture copies from; empty when the frame's slice is full
 Allocation stage(uint32_t size, uint32_t alignment);
 // the frame recorded so far submitted, its fence signalled, and the next
 // frame's slices waited for and begun
 void frame_end();
+// A memory block freed once the frame recording now has finished on the GPU
+// (destroy() uses it: draws recorded this frame may still read what it held).
+void retire(DkMemBlock block);
+void release_retired(uint32_t frame);
 // everything submitted done
 void wait_idle();
 // (the layer's own: the writes' command buffer, and its submission)
 DkCmdBuf transfer();
 void submit_transfer();
+// A command buffer that only ever captures commands into the caller's words
+// (dkCmdBufBeginCaptureCmds clears whatever buffer it is given), for replay
+// into commands().
+DkCmdBuf capture();
 
 // ---------- buffers
 
@@ -184,10 +194,23 @@ void bind(const PipelineState& state);
 bool draw_gx(const wiinx::gx::State& state, const wiinx::gx::Draw& draw, uint32_t width, uint32_t height,
              const wiinx::gx::CommandProcessor::Memory& memory);
 
+// An EFB copy (GXCopyTex): `source` of the EFB image, scaled into a
+// `width` x `height` image kept for the guest address it was copied to. A
+// texture bound at that address then samples it rather than decoding RAM,
+// until the guest writes something else there. Outside a pass.
+void efb_copy(uint32_t address, uint32_t width, uint32_t height, const Texture& efb, const DkImageRect& source,
+              const wiinx::gx::CommandProcessor::Memory& memory);
+
+// A frame presented: the GX caches age, and what has gone unused is freed.
+void gx_frame_done();
+
 // ---------- the screen
 
 // the console's screen: 1280x720 in handheld, 1920x1080 docked
 void screen_size(uint32_t* width, uint32_t* height);
+// the size the screen's images are allocated at, whatever the screen shows of
+// them (1920x1080; handheld crops): a target bound with them must be as big
+void screen_image_size(uint32_t* width, uint32_t* height);
 bool initialize_screen(DkImageFormat format);
 // the next image to draw the frame into, its size the screen's now
 Texture& acquire_screen();

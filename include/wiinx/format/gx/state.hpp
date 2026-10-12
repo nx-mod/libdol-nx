@@ -124,6 +124,8 @@ class State {
     // 0x50 the colour, 0x51 the 24-bit depth), as 0..1
     std::array<float, 4> CopyClearColor() const;
     float CopyClearDepth() const;
+    // a BP register as last loaded (its 24-bit value)
+    std::uint32_t Bp(std::uint8_t reg) const { return mBpRegs[reg] & 0x00FFFFFF; }
     // XF's viewport registers: scale x, y, z and offset x, y, z
     const std::array<float, 6>& Viewport() const { return mViewport; }
 
@@ -135,7 +137,7 @@ class State {
     std::vector<std::uint8_t> TevUniforms() const;
     std::vector<std::uint8_t> XfUniforms() const;
 
-    static constexpr std::size_t kTevBlockSize = 160;
+    static constexpr std::size_t kTevBlockSize = 256;  // + the indirect matrices, 6 ivec4
     static constexpr std::size_t kXfBlockSize = 3184;
 
   private:

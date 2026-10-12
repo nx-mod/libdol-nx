@@ -686,6 +686,84 @@ void WriteExi32(uint32_t addr, uint32_t value) {
     g_exi[offset / 4].store(value, std::memory_order_relaxed);
 }
 
+// The command processor's (CP: 0xCC000000) and the pixel engine's (PE:
+// 0xCC001000) registers, 16-bit, kept as register files. With libdol's own
+// renderer (WIINX_NATIVE_GX) the SDK's GX code runs as the game's, and parts
+// of it reach these directly: GXGetGPStatus, the FIFO's read pointer and
+// distance, GXPokeAlphaMode and its kind, GXReadBoundingBox, the PE
+// performance counters. The FIFO is decoded as it is written, so it always
+// reads drained - the GP idle, the read pointer at the write pointer, nothing
+// pending - and no SDK wait spins. Draw sync and the PE finish and token
+// interrupts stay libdol's (gx_stubs.cpp); their status bits read clear here.
+constexpr uint32_t kCpBase = 0xCC000000u;
+constexpr uint32_t kCpSize = 0x80u;
+constexpr uint32_t kPeBase = 0xCC001000u;
+constexpr uint32_t kPeSize = 0x100u;
+std::array<std::atomic<uint16_t>, kCpSize / 2> g_cp{};
+std::array<std::atomic<uint16_t>, kPeSize / 2> g_pe{};
+
+bool IsCp(uint32_t addr) { return addr - kCpBase < kCpSize && (addr & 1u) == 0; }
+bool IsPe(uint32_t addr) { return addr - kPeBase < kPeSize && (addr & 1u) == 0; }
+
+uint16_t ReadCp16(uint32_t addr) {
+    const uint32_t offset = addr - kCpBase;
+    switch (offset) {
+    case 0x00: return 0x000Cu;  // CP_STATUS: GP read idle, command idle
+    case 0x34: return g_cp[0x30 / 2].load(std::memory_order_relaxed);  // read pointer = write pointer
+    case 0x36: return g_cp[0x32 / 2].load(std::memory_order_relaxed);
+    case 0x38: case 0x3A: return 0;  // read/write distance: drained
+    default: return g_cp[offset / 2].load(std::memory_order_relaxed);
+    }
+}
+
+void WriteCp16(uint32_t addr, uint16_t value) {
+    const uint32_t offset = addr - kCpBase;
+    if (offset != 0x04)  // CP_CLEAR is a strobe
+        g_cp[offset / 2].store(value, std::memory_order_relaxed);
+}
+
+uint16_t ReadPe16(uint32_t addr) {
+    const uint32_t offset = addr - kPeBase;
+    switch (offset) {
+    case 0x0A: return g_pe[offset / 2].load(std::memory_order_relaxed) & 0x0003u;  // enables; status clear
+    case 0x10: return 0;      // bounding box: the whole EFB
+    case 0x12: return 639;
+    case 0x14: return 0;
+    case 0x16: return 527;
+    default:
+        if (offset >= 0x18 && offset < 0x30) return 0;  // performance counters
+        return g_pe[offset / 2].load(std::memory_order_relaxed);
+    }
+}
+
+void WritePe16(uint32_t addr, uint16_t value) {
+    g_pe[(addr - kPeBase) / 2].store(value, std::memory_order_relaxed);
+}
+
+// The processor interface's registers (PI: 0xCC003000, 32-bit, and its 0xCD
+// mirror on a Wii), kept as a register file for SDK code that writes them
+// itself - with libdol's renderer the SDK's GXInit runs as the game's, and its
+// FIFO setup reaches the PI FIFO base, end and write pointer. Interrupt cause
+// reads 0 (libdol raises interrupts itself) and the Flipper revision keeps its
+// constant (kPiFlipperRevision, read before this).
+constexpr uint32_t kPiBase = 0xCC003000u;
+constexpr uint32_t kPiSize = 0x40u;
+std::array<std::atomic<uint32_t>, kPiSize / 4> g_pi{};
+
+bool IsPi(uint32_t addr) {
+    const uint32_t offset = (addr & ~0x01000000u) - kPiBase;
+    return offset < kPiSize && (addr & 3u) == 0;
+}
+
+uint32_t ReadPi32(uint32_t addr) {
+    const uint32_t offset = (addr & ~0x01000000u) - kPiBase;
+    return offset == 0 ? 0 : g_pi[offset / 4].load(std::memory_order_relaxed);
+}
+
+void WritePi32(uint32_t addr, uint32_t value) {
+    g_pi[((addr & ~0x01000000u) - kPiBase) / 4].store(value, std::memory_order_relaxed);
+}
+
 // The memory interface's registers (MI: 0xCC004000-0xCC0040FF, 16-bit), kept
 // as a register file. OSInit programs its protection regions and clears its
 // interrupt state (the Mii Channel writes 0xCC004020 there); nothing here ever
@@ -794,6 +872,18 @@ bool ReadConstantRegister32(uint32_t addr, uint32_t* value) {
     }
     if (IsMi(addr) && (addr & 3u) == 0) {
         *value = static_cast<uint32_t>(ReadMi16(addr)) << 16 | ReadMi16(addr + 2);
+        return true;
+    }
+    if (IsCp(addr) && (addr & 3u) == 0) {
+        *value = static_cast<uint32_t>(ReadCp16(addr)) << 16 | ReadCp16(addr + 2);
+        return true;
+    }
+    if (IsPi(addr)) {
+        *value = ReadPi32(addr);
+        return true;
+    }
+    if (IsPe(addr) && (addr & 3u) == 0) {
+        *value = static_cast<uint32_t>(ReadPe16(addr)) << 16 | ReadPe16(addr + 2);
         return true;
     }
     if (IsSi(addr)) {
@@ -912,6 +1002,14 @@ void MemoryInline::Write16Slow(uint32_t addr, uint16_t val) {
             WriteMi16(addr, val);
             return;
         }
+        if (IsCp(addr)) {
+            WriteCp16(addr, val);
+            return;
+        }
+        if (IsPe(addr)) {
+            WritePe16(addr, val);
+            return;
+        }
         throw Memory::AccessViolation(addr, sizeof(val), "MMIO write blocked (non-GPU)");
     }
     WriteScalar(addr, val);
@@ -926,6 +1024,20 @@ void MemoryInline::Write32Slow(uint32_t addr, uint32_t val) {
         if (IsMi(addr) && (addr & 3u) == 0) {
             WriteMi16(addr, static_cast<uint16_t>(val >> 16));
             WriteMi16(addr + 2, static_cast<uint16_t>(val));
+            return;
+        }
+        if (IsCp(addr) && (addr & 3u) == 0) {
+            WriteCp16(addr, static_cast<uint16_t>(val >> 16));
+            WriteCp16(addr + 2, static_cast<uint16_t>(val));
+            return;
+        }
+        if (IsPi(addr)) {
+            WritePi32(addr, val);
+            return;
+        }
+        if (IsPe(addr) && (addr & 3u) == 0) {
+            WritePe16(addr, static_cast<uint16_t>(val >> 16));
+            WritePe16(addr + 2, static_cast<uint16_t>(val));
             return;
         }
         if (IsSi(addr)) {

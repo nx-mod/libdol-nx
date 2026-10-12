@@ -23,8 +23,90 @@ internal static class NativeSourceParsing
             .Select(path => new NativeSourceFile(
                 path,
                 Path.GetRelativePath(root, path).Replace('\\', '/'),
-                StripCommentsAndLiterals(File.ReadAllText(path))))
+                ApplyBuildDefines(StripCommentsAndLiterals(File.ReadAllText(path)))))
             .ToArray();
+    }
+
+    /// <summary>
+    /// The build options a runtime is compiled with that change which natives it
+    /// registers (recomp.yml <c>runtime.defines</c>). With WIINX_NATIVE_GX the
+    /// runtime draws GX itself and leaves the SDK's GX setters to the game's own
+    /// code, so the natives it does not compile must not keep those functions
+    /// out of the translation either.
+    /// </summary>
+    public static IReadOnlySet<string> Defines { get; set; } = new HashSet<string>(StringComparer.Ordinal);
+
+    // The only symbols whose conditionals are evaluated: every other #if keeps
+    // both branches, as the scan always has, because nothing says which a build
+    // takes.
+    private static readonly string[] ManagedSymbols = ["WIINX_NATIVE_GX"];
+
+    private static readonly Regex ConditionalPattern = new(
+        @"^\s*#\s*(?:(?<kw>ifdef|ifndef)\s+(?<sym>\w+)|if\s+(?<not>!)?\s*defined\s*\(?\s*(?<sym2>\w+)\s*\)?\s*$)",
+        RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// Drops the lines a build with <see cref="Defines"/> does not compile, for
+    /// the managed symbols only: <c>#if defined(X)</c>, <c>#if !defined(X)</c>,
+    /// <c>#ifdef X</c>, <c>#ifndef X</c>, their <c>#else</c> and <c>#endif</c>.
+    /// </summary>
+    public static string ApplyBuildDefines(string content)
+    {
+        if (content.IndexOf('#') < 0)
+            return content;
+        var lines = content.Split('\n');
+        var output = new StringBuilder(content.Length);
+        // Each open conditional: whether it is one this evaluates, and whether its
+        // current branch is compiled.
+        var frames = new List<(bool Managed, bool Active)>();
+        foreach (var line in lines)
+        {
+            var trimmed = line.TrimStart();
+            var keep = frames.TrueForAll(static f => !f.Managed || f.Active);
+            if (trimmed.StartsWith('#'))
+            {
+                var directive = trimmed[1..].TrimStart();
+                var match = ConditionalPattern.Match(line);
+                if (match.Success)
+                {
+                    var symbol = match.Groups["sym"].Success ? match.Groups["sym"].Value : match.Groups["sym2"].Value;
+                    if (Array.IndexOf(ManagedSymbols, symbol) >= 0)
+                    {
+                        var negated = match.Groups["kw"].Value == "ifndef" || match.Groups["not"].Success;
+                        frames.Add((true, Defines.Contains(symbol) != negated));
+                        output.Append('\n');
+                        continue;
+                    }
+                    frames.Add((false, true));
+                }
+                else if (directive.StartsWith("if", StringComparison.Ordinal))
+                {
+                    frames.Add((false, true));
+                }
+                else if (directive.StartsWith("else", StringComparison.Ordinal) && frames.Count > 0 && frames[^1].Managed)
+                {
+                    frames[^1] = (true, !frames[^1].Active);
+                    output.Append('\n');
+                    continue;
+                }
+                else if (directive.StartsWith("endif", StringComparison.Ordinal) && frames.Count > 0)
+                {
+                    var managed = frames[^1].Managed;
+                    frames.RemoveAt(frames.Count - 1);
+                    if (managed)
+                    {
+                        output.Append('\n');
+                        continue;
+                    }
+                }
+            }
+            // Dropped lines keep their newline, so positions in a file stay where
+            // they were for anything that reports one.
+            output.Append(keep ? line : string.Empty).Append('\n');
+        }
+        if (output.Length > 0)
+            output.Length--;
+        return output.ToString();
     }
 
     public static IEnumerable<string> SplitArguments(string arguments)

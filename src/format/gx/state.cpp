@@ -686,6 +686,22 @@ void State::RebuildProjection() {
 TevConfig State::Tev() const {
     TevConfig config = mTev;
     config.texCoordCount = mVertex.texGenCount;
+    // The indirect stages, straight from their BP registers (Dolphin's names):
+    // GENMODE's count, RAS1_IREF's coordinate and map for each, RAS1_SS0/SS1's
+    // scales, and each TEV stage's TevStageIndirect.
+    config.indStageCount = static_cast<std::uint8_t>((mBpRegs[0x00] >> 16) & 7);
+    const std::uint32_t iref = mBpRegs[0x27] & 0x00FFFFFF;
+    for (unsigned i = 0; i < 4; ++i) {
+        IndStage& ind = config.indStages[i];
+        ind.texMap = static_cast<std::uint8_t>((iref >> (6 * i)) & 7);
+        ind.texCoord = static_cast<std::uint8_t>((iref >> (6 * i + 3)) & 7);
+        const std::uint32_t ss = mBpRegs[i < 2 ? 0x25 : 0x26] >> ((i & 1) * 8);
+        ind.scaleS = static_cast<std::uint8_t>(ss & 0xF);
+        ind.scaleT = static_cast<std::uint8_t>((ss >> 4) & 0xF);
+    }
+    for (unsigned n = 0; n < 16; ++n) {
+        config.stages[n].ind = mBpRegs[0x10 + n] & 0x001FFFFF;
+    }
     return config;
 }
 
@@ -711,6 +727,20 @@ std::vector<std::uint8_t> State::TevUniforms() const {
     Put(out, 128, mFogColor.data(), 4);
     const float fog[4] = {mFogA, mFogC, static_cast<float>(mFogBMagnitude), static_cast<float>(mFogBShift)};
     Put(out, 144, fog, 4);
+    // The indirect matrices (IND_MTXA/B/C, BP 0x06 + 3 m): eleven-bit signed
+    // coefficients, and a six-bit scale across the three registers' top bits,
+    // stored as the shift Dolphin applies (17 - scale). Row 0 is (ma, mc, me),
+    // row 1 (mb, md, mf).
+    const auto sext11 = [](std::uint32_t v) { return static_cast<std::int32_t>(v << 21) >> 21; };
+    for (unsigned m = 0; m < 3; ++m) {
+        const std::uint32_t a = mBpRegs[0x06 + 3 * m], b = mBpRegs[0x07 + 3 * m], c = mBpRegs[0x08 + 3 * m];
+        const std::int32_t scale = static_cast<std::int32_t>(((a >> 22) & 3) | ((b >> 22) & 3) << 2 | ((c >> 22) & 3) << 4);
+        const std::int32_t rows[2][4] = {
+            {sext11(a), sext11(b), sext11(c), 17 - scale},
+            {sext11(a >> 11), sext11(b >> 11), sext11(c >> 11), 17 - scale},
+        };
+        std::memcpy(out.data() + 160 + m * 32, rows, sizeof(rows));
+    }
     return out;
 }
 

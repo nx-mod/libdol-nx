@@ -59,6 +59,10 @@ if (functionMap is not null)
     GuestSaveRestoreThunks.Current = GuestSaveRestoreThunks.FromFunctionMap(functionMap);
 }
 var root = project?.WorkspaceRoot ?? Directory.GetCurrentDirectory();
+// Native sources are read as the runtime this game builds against compiles them
+// (runtime.defines): every scan of them below sees the same set.
+if (project is not null)
+    RuntimeNativeIndexBuilder.SetBuildDefines(project.Runtime.Defines ?? []);
 var preferCachedInputs = HasFlag(tail, "--prefer-cached-inputs");
 var dolFile = new Lazy<DolFile>(LoadDol);
 var relFile = new Lazy<RelFile?>(LoadRel);
@@ -69,9 +73,14 @@ var canonicalIrStore = new CanonicalIrStore();
 var inferredGuestAbi = new Lazy<InferredGuestFunctionAbiProvider>(() =>
     new InferredGuestFunctionAbiProvider(image.Value, canonicalIrStore));
 var runtimeNativeIndex = new Lazy<RuntimeNativeIndex>(() =>
-    RuntimeNativeIndexBuilder.Build(RequireProject().Runtime.NativeRegistrationRoot,
+{
+    // Native sources are read as the runtime this game builds against compiles
+    // them (runtime.defines), before anything scans them.
+    RuntimeNativeIndexBuilder.SetBuildDefines(RequireProject().Runtime.Defines ?? []);
+    return RuntimeNativeIndexBuilder.Build(RequireProject().Runtime.NativeRegistrationRoot,
                                     RequireProject().Runtime.NativeBindings,
-                                    RequireProject().Runtime.GameNativeRoot));
+                                    RequireProject().Runtime.GameNativeRoot);
+});
 // Void-stub signatures are only trusted as declared guest ABIs when the stub
 // lives under runtime.native_abi_directories (the vetted set); everywhere else
 // the C++ signature is documentation and the inferred ABI stays authoritative.

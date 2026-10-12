@@ -6,6 +6,8 @@
 #include <cstdlib>
 #include <vector>
 
+void SwitchBootLogExternal(const char* text) noexcept;
+
 namespace dol::dk {
 namespace {
 
@@ -21,8 +23,14 @@ struct FrameRing {
   uint32_t slice = 0;
   uint32_t used = 0;
 
+  // `base` is the slice this frame writes (frame_end sets it): the end is that
+  // slice's, never worked out from `used`, which at exactly a slice's end named
+  // the next slice and let an allocation run into it - in the last slice, past
+  // the block altogether.
+  uint32_t base = 0;
+
   Allocation take(uint32_t size, uint32_t alignment) {
-    uint32_t end = (used / slice + 1) * slice;
+    uint32_t end = base + slice;
     uint32_t offset = align_up(used, alignment);
 
     if (offset + size > end)
@@ -40,6 +48,9 @@ struct State {
   // frame's recording)
   DkCmdBuf commands = nullptr;
   DkCmdBuf transfer = nullptr;
+  // only ever captures (dkCmdBufBeginCaptureCmds clears the buffer it is
+  // given, so capturing on `commands` threw away the frame recorded so far)
+  DkCmdBuf capture = nullptr;
   FrameRing command_memory;
   FrameRing staging;
   uint32_t frame = 0;
@@ -47,6 +58,13 @@ struct State {
   bool fence_pending[kFrames] = {};
   DkMemBlock descriptors = nullptr;
   bool descriptors_bound = false;
+  // What was destroyed while a frame was being recorded, freed once that
+  // frame's fence has signalled: draws already recorded may still use it (a
+  // texture replaced mid-frame was freed under them, the GPU faulted, and the
+  // next acquire aborted), and a descriptor slot reused at once rewrote what
+  // those draws read.
+  std::vector<DkMemBlock> retired_blocks[kFrames];
+  std::vector<uint32_t> retired_images[kFrames], retired_samplers[kFrames];
 } g;
 
 bool ring_make(FrameRing& ring, uint32_t size) {
@@ -62,6 +80,7 @@ bool ring_make(FrameRing& ring, uint32_t size) {
 
 // the command buffers are given memory a piece at a time from the frame's
 // slice; a slice that fills is a frame too big for it
+
 void command_memory_needed(void*, DkCmdBuf commands, size_t minimum) {
   uint32_t size = align_up(minimum < 64 * 1024 ? 64 * 1024 : static_cast<uint32_t>(minimum), DK_CMDMEM_ALIGNMENT);
   Allocation piece = g.command_memory.take(size, DK_CMDMEM_ALIGNMENT);
@@ -79,12 +98,17 @@ void debug_callback(void*, const char* context, DkResult result, const char* mes
 
 void log(const char* format, ...) {
   va_list arguments;
+  char line[512];
 
   va_start(arguments, format);
-  std::fputs("[deko3d] ", stderr);
-  std::vfprintf(stderr, format, arguments);
-  std::fputc('\n', stderr);
+  std::vsnprintf(line, sizeof(line), format, arguments);
   va_end(arguments);
+  std::fprintf(stderr, "[deko3d] %s\n", line);
+  // and in boot.log, which a crash folder keeps when console.log is not
+  // written: the renderer's per-second counts are what a failed run is read by
+  char tagged[528];
+  std::snprintf(tagged, sizeof(tagged), "[deko3d] %s", line);
+  SwitchBootLogExternal(tagged);
 }
 
 void fatal(const char* format, ...) {
@@ -113,6 +137,9 @@ bool initialize() {
     return false;
   dkQueueMakerDefaults(&queue_maker, g.device);
   queue_maker.flags = DkQueueFlags_Graphics | DkQueueFlags_Compute;
+  // room for a whole frame's work items before the queue has to flush
+  queue_maker.commandMemorySize = 1024 * 1024;
+  queue_maker.flushThreshold = 128 * 1024;
   g.queue = dkQueueCreate(&queue_maker);
   if (!g.queue || !ring_make(g.command_memory, kCommandSlice) || !ring_make(g.staging, kStagingSlice))
     return false;
@@ -120,6 +147,7 @@ bool initialize() {
   command_maker.cbAddMem = command_memory_needed;
   g.commands = dkCmdBufCreate(&command_maker);
   g.transfer = dkCmdBufCreate(&command_maker);
+  g.capture = dkCmdBufCreate(&command_maker);
   dkMemBlockMakerDefaults(&descriptor_maker, g.device,
                           align_up(kImageSlots * sizeof(DkImageDescriptor) + kSamplerSlots * sizeof(DkSamplerDescriptor),
                                    DK_MEMBLOCK_ALIGNMENT));
@@ -140,10 +168,14 @@ void shutdown() {
   shutdown_screen();
   shutdown_gx();
   shutdown_shaders();
+  for (uint32_t f = 0; f < kFrames; ++f)
+    release_retired(f);  // the queue is idle: everything retired can go
   if (g.commands)
     dkCmdBufDestroy(g.commands);
   if (g.transfer)
     dkCmdBufDestroy(g.transfer);
+  if (g.capture)
+    dkCmdBufDestroy(g.capture);
   if (g.descriptors)
     dkMemBlockDestroy(g.descriptors);
   if (g.staging.block)
@@ -166,9 +198,13 @@ void submit() {
   dkQueueFlush(g.queue);
 }
 
+void submit_list() { dkQueueSubmitCommands(g.queue, dkCmdBufFinishList(g.commands)); }
+
 Allocation stage(uint32_t size, uint32_t alignment) { return g.staging.take(size, alignment); }
 
 DkCmdBuf transfer() { return g.transfer; }
+
+DkCmdBuf capture() { return g.capture; }
 
 void submit_transfer() { dkQueueSubmitCommands(g.queue, dkCmdBufFinishList(g.transfer)); }
 
@@ -176,14 +212,25 @@ void frame_end() {
   submit();
   dkQueueSignalFence(g.queue, &g.fences[g.frame], true);
   dkQueueFlush(g.queue);
+  // (the command buffers move to the next frame's slice below)
   g.fence_pending[g.frame] = true;
   g.frame = (g.frame + 1) % kFrames;
   if (g.fence_pending[g.frame]) {
     dkFenceWait(&g.fences[g.frame], -1);
     g.fence_pending[g.frame] = false;
   }
-  g.command_memory.used = g.frame * g.command_memory.slice;
-  g.staging.used = g.frame * g.staging.slice;
+  release_retired(g.frame);  // that frame's work is done: what it used can go
+  g.command_memory.used = g.command_memory.base = g.frame * g.command_memory.slice;
+  // The next frame records into its own slice. Left alone, a command buffer
+  // goes on writing into the piece it was last given - this frame's, which
+  // the GPU has not run yet - and dkCmdBufClear does not change that: it only
+  // rewinds to that piece's start. So each is cleared and given a fresh piece
+  // of the new slice at once.
+  for (DkCmdBuf commands : {g.commands, g.transfer}) {
+    dkCmdBufClear(commands);
+    command_memory_needed(nullptr, commands, 0);
+  }
+  g.staging.used = g.staging.base = g.frame * g.staging.slice;
   // (bound again at the frame's first draw: the queue's state is not kept)
   g.descriptors_bound = false;
 }
@@ -239,14 +286,29 @@ int32_t sampler_slot(Sampler& sampler) {
 
 void destroy(TextureView& view) {
   if (view.slot >= 0)
-    free_images.push_back(static_cast<uint32_t>(view.slot));
+    g.retired_images[g.frame].push_back(static_cast<uint32_t>(view.slot));
   view = TextureView{};
 }
 
 void destroy(Sampler& sampler) {
   if (sampler.slot >= 0)
-    free_samplers.push_back(static_cast<uint32_t>(sampler.slot));
+    g.retired_samplers[g.frame].push_back(static_cast<uint32_t>(sampler.slot));
   sampler = Sampler{};
+}
+
+void retire(DkMemBlock block) {
+  if (block)
+    g.retired_blocks[g.frame].push_back(block);
+}
+
+void release_retired(uint32_t frame) {
+  for (DkMemBlock block : g.retired_blocks[frame])
+    dkMemBlockDestroy(block);
+  g.retired_blocks[frame].clear();
+  free_images.insert(free_images.end(), g.retired_images[frame].begin(), g.retired_images[frame].end());
+  g.retired_images[frame].clear();
+  free_samplers.insert(free_samplers.end(), g.retired_samplers[frame].begin(), g.retired_samplers[frame].end());
+  g.retired_samplers[frame].clear();
 }
 
 void bind_descriptor_sets() {

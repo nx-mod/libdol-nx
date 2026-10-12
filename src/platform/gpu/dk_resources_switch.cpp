@@ -70,13 +70,12 @@ Buffer create_buffer(uint32_t size, bool readback) {
 }
 
 void destroy(Buffer& buffer) {
-  if (buffer.block) {
-    // (the GPU may still read it)
-    wait_idle();
-    dkMemBlockDestroy(buffer.block);
-  }
+  // (the GPU may still read it: freed when this frame has finished)
+  retire(buffer.block);
   buffer = Buffer{};
 }
+
+void upload_barrier(DkCmdBuf cmd);
 
 void write_buffer(const Buffer& buffer, uint32_t offset, const void* data, uint32_t size) {
   Allocation staging = stage(size, 16);
@@ -88,8 +87,20 @@ void write_buffer(const Buffer& buffer, uint32_t offset, const void* data, uint3
     return;
   }
   std::memcpy(staging.cpu(), data, size);
-  dkCmdBufCopyBuffer(transfer(), staging.gpu(), buffer.gpu() + offset, size);
-  submit_transfer();
+  DkCmdBuf cmd = commands();
+  upload_barrier(cmd);
+  dkCmdBufCopyBuffer(cmd, staging.gpu(), buffer.gpu() + offset, size);
+  upload_barrier(cmd);
+}
+
+// Uploads go into the frame's own commands, in order with its draws. Each was
+// its own list on the transfer buffer, submitted at once: it ran ahead of
+// draws recorded before it (a texture rewritten mid-frame changed under them),
+// and a busy menu queued dozens of small submissions between flushes. The
+// barrier before lets earlier draws finish with what is about to be
+// overwritten; the one after makes the new contents what later draws read.
+void upload_barrier(DkCmdBuf cmd) {
+  dkCmdBufBarrier(cmd, DkBarrier_Full, DkInvalidateFlags_Image | DkInvalidateFlags_L2Cache);
 }
 
 // ---------- textures
@@ -140,10 +151,7 @@ Texture create_texture(DkImageFormat format, uint32_t width, uint32_t height, ui
 }
 
 void destroy(Texture& texture) {
-  if (texture.block) {
-    wait_idle();
-    dkMemBlockDestroy(texture.block);
-  }
+  retire(texture.block);  // (freed when this frame has finished on the GPU)
   texture = Texture{};
 }
 
@@ -167,8 +175,10 @@ void write_texture(const Texture& texture, uint32_t mip, uint32_t x, uint32_t y,
   copy.addr = staging.gpu();
   copy.rowLength = bytes_per_row ? bytes_per_row : row_bytes;
   copy.imageHeight = rows;
-  dkCmdBufCopyBufferToImage(transfer(), &copy, &view, &rect, 0);
-  submit_transfer();
+  DkCmdBuf cmd = commands();
+  upload_barrier(cmd);
+  dkCmdBufCopyBufferToImage(cmd, &copy, &view, &rect, 0);
+  upload_barrier(cmd);
 }
 
 TextureView make_view(const Texture& texture, uint32_t base_mip, uint32_t mip_count, uint32_t base_layer,

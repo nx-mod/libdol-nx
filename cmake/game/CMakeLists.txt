@@ -189,10 +189,21 @@ endif ()
 
 if (TARGET WiiCompiled)
     # The graphics path ends at NVK; dawn-nx knows how it has to be linked.
-    include("${WIINX_DAWN_DIR}/switch_smoke_test/NvkLink.cmake")
-    dawn_switch_link_nvk(WiiCompiled)
+    if(NOT WIINX_NATIVE_GX)
+        # (libdol's own renderer is deko3d: no Dawn, no NVK)
+        include("${WIINX_DAWN_DIR}/switch_smoke_test/NvkLink.cmake")
+        dawn_switch_link_nvk(WiiCompiled)
+    endif()
     # libdol's own GPU layer (src/platform/gpu, docs/deko3d.md)
-    target_link_libraries(WiiCompiled PRIVATE deko3d)
+    # deko3d's debug build validates every call and reports what was wrong
+    # through the device's debug callback (logged to boot.log) before it
+    # aborts, where the release build only aborts
+    option(WIINX_DEKO3D_DEBUG "Link deko3d's validating debug build" OFF)
+    if(WIINX_DEKO3D_DEBUG)
+        target_link_libraries(WiiCompiled PRIVATE deko3dd)
+    else()
+        target_link_libraries(WiiCompiled PRIVATE deko3d)
+    endif()
     # UAM, its shader compiler, built for the console. Its build is Halo's
     # (nx-mod/haloce-nx: meson, bison, flex and mako, at a pinned commit with
     # uam.patch), found beside this checkout unless pointed elsewhere; without

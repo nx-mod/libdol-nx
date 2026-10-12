@@ -15,13 +15,16 @@
 //   uniform block binding 0     vec4 tevreg[4] (PREV, REG0..2 as GXSetTevColor
 //                               sets them), vec4 kcolor[4], vec4 fogColor
 //                               (its w the destination alpha),
-//                               vec4 fogParams (A, C, B's magnitude, B's shift)
+//                               vec4 fogParams (A, C, B's magnitude, B's shift),
+//                               ivec4 indMtx[6] (the indirect matrices)
 //   sampler2D binding 0..7      texture maps 0..7
 //   out vec4 location 0         the pixel
 //
 // After Aurora's WGSL generator (lib/gx/shader.cpp, MIT), which is after
-// Dolphin's; fog as Dolphin's pixel shader computes it. Indirect textures and
-// the z texture are not here yet.
+// Dolphin's; fog and indirect textures as Dolphin's pixel shader computes
+// them (the matrices in TevBlock's ivec4 indMtx[6]: two rows a matrix, xyz the
+// coefficients, w the shift). Not here yet: the z texture, and the bump alpha
+// an indirect stage can feed the TEV.
 
 #include <array>
 #include <cstdint>
@@ -78,6 +81,18 @@ struct TevStage {
     TevChannel channel = TevChannel::Null;
     std::uint8_t rasSwap = 0;       // into swapTable
     std::uint8_t texSwap = 0;
+    // GXSetTevIndirect: BP 0x10 + stage as loaded, Dolphin's TevStageIndirect
+    // (bt 0-1, fmt 2-3, bias 4-6, bs 7-8, matrix_index 9-10, matrix_id 11-12,
+    // sw 13-15, tw 16-18, lb_utclod 19, fb_addprev 20). 0: no indirect op.
+    std::uint32_t ind = 0;
+};
+
+// An indirect texture stage (GXSetIndTexOrder, GXSetIndTexCoordScale): the
+// coordinate and map it samples, and the scales that divide the coordinate
+// first (as a shift, 0 for none).
+struct IndStage {
+    std::uint8_t texCoord = 0, texMap = 0;
+    std::uint8_t scaleS = 0, scaleT = 0;
 };
 
 struct TevSwap {
@@ -99,6 +114,9 @@ struct TevConfig {
     std::uint8_t fogType = 0;
     // GXSetDstAlpha: the alpha written is the constant (fogColor.w), not the TEV's
     bool dstAlpha = false;
+    // GXSetNumIndStages, and each one's coordinate and map
+    std::uint8_t indStageCount = 0;
+    std::array<IndStage, 4> indStages{};
 };
 
 // The fragment shader for `config`, GLSL 460 for UAM. Empty when the config

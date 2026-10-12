@@ -130,6 +130,11 @@ inline void ApplyPendingSurfaceSize() {
 }
 
 inline bool BeginAuroraFrame() {
+#if defined(WIINX_NATIVE_GX)
+    // libdol's renderer opens its own frame at the first draw (gx_native.h);
+    // Aurora, on its null backend, has none to begin
+    return true;
+#endif
     if (!aurora_begin_frame()) {
         return false;
     }

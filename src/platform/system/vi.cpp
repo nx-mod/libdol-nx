@@ -9,6 +9,9 @@
 #include "guest_globals.h"
 #include "platform/host_platform.h"
 #include "runtime_log.h"
+#if defined(WIINX_NATIVE_GX)
+#include "../gpu/gx_native.h"
+#endif
 
 #include <dolphin/vi.h>
 
@@ -1075,7 +1078,9 @@ void VI_HLE_PresentFrame(bool presentedXfb, bool paceToRetrace) {
         // cadence, and zero only happens when production outruns VI. "Kept up" means <=1 retrace
         // elapsed; 2+ means a boundary was missed, so Aurora seals that frame without its interpolated
         // slots (a windowed backstop lowers the slot target only under sustained overload).
+#if !defined(WIINX_NATIVE_GX)
         aurora_report_producer_paced(retracesElapsed <= 1);
+#endif
         // Stamp the sealed frame's presentation schedule so Aurora paces interpolated slots against
         // this same VI timeline. Anchor to the NEXT retrace boundary, not the period just produced,
         // since slots anchored to the current period would already be expired by seal time. Encoding
@@ -1088,18 +1093,30 @@ void VI_HLE_PresentFrame(bool presentedXfb, bool paceToRetrace) {
             anchorNanos = s_lastPresentAnchorNanos + intervalNanos;
         }
         s_lastPresentAnchorNanos = anchorNanos;
+#if !defined(WIINX_NATIVE_GX)
         aurora_set_present_schedule(anchorNanos, intervalNanos);
+#endif
     } else {
         // Retrace-context presents (VI black, boot) have no display period of
         // their own to subdivide; present as soon as the frame is ready. The
         // schedule grid is gone, so the anchor cursor must not constrain the
         // next paced frame.
         s_lastPresentAnchorNanos = 0;
+#if !defined(WIINX_NATIVE_GX)
         aurora_set_present_schedule(0, 0);
+#endif
     }
 
+#if defined(WIINX_NATIVE_GX)
+    // libdol's own renderer: the EFB pass the frame's draws opened is the
+    // screen, and this presents it (gx_native.h). The next frame's pass opens
+    // at its first draw, so there is nothing to pre-warm.
+    SWITCH_PHASE("gx_native end_frame");
+    dol::gx_native::end_frame();
+#else
     SWITCH_PHASE("aurora_end_frame");
     aurora_end_frame();
+#endif
     // The whole frame is decoded now (end_frame syncs a threaded decoder), so
     // the packed vertex arrays its draws pointed at are free again.
     GxDlRecyclePackedArrays();
@@ -1119,6 +1136,10 @@ void VI_HLE_PresentFrame(bool presentedXfb, bool paceToRetrace) {
         g_vi.hasValidXfb = false;
         g_vi.readyXfb = 0;
     }
+#if defined(WIINX_NATIVE_GX)
+    UpdateAuroraAndProcessEvents();
+    return;
+#endif
     // Pre-warm the next frame so subsequent GX work has a valid frame context.
     {
         SWITCH_PHASE("prewarm UpdateAuroraAndProcessEvents");
