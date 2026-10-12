@@ -242,7 +242,37 @@ static uint32_t ComputeMaxMipLevel(uint16_t width, uint16_t height) noexcept {
     return levels;
 }
 
+#if defined(__SWITCH__)
+void SwitchBootLogExternal(const char* text) noexcept;
+#endif
+
 extern "C" void GX__InitTexObj_801707f8(uint32_t oa, uint32_t da, uint32_t w, uint32_t h, uint32_t f, uint32_t ws, uint32_t wt, uint32_t m) {
+#if defined(__SWITCH__)
+    // Diagnostic: who binds a font glyph sheet (I4, 128x1024 - an NW4R font
+    // sheet) as a texture, i.e. which code draws glyphs. First few only.
+    // Every distinct texture shape bound, with who bound it: the first 40.
+    {
+        static uint32_t seen[40];
+        static int logged = 0;
+        const uint32_t key = (w << 20) ^ (h << 8) ^ f ^ (static_cast<uint32_t>(RecompMod::g_currentTranslatedExecutionAddress) << 1);
+        bool known = false;
+        for (int i = 0; i < logged; ++i) known = known || seen[i] == key;
+        // The menu's own layout loader (0x8152B3CC) binds dozens of textures
+        // at boot; skip it so the slots catch what the web engine binds.
+        auto* traceCpu = TryGetCpuContext();
+        const bool layoutLoader = traceCpu && traceCpu->lr == 0x8152B3CCu;
+        if (!known && !layoutLoader && logged < 40) {
+            seen[logged++] = key;
+            auto* cpu = TryGetCpuContext();
+            char line[160];
+            std::snprintf(line, sizeof(line),
+                          "[tex] %ux%u fmt %u at 0x%08X bound by translated 0x%08X lr 0x%08X r1 0x%08X",
+                          w, h, f, da, static_cast<unsigned>(RecompMod::g_currentTranslatedExecutionAddress),
+                          cpu ? cpu->lr : 0u, cpu ? cpu->gpr[1] : 0u);
+            SwitchBootLogExternal(line);
+        }
+    }
+#endif
     if (w == 0 || h == 0) {
         auto* cpu = TryGetCpuContext();
         RT_LOGF(RT_TAG_GX,
