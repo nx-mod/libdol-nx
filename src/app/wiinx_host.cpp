@@ -34,7 +34,14 @@ void WiinxInstallHost() {
         // there" together. Asking Contains and then GetPointer resolved the
         // same address twice, on a path a native takes for every field of
         // every object it touches.
-        return MemoryInline::GetPointerFast(addr, size);
+        if (wiinx::u8* fast = MemoryInline::GetPointerFast(addr, size)) {
+            return fast;
+        }
+        // The page table answers within one 1 MiB page only. A span across
+        // pages of the same region is still one block of storage: Mario Kart
+        // Wii's first decodeSZS writes 2.6 MB from 0x80F10300, was refused
+        // here, and the game stopped on a "corrupt compressed file".
+        return Memory::Contains(addr, size) ? Memory::GetPointer(addr, size) : nullptr;
     };
     host.valid = [](wiinx::GuestAddr addr, wiinx::u32 size) { return Memory::Contains(addr, size); };
     host.gpr = [](wiinx::Cpu* cpu, int index) { return static_cast<wiinx::u32>(context(cpu)->gpr[index]); };

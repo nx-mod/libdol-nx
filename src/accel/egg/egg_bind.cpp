@@ -18,7 +18,7 @@ extern "C" uint32_t EGG_Decomp_decodeSZS_80218c2c(uint32_t src, uint32_t dst)
 {
     const uint32_t expanded = wiinx::egg::decomp::decode_szs(src, dst);
     if (expanded == 0) {
-        RT_LOG(RT_TAG_HLE) << "decodeSZS: malformed stream from 0x" << std::hex << src << std::dec
+        RT_LOG(RT_TAG_HLE) << "decodeSZS failed (reason in boot.log) from 0x" << std::hex << src << std::dec
                            << std::endl;
         ShowRuntimeFatalPopup("corrupt compressed file",
                               "The game stopped decoding a malformed Yaz0 file.");
