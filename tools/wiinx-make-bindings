@@ -41,8 +41,12 @@ def reference_table():
 
 OVERRIDE = re.compile(
     r"PPC_NATIVE_OVERRIDE[A-Z_]*\(\s*([0-9A-Fa-f]{8})")
+# Every registration macro, the _AS form included: Mario Kart Wii's mod loader
+# hooks are REGISTER_NATIVE_FUNCTION_AS, were left out of the table, resolved
+# to 0 and were dropped - while the translator, which counts them, had already
+# left their functions out of the dispatch table.
 REGISTER = re.compile(
-    r"REGISTER_NATIVE_FUNCTION\(\s*0x([0-9A-Fa-f]{8})")
+    r"REGISTER_(?:NATIVE|TRANSLATED)_FUNCTION(?:_AS)?\(\s*0x([0-9A-Fa-f]{8})")
 
 
 def game_own(output_path):
