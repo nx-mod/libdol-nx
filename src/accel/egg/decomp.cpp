@@ -34,6 +34,22 @@ u32 readable_from(GuestAddr address) noexcept {
         good = probe;
         probe *= 2;
     }
+    if (probe > kLimit) {
+        return good;
+    }
+    // Then the exact end between the last size that fit and the first that did
+    // not. Doubling alone answered a power of two: Mario Kart Wii loads an
+    // archive 1.2 MB below the end of MEM1, was handed 1 MB of it, and the
+    // decoder ran out of input mid-stream ("malformed stream").
+    u32 bad = probe;
+    while (bad - good > 1) {
+        const u32 middle = good + (bad - good) / 2;
+        if (h.valid(address, middle)) {
+            good = middle;
+        } else {
+            bad = middle;
+        }
+    }
     return good;
 }
 
