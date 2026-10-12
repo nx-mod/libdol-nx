@@ -51,13 +51,16 @@ Dependencies point one way: `app` → `accel` → `platform` → `cpu` → `core
 
 `core`, `format` and `accel` need only the standard library, so they build on
 any machine and their checks run there. `cpu`, `platform` and `app` are the
-running console and need Aurora and a game's translated code.
+running console and need a game's translated code.
 
-Underneath, this builds on [aurora-nx](https://github.com/nx-mod/aurora-nx)
-(GX to WebGPU), [dawn-nx](https://github.com/nx-mod/dawn-nx) (WebGPU to Vulkan),
-[nxvk](https://github.com/nx-mod/nxvk) (the Vulkan driver),
-[sqlite-nx](https://github.com/nx-mod/sqlite-nx) and libnx. Those stay separate
-libraries; a game project sees this one and its console's.
+On the Switch, GX is drawn by libdol's own renderer on deko3d, the console's
+GPU library ([docs/deko3d.md](docs/deko3d.md); the default since 2026-10-12).
+[aurora-nx](https://github.com/nx-mod/aurora-nx) (GX to WebGPU) and
+[dawn-nx](https://github.com/nx-mod/dawn-nx) (WebGPU to Vulkan) are still
+configured for their headers and for the desktop build, but not linked into a
+Switch game; `runtime.defines: []` in a game's `recomp.yml` builds it on them
+as before. [sqlite-nx](https://github.com/nx-mod/sqlite-nx) and libnx stay
+separate libraries; a game project sees this one and its console's.
 
 ### format - the consoles' own files
 
@@ -82,7 +85,7 @@ library.
 |----------|-----------------------------------------------------------------|
 | `os`     | threads, alarms, interrupts, time, caches, mutexes              |
 | `fs`     | the disc (DVD), and saves through whichever store the console has |
-| `gx`     | graphics: the GX FIFO into Aurora                               |
+| `gx`     | graphics: the GX FIFO into libdol's deko3d renderer (`gpu`)     |
 | `audio`  | AI/DSP/AX into Switch audio                                     |
 | `input`  | the controller ports, and each console's own controllers        |
 | `system` | video timing (VI), settings, power                              |
@@ -163,8 +166,9 @@ tools/wiinx-build mygame.iso        # or a game folder made earlier
 
 extracts the disc, writes the project, scans the game for the natives libdol-nx
 can bind, translates its code, builds it and leaves `<game>/build/<game>.nro`
-for `sdmc:/wii-nx/games/<game>/`. It needs dawn-nx and aurora-nx checkouts
-(`--dawn`, `--aurora`) and devkitPro's Switch toolchain.
+for `sdmc:/wii-nx/games/<game>/`. It needs devkitPro's Switch toolchain with
+deko3d, and dawn-nx and aurora-nx checkouts (`--dawn`, `--aurora`) for their
+headers - neither is linked into a native build.
 
 Games are only ever built on the player's machine from their own disc; CI
 builds the library and tools, never a game.

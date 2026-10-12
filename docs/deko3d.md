@@ -14,6 +14,8 @@ Tint, no NVK.
 | `dk_frame_switch.cpp` | passes, copies, the screen (1920x1080 images, cropped to 720p in handheld) |
 | `dk_shader_switch.cpp` | shaders: GLSL compiled by UAM on the console, loaded into code memory, kept for the run |
 | `dk_gx_renderer_switch.cpp` | GX draws: the state's shaders, uniforms, converted vertices, pixel state and viewport, and its textures - decoded from guest memory, mips and palettes, cached by a sampled hash, with their samplers (`draw_gx`) |
+| `gx_native_switch.cpp` | the renderer GX feeds: the FIFO buffered and run in batches, frames opened at the first draw and presented at the display copy, EFB copies kept on the GPU by guest address, per-second counts in boot.log |
+| `aurora_off_switch.cpp` | what libdol still asked of Aurora - its start, events and shut-down, GX calls that only fed its copy of the state, its VI helpers and counters - done natively, so Aurora and Dawn are not linked |
 | `dk_gx_state_switch.cpp` | GX's pixel state (`wiinx/format/gx/pixel.hpp`: blending, logic op, depth, culling, write masks) as deko3d state objects |
 
 UAM is built for the console as Halo's port builds it (meson, bison, flex,
@@ -51,53 +53,69 @@ the runtime's unity batches (`cmake/runtime/Runtime.cmake`).
 `uam` - the compiler the console runs - wherever it is installed. Not yet:
 indirect textures, fog, the z texture, bump texgens.
 
-## How it replaces Aurora (the plan)
+## How it replaces Aurora
 
-Not by carrying Aurora's GX library over: that would keep its design (GX calls
-encoded into a FIFO only to be decoded again, PC-side pointer extensions,
-its texture objects). The game already speaks the hardware's language, and
-libdol already reads it:
+The default on the Switch since 2026-10-12 (`WIINX_NATIVE_GX`, on). Aurora and
+Dawn are not linked: Mario Kart Wii's NRO went from 139 MB to 115 MB.
 
-1. The gather pipe. A game's FIFO words arrive at `GX_HLE_FIFO_Write*` and
-   `GX_HLE_FIFO_WriteBurst` (`src/platform/gx/gx_fifo.cpp`), which today
-   parse them and hand BP writes, XF loads and draws to Aurora
-   (`GXApplyBPReg`, `GXCallDisplayList`, `submit_raw_draw`). Natively the
-   same bytes go to one `wiinx::gx::CommandProcessor` over guest memory, and
-   its draws to `draw_gx`.
-2. libdol's replacements of the SDK's GX functions (`src/platform/gx`, the
-   ones that bypass the FIFO for speed) call `wiinx::gx::State`'s setters
-   instead of Aurora's host GX API. The ones that stand in for the hardware -
-   draw sync, the PE finish and token interrupts, the CP FIFO registers -
-   stay as they are, so no MMIO needs emulating.
-3. The EFB as a deko3d render target at the screen's scale; EFB copies to
-   textures (`GXCopyTex`) and to the XFB (`GXCopyDisp`); VI presents the XFB.
-4. A build option swaps the two: Aurora's GX and present, or these. Aurora's
-   code stays a reference for GX behaviour, as Dolphin's is.
+1. **The game sets GX itself.** libdol's replacements of the SDK's GX setters
+   existed to bridge into Aurora; natively the SDK's own setters write the
+   hardware's registers through the gather pipe into `wiinx::gx::CommandProcessor`,
+   so those natives are not registered (`#if !defined(WIINX_NATIVE_GX)` around
+   each registration) and the game's own code runs, `GXInit` included. What
+   stays native stands in for hardware: the FIFO and display-list plumbing,
+   draw sync and the PE interrupts, and the copies. The CP, PE, PI, MI and SI
+   registers the SDK reaches directly are register files (`src/cpu/memory.cpp`).
+2. **The translator and the runtime agree.** A game's `recomp.yml` says which
+   build it is (`runtime.defines`); the translator reads native sources as that
+   build compiles them, so a function whose native drops out is translated, and
+   `wiinx-build` builds the runtime the same way. With no list the default is
+   `[WIINX_NATIVE_GX]`; `defines: []` is Aurora's build.
+3. **Frames.** A frame opens at its first draw on the screen's image, cleared
+   by the copy clear registers, and VI presents it at `GXCopyDisp`, paced to
+   the retrace. `GXCopyTex` copies the EFB into an image kept for the guest
+   address; a texture bound there samples it until the guest rewrites that RAM.
+4. **What is left of Aurora** is its application layer's API, done in
+   `aurora_off_switch.cpp`: HOME and quitting from libnx's applet loop, the
+   controllers from libdol's native input. The settings overlay (ImGui on
+   Aurora's renderer) is not drawn until it has a deko3d version.
+
+## Lessons from deko3d
+
+- **Free nothing the frame has recorded.** Draws recorded but not submitted
+  still read what they bound. Textures, buffers and descriptor slots are
+  retired with the frame and freed once its fence has passed (`retire`).
+- **`dkCmdBufClear` does not drop a command buffer's memory**; it rewinds to
+  the start of the piece it was last given. At each frame's end the buffers are
+  cleared and given a fresh piece of the new frame's slice at once.
+- **`dkCmdBufBeginCaptureCmds` clears the buffer it is given**: capture on a
+  buffer of its own (`dk::capture()`), never on the frame's.
+- **`dkCmdBufBindVtxBuffers` reserves five words and writes six** (deko3d's
+  source as of 2026). It is captured and replayed, which reserves what it
+  wrote.
+- **Bound targets must agree in size.** The screen's images are 1920x1080
+  whatever handheld crops them to; the depth buffer is the same size.
+- **Many draws in one command list went wrong on the GPU** - a "GPU method
+  error" on a data-like word, a different method each run, after a few hundred
+  frames. Each draw submitted as its own list does not (`kSubmitEveryDraw`).
+  The cause is not found yet; that is the workaround.
+- **deko3d's debug build names the fault.** `-DWIINX_DEKO3D_DEBUG=ON` links
+  `libdeko3dd`, whose messages reach boot.log.
+
+## Where it stands
+
+2026-10-12, Mario Kart Wii: boots, every draw accepted, stable through the
+menus, about 20-26 fps there with ~220 draws a frame. The profile is 82% the
+game's own translated code, 18% the runtime - the renderer included - so the
+next speed is in the game's code: the GX setters now run as translated code
+and feed the gather pipe a word at a time.
 
 ## What comes next
 
-GX is decoded by libdol already (`src/platform/gx`: display lists, vertex
-formats, the CP and XF state). What is missing is the half that turns a frame's
-GX state and draws into GPU work:
-
-1. Pipelines: GLSL compiled on the console by UAM into DKSH, kept in memory
-   by the source's hash for the run. Blend, depth, rasterizer and vertex-input
-   state as deko3d state objects. Halo: Combat Evolved's deko3d port is the
-   reference (nx-mod/haloce-nx, `port/switch/host/host_dk*.c`).
-2. The TEV stages as GLSL. Aurora's WGSL generator (`lib/gx/shader.cpp`) is the
-   reference for what each stage computes; it is adapted, not linked.
-3. Textures: GX formats decoded (or, where the GPU has a match, uploaded as
-   they are), TLUT palettes, the texture cache.
-4. Draws: vertex and index data from libdol's display-list decoder into the
-   frame's staging ring, one pass per EFB.
-5. EFB and XFB copies, with their format conversions; then the present.
-6. The settings overlay drawn without ImGui-on-WebGPU (section 5).
-
-Once a title draws on it: the compiled shaders kept on the card in one SQLite
-database (nx-mod/sqlite-nx) keyed by the source's hash - compiled once, never
-again, and shippable as keys so a new install compiles in the background at
-first start, as Halo's port does. Not before: the cache comes after the
-renderer runs.
-
-Each lands behind the Aurora renderer until a title draws its first frame on
-it; then Aurora's `aurora_gx`, `aurora_vi` and Dawn leave the Switch build.
+1. Speed: a cheaper gather-pipe path; native fast paths for the hottest GX
+   setters straight into `State`; `nw4r::g3d` natives ([performance](performance.md)).
+2. EFB copies in their own formats (depth, intensity) and copies the CPU reads.
+3. The settings overlay drawn by deko3d.
+4. Why large command lists fault, so draws can share lists again.
+5. The compiled shaders kept on the card (nx-mod/sqlite-nx), keyed by the
+   source's hash, so only a first run compiles them.

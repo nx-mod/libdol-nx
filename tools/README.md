@@ -58,3 +58,7 @@ tools/wiinx-extract "Wii Sports + Wii Sports Resort.iso" sports.dol --file US/sy
   `wiinx-new-game` refused to work inside a repository that already existed.
   `wiinx-scan functions` was added the same day, because without a symbol map
   that game translated only 1,999 of its functions.
+- 2026-10-12: `wiinx-build` builds with libdol's deko3d renderer unless the
+  game's `recomp.yml` lists `runtime.defines` without `WIINX_NATIVE_GX`
+  (`defines: []` is Aurora's build); the translator reads the same rule.
+  `wiinx-near-map` added (docs/signatures.md, "Builds nobody has mapped").
