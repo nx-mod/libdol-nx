@@ -2250,6 +2250,11 @@ int RuntimeMain(int argc, char** argv) {
         SwitchLoadStage(1);
         SwitchDurableLog("[boot] SystemBridge::Initialize enter (runs guest OS init)");
 #endif
+        // The native tables before any guest code: SystemBridge::Initialize runs
+        // the static constructors, and Mario Kart Wii's call PSMTXIdentity
+        // through a generated binding, which found no table and dereferenced
+        // null when this ran after the graphics setup further down.
+        WiinxInstallHost();
         SystemBridge::Initialize();
         RT_LOG(RT_TAG_RUNTIME) << "[boot] SystemBridge::Initialize done" << std::endl;
 #if defined(__SWITCH__)
@@ -2397,7 +2402,6 @@ int RuntimeMain(int argc, char** argv) {
         }
         aurora_set_frame_worker_wait_callback(ServiceGuestTimingDuringAuroraFrameWait);
         GxGuestWrite::InstallAuroraHooks();
-        WiinxInstallHost();
         if (!RuntimeGuestOs::installed()) {
             // Every Wii game links the OS, so every game has these; libdol-nx
             // just does not know where this one put them (guest_os_layout.h).
