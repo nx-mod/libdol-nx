@@ -457,7 +457,14 @@ def after_helper(dol, helper, sig):
 
 
 def masked_hash(code):
-    """Hash a function with everything that legitimately moves blanked out.
+    """Hash a function with everything that legitimately moves blanked out
+    (masked_words)."""
+    masked = masked_words(code)
+    return hashlib.sha256(struct.pack(f">{len(masked)}I", *masked)).hexdigest()[:16]
+
+
+def masked_words(code):
+    """A function's instructions with everything that legitimately moves blanked out.
 
     mask() handles what one instruction can decide on its own. The rest needs
     the stream: an address of a global is built from a `lis` and an `addi` (or
@@ -488,7 +495,7 @@ def masked_hash(code):
         elif target in pending and opcode != 15:
             pending.discard(target)                          # register reused for something else
         masked.append(value)
-    return hashlib.sha256(struct.pack(f">{len(masked)}I", *masked)).hexdigest()[:16]
+    return masked
 
 
 MONTHS = {m: i + 1 for i, m in enumerate("Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split())}

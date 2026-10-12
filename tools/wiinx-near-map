@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+"""Name a game's natives from a game of a nearby SDK build.
+
+    tools/wiinx-near-map <game.dol> <game functions.map> <ref.dol> <ref map>
+                         [--out near.map] [--min 0.85] [--margin 0.08]
+
+A native is signed from a game whose symbols are known, and a signature finds
+the same build's copy anywhere. A game linking a build nobody has a map for -
+Wii Party and Wii Sports Resort share RVL_SDK of 2009-12-11 - gets only the
+natives whose code did not change between builds, which is about half.
+
+Between neighbouring builds a function usually changes a little: an
+instruction added, a field moved. This finds each native in the game by how
+similar its masked code is to the reference game's copy, where the reference
+map says what it is. A function counts only when it is clearly the one: at
+least --min similar, ahead of the next candidate by --margin, and not claimed
+by another native.
+
+It writes a map: every function start in the game, the found ones under the
+reference's names. Nothing is bound from it directly - it is the input to
+
+    tools/wiinx-sign-natives <game.dol> near.map --by-name --cross <ref.dol> <ref map> --write
+
+which signs from this game's own code and keeps only what verifies.
+"""
+import difflib
+import os
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+
+
+def load(name):
+    """Another tool's code, without running its main."""
+    path = os.path.join(HERE, name)
+    module = type(sys)(name.replace("-", "_"))
+    module.__dict__["__file__"] = path
+    source = open(path).read().replace("def main(argv):", "def _unused(argv):")
+    exec(compile(source, name, "exec"), module.__dict__)
+    return module
+
+
+def starts(path):
+    """[(address, name)] ascending, from a `hexaddr [name]` map."""
+    found = []
+    for line in open(path, errors="ignore"):
+        parts = line.split()
+        if parts:
+            try:
+                found.append((int(parts[0], 16), parts[1] if len(parts) > 1 else ""))
+            except ValueError:
+                continue
+    return sorted(set(found))
+
+
+def functions(dol, entries, scan):
+    """{address: masked words} for each start, up to the next one."""
+    out = {}
+    for index, (address, _) in enumerate(entries):
+        if index + 1 >= len(entries):
+            break
+        size = entries[index + 1][0] - address
+        if 16 <= size <= 0x4000 and (code := dol.read(address, size)) is not None:
+            out[address] = scan.masked_words(code)
+    return out
+
+
+def main(argv):
+    paths = [a for a in argv if not a.startswith("--")]
+    def option(name, default):
+        return type(default)(argv[argv.index(name) + 1]) if name in argv else default
+    if len(paths) < 4:
+        print(__doc__.strip())
+        return 2
+    game_dol, game_map, ref_dol, ref_map = paths[:4]
+    out = option("--out", "near.map")
+    minimum, margin = option("--min", 0.85), option("--margin", 0.08)
+
+    scan, signer = load("wiinx-scan"), load("wiinx-sign-natives")
+    game, ref = scan.Dol(game_dol), scan.Dol(ref_dol)
+    game_entries, ref_entries = starts(game_map), signer.symbol_map(ref_map)
+    names = dict(ref_entries)
+
+    # The natives the reference game has, located by name as the signer does.
+    src = os.path.join(HERE, "..", "src")
+    shipped = signer.json.load(open(signer.SIGNATURES))["natives"]
+    natives = signer.by_name(src, ref_entries, [(e["name"], e.get("registration")) for e in shipped])
+    ref_code = functions(ref, ref_entries, scan)
+    game_code = functions(game, game_entries, scan)
+    by_size = sorted((len(words), address) for address, words in game_code.items())
+
+    claims = {}
+    for address in sorted(natives):
+        wanted = ref_code.get(address)
+        if not wanted or signer.NOT_A_FUNCTION.search(names.get(address, "")):
+            continue
+        low, high = len(wanted) * 0.8, len(wanted) * 1.25
+        scored = []
+        for size, candidate in by_size:
+            if size < low:
+                continue
+            if size > high:
+                break
+            matcher = difflib.SequenceMatcher(None, wanted, game_code[candidate], autojunk=False)
+            if matcher.real_quick_ratio() < minimum or matcher.quick_ratio() < minimum:
+                continue
+            scored.append((matcher.ratio(), candidate))
+        scored.sort(reverse=True)
+        if not scored or scored[0][0] < minimum:
+            continue
+        if len(scored) > 1 and scored[0][0] - scored[1][0] < margin:
+            continue
+        score, candidate = scored[0]
+        # One function, one native: two that both look like it are both wrong.
+        if candidate in claims and claims[candidate][0] >= score:
+            continue
+        claims[candidate] = (score, names[address])
+
+    # Two names on one function were settled above; drop names that landed twice.
+    seen = {}
+    for candidate, (score, name) in claims.items():
+        seen.setdefault(name, []).append(candidate)
+    named = {c: n for n, cs in seen.items() if len(cs) == 1 for c in cs}
+
+    with open(out, "w") as handle:
+        for address, _ in game_entries:
+            handle.write(f"{address:08x} {named.get(address, f'fn_{address:08x}')}\n")
+    exact = sum(1 for c, (s, _) in claims.items() if c in named and s >= 0.999)
+    print(f"reference natives: {len(natives)}; named in this game: {len(named)} "
+          f"({exact} identical, {len(named) - exact} near)")
+    print(f"wrote {out}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

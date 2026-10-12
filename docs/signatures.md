@@ -191,6 +191,45 @@ disc named every address the scan had already bound by code - 97 of 97, from a
 project with no connection to this one. That is the strongest check these
 signatures have had.
 
+## Builds nobody has mapped
+
+A game whose SDK build no mapped game shares gets only the natives whose code
+did not change between builds. Wii Party and Wii Sports Resort link RVL_SDK of
+2009-12-11 and NW4R of 2009-12-22, and no map exists for either.
+
+Between neighbouring builds a function usually changes only a little.
+`wiinx-near-map` finds each native in such a game by how similar its masked
+code (`masked_words`, the same masking the hashes use) is to a mapped game's
+copy, and writes a map of the game's function starts with those names on them.
+A match counts only when it is clearly the one: 85% similar or better, 8
+points ahead of the next candidate, and claimed by no other native. The map
+then goes through the signer like any other, so its uniqueness and `--cross`
+checks decide what ships:
+
+```sh
+tools/wiinx-scan functions wiiparty/disc/sys/main.dol --out wiiparty/functions.map
+tools/wiinx-near-map wiiparty/disc/sys/main.dol wiiparty/functions.map \
+    nsmbw/disc/sys/main.dol nsmbw/functions.map --out near.map
+tools/wiinx-sign-natives wiiparty/disc/sys/main.dol near.map --by-name \
+    --cross nsmbw/disc/sys/main.dol nsmbw/functions.map \
+    --cross mkwii/disc/sys/main.dol mkwii/MAP.txt --write
+```
+
+2026-10-12, from New Super Mario Bros. Wii into Wii Party: 247 natives named
+(237 identical, 10 near), all 247 signed and verified. Natives bound by code:
+
+| game | before | after |
+|---|---|---|
+| Wii Party (signed from) | 280 | 311 |
+| New Super Mario Bros. Wii | 319 | 333 |
+| Mario Kart Wii | 359 | 364 |
+
+No binding was lost or moved in any of them. The one new signature that
+contradicted an existing one (`GXPokeColorUpdate`) was left out. Rescanning
+New Super Mario Bros. Wii also moved four bindings its `bindings.json` had
+pointed at the SDK's internal helpers (`__GXSetProjection`, `nandOpen`, ...)
+onto the public functions.
+
 ## The console's own natives
 
 `accel` natives are bound this way today, and so are the ten assembly
