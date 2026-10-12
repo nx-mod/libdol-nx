@@ -323,7 +323,12 @@ public sealed partial class CxxLinearCodeGenerator
                     if (call.IsTailCall || (s_tailJumpCallTargets is { } tailJumpTargets && tailJumpTargets.Contains(addr)))
                     {
                         AppendFlush(sb, pad);
-                        sb.AppendLine($"{pad}MKW_TAIL_JUMP(0x{addr:X8}u, ctx);");
+                        // A fixed target: recorded like a direct call so this
+                        // shard gets its trait, and MKW_TAIL_JUMP_TO branches
+                        // straight to a translated winner instead of looking
+                        // it up on every jump.
+                        RecordEmittedDirectCallTarget(addr);
+                        sb.AppendLine($"{pad}MKW_TAIL_JUMP_TO(0x{addr:X8}u, ctx);");
                         break;
                     }
 

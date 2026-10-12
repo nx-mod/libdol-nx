@@ -717,6 +717,23 @@ inline GuestCpuEntry ResolveTailJump(uint32_t target, CpuContext* cpu) {
         MKW_MUSTTAIL return mkw_tail_entry_(cpu);                               \
     } while (0)
 
+// A jump to a target known when this shard was generated. A translated winner
+// that needs no FPR guard, entered from the context already current, is a
+// plain branch: no registry lookup. The jump to a fixed function is the common
+// case - every `b func` - and the lookup on each one made the menus slower than
+// the calls these jumps replaced. Anything else resolves as MKW_TAIL_JUMP.
+#define MKW_TAIL_JUMP_TO(addr, cpu)                                                         \
+    do {                                                                                    \
+        if constexpr (KnownTranslatedCpuCall<(addr)>::kAvailable &&                         \
+                      KnownTranslatedCpuCall<(addr)>::kNonvolatileFprWriteMask == 0) {      \
+            if (__builtin_expect(TryGetCpuContext() == (cpu), 1)) {                         \
+                RecompMod::g_currentTranslatedExecutionAddress = (addr);                    \
+                MKW_MUSTTAIL return KnownTranslatedCpuCall<(addr)>::Entry(cpu);             \
+            }                                                                               \
+        }                                                                                   \
+        MKW_TAIL_JUMP((addr), (cpu));                                                       \
+    } while (0)
+
 
 inline void InvokeIndirectCpu(uint32_t target, CpuContext* ctx) {
     CpuContext* cpu = ctx ? ctx : &GetPersistentCpuContext();
