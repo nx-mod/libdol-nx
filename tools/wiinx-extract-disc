@@ -51,4 +51,10 @@ command -v dolphin-tool >/dev/null || {
 }
 
 echo ">> $image"
-dolphin-tool extract -i "$image" -o "$disc_dir"
+# The game partition only, where a project expects it: without --gameonly a
+# Wii disc comes out as DATA/ and UPDATE/ side by side, and nothing finds
+# disc/sys/main.dol (Wii Party's update partition carries a whole system).
+dolphin-tool extract --gameonly -i "$image" -o "$disc_dir"
+if [ -d "$disc_dir/DATA/sys" ] && [ ! -e "$disc_dir/sys" ]; then
+    (shopt -s dotglob; mv "$disc_dir/DATA"/* "$disc_dir"/) && rmdir "$disc_dir/DATA"
+fi
