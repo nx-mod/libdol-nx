@@ -76,6 +76,12 @@ function(mkw_configure_translated_target target)
     mkw_configure_object_target(${target})
     mkw_apply_translated_compile_options(${target})
     mkw_bound_translated_compiles(${target})
+    # Translated code calls natives directly through native_cpu_calls.inc,
+    # whose GX setters exist only in Aurora's build: it has to see the same
+    # build the runtime and the translator do.
+    if(MKW_PLATFORM_SWITCH AND WIINX_NATIVE_GX)
+        target_compile_definitions(${target} PRIVATE WIINX_NATIVE_GX=1)
+    endif()
 endfunction()
 
 # The runtime as its layers: cpu (the guest CPU), platform (the console) and

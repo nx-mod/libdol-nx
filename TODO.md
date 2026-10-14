@@ -23,6 +23,9 @@ The large moves, newest work first. Each section's own TODO.md has its detail.
 - [ ] `format/archive` - U8, and a Yaz0 encoder
 - [ ] `accel/nw4r` - g3d and snd are the two largest gaps in any game
       ([coverage](docs/coverage.md))
+- [ ] `accel/sdk/gx` - GX natives written (texture objects); bind them with
+      `wiinx-emit-bindings` and retranslate, then TEV, vertex formats,
+      transforms, lights and the pixel setters
 - [ ] `accel/ogc` - natives for homebrew put through the translator
 - [ ] `app` - one launcher, themed per console, rather than one per front repo
 
@@ -33,8 +36,17 @@ The large moves, newest work first. Each section's own TODO.md has its detail.
 - [ ] **libgc-nx**: ARAM, memory cards, DTK and boot
 - [ ] **libwii-nx**: IOS, ES, ISFS, NAND, WPAD/KPAD, SC
 
-## Measured, not guessed
+## Speed, measured ([performance](docs/performance.md))
 
-- [ ] Display-list decode, 12.6 ms a frame
-- [ ] Audio, about 5 ms a frame
-- [ ] Free memory: 3 MB of 3189 MB
+- [ ] The guest's audio callback onto core 1 (~13 ms of a race frame)
+- [ ] Vertex decode on the GPU, so the render thread stops being the wait
+- [ ] g3d and AXFX natives
+- [ ] Async disc reads back on (a hang between menus is not found)
+
+## Native GX ([deko3d](docs/deko3d.md))
+
+- [ ] Miis: face texture eyes and mouth, heads, icons
+- [ ] The race minimap
+- [ ] Bump-alpha colour channels
+- [ ] The settings overlay on deko3d
+- [ ] Mega Man 9: a pixel row lost here and there in its scaled 256x240 picture

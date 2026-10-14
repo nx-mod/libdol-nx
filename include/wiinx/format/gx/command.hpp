@@ -57,15 +57,38 @@ class CommandProcessor {
     // this is the direct format the draw callback receives).
     VertexFormat DirectFormat(std::uint8_t table) const;
 
+    // Called just before the stream changes the state a draw reads (BP and XF
+    // loads, the vertex descriptor): whoever batches draws that share a state
+    // sends them before it moves on.
+    using ChangeFn = std::function<void()>;
+    void SetBeforeChange(ChangeFn change) { mBeforeChange = std::move(change); }
+    // what the change about to happen is, while the hook runs: kind << 16 |
+    // what it names (1 BP register, 2 XF address, 3 CP register, 4 XF loaded
+    // from array 12..15), for counting what splits batches
+    std::uint32_t ChangeCause() const { return mChangeCause; }
+
   private:
+    void BeforeChange(std::uint32_t cause) {
+        mChangeCause = cause;
+        if (mBeforeChange) {
+            mBeforeChange();
+        }
+    }
+    ChangeFn mBeforeChange;
+    std::uint32_t mChangeCause = 0;
     State& mState;
     Memory mMemory;
     DrawFn mDraw;
     std::uint32_t mVcdLo = 0, mVcdHi = 0;
+    bool mVcdSet = false;
     std::array<std::uint32_t, 8> mVatA{}, mVatB{}, mVatC{};
     std::array<std::uint32_t, 16> mArrayBase{}, mArrayStride{};
     std::vector<std::uint8_t> mExpanded;
+    std::vector<std::uint32_t> mXfWords;
     int mDepth = 0;
+    // DirectFormat per table, until the descriptor or a table changes
+    mutable std::array<VertexFormat, 8> mFormats{};
+    mutable std::uint8_t mFormatValid = 0;
 
     void LoadCP(std::uint8_t reg, std::uint32_t value);
     std::uint8_t AttrType(std::uint8_t attr) const;  // GX_NONE / DIRECT / INDEX8 / INDEX16

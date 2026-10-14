@@ -1,14 +1,23 @@
 // The GPU on deko3d: shaders - GLSL compiled on the console by UAM, loaded
 // into code memory, kept for the run by the source's hash (dk.h).
 //
-// Compiled shaders are not kept on the card yet: that comes once a title draws
-// on deko3d (docs/deko3d.md).
+// And kept between runs: every shader compiled is appended to one pack file in
+// the game's cache folder, read whole the first time a shader is asked for, so
+// a shader a game has drawn with before loads at once instead of being compiled
+// again (UAM takes tens of milliseconds a shader - a stall the first time each
+// effect appears, every run). Entries are keyed by the exact source's hash: a
+// renderer that writes a shader differently makes a new entry, never a stale
+// binary.
 #include "dk.h"
+#include "switch_layout.h"
 
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <mutex>
+#include <sys/stat.h>
 #include <unordered_map>
+#include <vector>
 
 // UAM, from src/uam/uam_compile.cpp when the build has it; this stand-in when it
 // does not (no UAM build found: cmake/game/CMakeLists.txt says so)
@@ -36,7 +45,67 @@ struct Shaders {
     // by (stage, source hash); a failed compile is kept as null, not retried
     std::unordered_map<uint64_t, DkShader*> loaded;
     bool said_no_compiler = false;
+    // the pack's binaries not loaded yet, by the same key
+    std::unordered_map<uint64_t, std::vector<char>> packed;
+    bool pack_read = false;
 } g_shaders;
+
+// the pack: a tag, then (key, size, DKSH) entries one after another
+constexpr char kPackTag[8] = {'W', 'X', 'S', 'H', 'P', 'K', '0', '1'};
+constexpr const char* kPackPath = WIINX_GAME_PATH("cache/shaders.pack");
+
+void read_pack() {
+    g_shaders.pack_read = true;
+    FILE* file = std::fopen(kPackPath, "rb");
+    if (!file) {
+        return;
+    }
+    std::vector<char> bytes;
+    char chunk[64 * 1024];
+    for (size_t n; (n = std::fread(chunk, 1, sizeof(chunk), file)) > 0;) {
+        bytes.insert(bytes.end(), chunk, chunk + n);
+    }
+    std::fclose(file);
+    if (bytes.size() < sizeof(kPackTag) || std::memcmp(bytes.data(), kPackTag, sizeof(kPackTag)) != 0) {
+        log("shader pack: not ours, ignored");
+        return;
+    }
+    // (a short or damaged entry ends the read: what came before it still counts)
+    size_t at = sizeof(kPackTag);
+    while (at + 12 <= bytes.size()) {
+        uint64_t key;
+        uint32_t size;
+        std::memcpy(&key, bytes.data() + at, 8);
+        std::memcpy(&size, bytes.data() + at + 8, 4);
+        at += 12;
+        if (size == 0 || at + size > bytes.size()) {
+            break;
+        }
+        g_shaders.packed[key].assign(bytes.data() + at, bytes.data() + at + size);
+        at += size;
+    }
+    log("shader pack: %zu shaders kept from earlier runs", g_shaders.packed.size());
+}
+
+void append_pack(uint64_t key, const char* dksh, size_t size) {
+    struct stat info;
+    const bool fresh = stat(kPackPath, &info) != 0 || info.st_size == 0;
+    if (fresh) {
+        mkdir(WIINX_GAME_PATH("cache"), 0777);  // (already there in a normal install)
+    }
+    FILE* file = std::fopen(kPackPath, "ab");
+    if (!file) {
+        return;
+    }
+    if (fresh) {
+        std::fwrite(kPackTag, 1, sizeof(kPackTag), file);
+    }
+    const uint32_t length = static_cast<uint32_t>(size);
+    std::fwrite(&key, 1, 8, file);
+    std::fwrite(&length, 1, 4, file);
+    std::fwrite(dksh, 1, size, file);
+    std::fclose(file);
+}
 
 // FNV-1a over the source, with the stage folded in
 uint64_t source_key(ShaderStage stage, const char* glsl) {
@@ -108,11 +177,26 @@ const DkShader* shader(ShaderStage stage, const char* glsl) {
     if (const auto it = g_shaders.loaded.find(key); it != g_shaders.loaded.end()) {
         return it->second;
     }
+    if (!g_shaders.pack_read) {
+        read_pack();
+    }
+    if (const auto it = g_shaders.packed.find(key); it != g_shaders.packed.end()) {
+        DkShader* kept = load(it->second.data(), it->second.size());
+        g_shaders.packed.erase(it);
+        if (kept) {
+            g_shaders.loaded.emplace(key, kept);
+            return kept;
+        }
+        // (a binary that would not load is compiled again below)
+    }
     char* dksh = nullptr;
     size_t size = 0;
     DkShader* loaded = nullptr;
     if (dol_dk_compile_glsl(stage == ShaderStage::Fragment, glsl, &dksh, &size)) {
         loaded = load(dksh, size);
+        if (loaded) {
+            append_pack(key, dksh, size);
+        }
     } else if (dksh == nullptr && size == 0 && !g_shaders.said_no_compiler) {
         log("a shader did not compile (or this build has no UAM)");
         g_shaders.said_no_compiler = true;

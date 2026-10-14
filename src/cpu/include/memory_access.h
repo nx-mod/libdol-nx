@@ -655,39 +655,36 @@ MKW_MEMORY_FORCE_INLINE void FlatWriteRamFloat64(uint32_t address, double value)
 
 } // namespace MemoryInline
 
-#undef MKW_MEMORY_FORCE_INLINE
-#undef MKW_MEMORY_NO_INLINE
-#undef MKW_MEMORY_COLD
 
-inline uint8_t Memory::Read8(uint32_t addr) {
+MKW_MEMORY_FORCE_INLINE uint8_t Memory::Read8(uint32_t addr) {
     uint8_t value = 0;
     if (!MemoryInline::TryReadGuestScalar(addr, value)) [[unlikely]]
         return MemoryInline::Read8Slow(addr);
     return value;
 }
 
-inline uint16_t Memory::Read16(uint32_t addr) {
+MKW_MEMORY_FORCE_INLINE uint16_t Memory::Read16(uint32_t addr) {
     uint16_t value = 0;
     if (!MemoryInline::TryReadGuestScalar(addr, value)) [[unlikely]]
         return MemoryInline::Read16Slow(addr);
     return value;
 }
 
-inline uint32_t Memory::Read32(uint32_t addr) {
+MKW_MEMORY_FORCE_INLINE uint32_t Memory::Read32(uint32_t addr) {
     uint32_t value = 0;
     if (!MemoryInline::TryReadGuestScalar(addr, value)) [[unlikely]]
         return MemoryInline::Read32Slow(addr);
     return value;
 }
 
-inline uint64_t Memory::Read64(uint32_t addr) {
+MKW_MEMORY_FORCE_INLINE uint64_t Memory::Read64(uint32_t addr) {
     uint64_t value = 0;
     if (!MemoryInline::TryReadGuestScalar(addr, value)) [[unlikely]]
         return MemoryInline::Read64Slow(addr);
     return value;
 }
 
-inline float Memory::ReadFloat32(uint32_t addr) {
+MKW_MEMORY_FORCE_INLINE float Memory::ReadFloat32(uint32_t addr) {
     uint32_t bits = 0;
     if (!MemoryInline::TryReadGuestScalar(addr, bits)) [[unlikely]]
         return MemoryInline::ReadFloat32Slow(addr);
@@ -696,7 +693,7 @@ inline float Memory::ReadFloat32(uint32_t addr) {
     return value;
 }
 
-inline double Memory::ReadFloat64(uint32_t addr) {
+MKW_MEMORY_FORCE_INLINE double Memory::ReadFloat64(uint32_t addr) {
     uint64_t bits = 0;
     if (!MemoryInline::TryReadGuestScalar(addr, bits)) [[unlikely]]
         return MemoryInline::ReadFloat64Slow(addr);
@@ -705,27 +702,27 @@ inline double Memory::ReadFloat64(uint32_t addr) {
     return value;
 }
 
-inline void Memory::Write8(uint32_t addr, uint8_t val) {
+MKW_MEMORY_FORCE_INLINE void Memory::Write8(uint32_t addr, uint8_t val) {
     if (!MemoryInline::TryWriteGuestScalar(addr, val)) [[unlikely]]
         MemoryInline::Write8Slow(addr, val);
 }
 
-inline void Memory::Write16(uint32_t addr, uint16_t val) {
+MKW_MEMORY_FORCE_INLINE void Memory::Write16(uint32_t addr, uint16_t val) {
     if (!MemoryInline::TryWriteGuestScalar(addr, val)) [[unlikely]]
         MemoryInline::Write16Slow(addr, val);
 }
 
-inline void Memory::Write32(uint32_t addr, uint32_t val) {
+MKW_MEMORY_FORCE_INLINE void Memory::Write32(uint32_t addr, uint32_t val) {
     if (!MemoryInline::TryWriteGuestScalar(addr, val)) [[unlikely]]
         MemoryInline::Write32Slow(addr, val);
 }
 
-inline void Memory::Write64(uint32_t addr, uint64_t val) {
+MKW_MEMORY_FORCE_INLINE void Memory::Write64(uint32_t addr, uint64_t val) {
     if (!MemoryInline::TryWriteGuestScalar(addr, val)) [[unlikely]]
         MemoryInline::Write64Slow(addr, val);
 }
 
-inline void Memory::WriteFloat32(uint32_t addr, double val) {
+MKW_MEMORY_FORCE_INLINE void Memory::WriteFloat32(uint32_t addr, double val) {
     {
         const uint32_t bits = MemoryInline::ConvertPpcDoubleToSingleBits(val);
         if (MemoryInline::TryWriteGuestScalar(addr, bits))
@@ -734,7 +731,7 @@ inline void Memory::WriteFloat32(uint32_t addr, double val) {
     [[unlikely]] MemoryInline::WriteFloat32Slow(addr, val);
 }
 
-inline void Memory::WriteFloat64(uint32_t addr, double val) {
+MKW_MEMORY_FORCE_INLINE void Memory::WriteFloat64(uint32_t addr, double val) {
     {
         uint64_t bits = 0;
         std::memcpy(&bits, &val, sizeof(bits));
@@ -743,3 +740,8 @@ inline void Memory::WriteFloat64(uint32_t addr, double val) {
     }
     [[unlikely]] MemoryInline::WriteFloat64Slow(addr, val);
 }
+
+// (kept defined down to here: the Memory:: accessors above are forced inline too)
+#undef MKW_MEMORY_FORCE_INLINE
+#undef MKW_MEMORY_NO_INLINE
+#undef MKW_MEMORY_COLD

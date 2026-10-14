@@ -12,8 +12,10 @@ void SwitchTraceRing(const char* text) noexcept;
 #include "guest_os_layout.h"
 // Declared here rather than including the platform's hle_stubs.h: the CPU
 // layer must not depend on the console above it. VI's retrace pump is the one
-// thing a stuck fiber needs from it.
+// thing a stuck fiber needs from it, and each thread's interrupt-enable flag.
 void VI_HLE_ForceRetrace(CpuContext* cpu);
+bool OS_HLE_InterruptsEnabled() noexcept;
+void OS_HLE_SetInterruptsEnabled(bool enabled) noexcept;
 #include "host_context.h"
 #include "recomp_mod_loader.h"
 #include "runtime_log.h"
@@ -45,10 +47,19 @@ namespace {
 // and into freed heap once that thread ended and its stack was released: guest
 // stack values in the fiber map's nodes, and the Wii Menu's web engine crashed.
 // Each fiber puts back the pointer it had when it resumes.
+//
+// The same for interrupts: MSR[EE] is part of a thread's context on the Wii,
+// but here it is one flag for the host thread. A thread preempted at a safe
+// point (interrupts on) and resumed from another's OSDisableInterrupts section
+// (OSSleepThread) came back with them off, and its next wait loop never let
+// an interrupt in again: Mega Man 9's save check spun forever on a flag its
+// NAND callback would have set, with retraces stopped.
 void SwitchKeepingAmbientContext(void* target) {
     CpuContext* const ambient = g_currentCpuContext;
+    const bool interrupts = OS_HLE_InterruptsEnabled();
     HostContext::Switch(target);
     g_currentCpuContext = ambient;
+    OS_HLE_SetInterruptsEnabled(interrupts);
 }
 }  // namespace
 
@@ -674,6 +685,8 @@ void GuestFiberManager::FiberProc(void* param)
     
     // Create a CpuContextScope for this fiber
     CpuContextScope scope(cpu);
+    // A new thread starts with interrupts on: OSCreateThread sets EE in its SRR1.
+    OS_HLE_SetInterruptsEnabled(true);
     
     int startDeferAttempts = 0;
     // A thread entry that reads its real function from an object's vtable, which

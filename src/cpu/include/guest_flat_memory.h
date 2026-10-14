@@ -97,6 +97,12 @@ bool IsActive();
 
 #if defined(MKW_GUEST_FLAT_FIXED_PAGE_SIZE)
 inline constexpr bool RequiresCheckedAccess() noexcept { return false; }
+#elif defined(__SWITCH__)
+// Always on a Switch (the flat view cannot be backed there: Initialize), so a
+// constant: as a load it was a test and branch in every guest access, and the
+// unreachable flat path beside each one bloated every translated function.
+extern MKW_HIDDEN bool g_requiresCheckedAccess;
+inline constexpr bool RequiresCheckedAccess() noexcept { return true; }
 #else
 extern MKW_HIDDEN bool g_requiresCheckedAccess;
 inline bool RequiresCheckedAccess() noexcept { return g_requiresCheckedAccess; }

@@ -159,6 +159,47 @@ int main() {
         Check("the called list's BP write", !state.Pixel().depthTest);
     }
 
+    std::printf("a table rewritten between draws\n");
+    {
+        draws.clear();
+        converted.clear();
+        List l;
+        l.CP(0x50, 1u << 9);  // POS direct
+        l.CP(0x60, 0);
+        l.CP(0x71, 1u | 4u << 1);  // table 1: POS XYZ F32
+        l.U8(0x91), l.U16(1);
+        l.F32(1.0f), l.F32(2.0f), l.F32(3.0f);
+        l.CP(0x71, 1u | 3u << 1 | 8u << 4);  // table 1 again: POS XYZ S16, 8 fractional bits
+        l.U8(0x91), l.U16(1);
+        l.U16(256), l.U16(512), l.U16(768);
+        const std::size_t ran = cp.Run(l.bytes.data(), l.bytes.size());
+        Check("the list ran", ran == l.bytes.size());
+        Check("the second draw read the new format",
+              draws.size() == 2 && draws[1].bytes == 6 && Near(converted[1][0], 1.0f) && Near(converted[1][2], 3.0f));
+    }
+
+    std::printf("loads that change nothing\n");
+    {
+        State fresh;
+        CommandProcessor quiet(fresh, Memory, nullptr);
+        List first;
+        first.BP(0x40u << 24 | 0u);  // z test off: a register never loaded, over the default (on)
+        first.U8(0x10), first.U32(0x1018), first.U32(0);  // XF matrix index 0
+        quiet.Run(first.bytes.data(), first.bytes.size());
+        Check("a first load over a default applies", !fresh.Pixel().depthTest);
+        const std::uint64_t before = fresh.Generation();
+        List again;
+        again.BP(0x40u << 24 | 0u);
+        again.U8(0x10), again.U32(0x1018), again.U32(0);
+        quiet.Run(again.bytes.data(), again.bytes.size());
+        Check("the same BP and XF words again change nothing", fresh.Generation() == before);
+        List masked;
+        masked.BP(0xFEu << 24 | 0x000001u);   // mask: z test enable only
+        masked.BP(0x40u << 24 | 0xFFFFFFu);
+        quiet.Run(masked.bytes.data(), masked.bytes.size());
+        Check("a masked write still applies, through its mask", fresh.Pixel().depthTest && fresh.Bp(0x40) == 1);
+    }
+
     std::printf("refusals\n");
     {
         const std::uint8_t garbage[] = {0x00, 0x77, 0x00};

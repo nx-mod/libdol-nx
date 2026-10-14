@@ -14,6 +14,7 @@ extern "C" void GxNotifyGuestRamDmaWrite(uint32_t addr, uint32_t size);
 #include "recomp_mod_loader.h"
 #include "runtime_config.h"
 #include "runtime_log.h"
+#include "../os/os_internal.h"
 #include "runtime_product.h"
 
 #include <cstdint>
@@ -22,8 +23,10 @@ extern "C" void GxNotifyGuestRamDmaWrite(uint32_t addr, uint32_t size);
 #include <cstdio>
 
 #if defined(__SWITCH__)
+#include <switch.h>
 // File scope: used by both the disc-index count and the read trace below.
 void SwitchBootLogExternal(const char* text) noexcept;
+void SwitchPinCurrentThread(int core) noexcept;
 #endif
 #include <cstring>
 #include <algorithm>
@@ -35,8 +38,14 @@ void SwitchBootLogExternal(const char* text) noexcept;
 #include <iostream>
 #include <fstream>
 #include <mutex>
+#include <condition_variable>
+#include <deque>
+#include <memory>
+#include <thread>
 #include <sstream>
 #include <utility>
+#include "console_region.h"
+#include "generated/RuntimeConfig.h"
 
 namespace fs = std::filesystem;
 
@@ -50,8 +59,22 @@ namespace fs = std::filesystem;
 static fs::path g_dvdRoot;
 static std::once_flag g_dvdRootOnce;
 
+// What a disc read answers for the game's code when low memory holds none yet.
+// A title from the NAND (WiiWare, a channel) has no disc: its own title code, as
+// ES leaves it. Mario Kart Wii's "RMCP" used to be the only fallback, and
+// Mega Man 9 read its disk ID into 0x80000000 and became RMCP01.
 static uint32_t CurrentDiscGameCode() {
+#if defined(RUNTIME_CONFIG_HAS_TITLE_ID)
+    return RuntimeHle::CurrentGameCode(RuntimeConfig::TITLE_ID_LO);
+#else
+    const std::string disc = ConsoleRegion::DiscGameId();
+    if (disc.size() >= 4) {
+        return RuntimeHle::CurrentGameCode(static_cast<uint32_t>(
+            static_cast<unsigned char>(disc[0]) << 24 | static_cast<unsigned char>(disc[1]) << 16 |
+            static_cast<unsigned char>(disc[2]) << 8 | static_cast<unsigned char>(disc[3])));
+    }
     return RuntimeHle::CurrentGameCode(0x524D4350u); // RMCP
+#endif
 }
 
 // ============================================================================
@@ -209,6 +232,17 @@ static void InvokeDvdCallback(uint32_t callbackPtr, int32_t result, uint32_t fil
     InvokeIndirectCpu(callbackPtr, &cpu);
 }
 
+void OS_HLE_WakeupThreadNoReschedule(CpuContext* ctx, uint32_t waitQueue);
+
+static void InvokeDvdCallbackOn(CpuContext* cpu, uint32_t callbackPtr, int32_t result, uint32_t fileInfoPtr) {
+    if (callbackPtr == 0 || !TranslatedFunctionRegistry::FindByAddressPtr(callbackPtr)) {
+        return;
+    }
+    cpu->gpr[3] = static_cast<uint32_t>(result);
+    cpu->gpr[4] = fileInfoPtr;
+    InvokeIndirectCpu(callbackPtr, cpu);
+}
+
 // Same shape as InvokeDvdCallback minus the command block: the DVDLow callbacks
 // take only a result, so r4 is deliberately left untouched here.
 static void InvokeDvdLowCallback(uint32_t callbackPtr, int32_t result) {
@@ -256,6 +290,167 @@ static int32_t DvdReadFatal(uint32_t fileInfoPtr,
     }
     return kDvdFatalError;
 }
+
+// ---------- reads off the game's thread
+//
+// A read used to happen inside the call that asked for it, on the one host
+// thread every guest thread shares: a loader reading the next screen's archive
+// stopped the game drawing until it finished - the lag on a button press and at
+// each transition - and every streamed music block was a stall too, the file
+// opened and closed for each read, a round trip to the card each time. On a Wii
+// the drive works while the game draws. Reads go to a worker of their own,
+// which keeps a few files open; what it read reaches guest memory on the
+// scheduler thread (DVD_HLE_ProcessCompletions, with the alarms), where the
+// command block finishes, the game's callback runs and a sleeping DVDReadPrio
+// wakes, as the drive's interrupt would have done.
+// (off while a hang between menus is narrowed down: the dirty-state fix is
+// tested alone first)
+constexpr bool kDvdAsync = false;
+constexpr size_t kDvdOpenFiles = 8;
+
+struct DvdJob {
+    uint32_t block = 0;      // the command block (file info) the game polls
+    uint32_t buffer = 0;
+    uint32_t callback = 0;   // the game's, or 0
+    uint32_t waitQueue = 0;  // a sleeping DVDReadPrio's, or 0
+    std::filesystem::path path;
+    uint64_t offset = 0;
+    uint32_t length = 0;
+    int64_t reportOffset = 0;  // for the error report: the offset the game asked for
+    std::vector<uint8_t> data;
+    DvdReadContract::HostReadFailure failure = DvdReadContract::HostReadFailure::None;
+    bool ok = false;
+};
+
+namespace {
+struct DvdWorker {
+    std::mutex mutex;
+    std::condition_variable wake;
+    std::deque<std::unique_ptr<DvdJob>> queued, finished;
+    std::atomic<uint32_t> finishedCount{0};
+    std::once_flag started;
+} g_dvdWorker;
+
+// The read, through files kept open, most recent last - the worker's, and
+// the game thread's own reads when they are not queued (opening a file is a
+// round trip to the card; a read per open was most of a small read's cost)
+std::mutex g_dvdOpenFilesMutex;
+bool DvdWorkerRead(DvdJob& job) {
+    struct Open {
+        std::string path;
+        FILE* file;
+    };
+    static std::vector<Open> open;
+    std::lock_guard<std::mutex> lock(g_dvdOpenFilesMutex);
+    const std::string key = job.path.string();
+    FILE* file = nullptr;
+    for (size_t i = 0; i < open.size(); ++i) {
+        if (open[i].path == key) {
+            const Open hit = open[i];
+            open.erase(open.begin() + static_cast<std::ptrdiff_t>(i));
+            open.push_back(hit);
+            file = hit.file;
+            break;
+        }
+    }
+    if (!file) {
+        file = std::fopen(key.c_str(), "rb");
+        if (!file) {
+            job.failure = DvdReadContract::HostReadFailure::MissingFile;
+            return false;
+        }
+        if (open.size() >= kDvdOpenFiles) {
+            std::fclose(open.front().file);
+            open.erase(open.begin());
+        }
+        open.push_back({key, file});
+    }
+    job.data.resize(job.length);
+    if (job.length == 0) {
+        return true;
+    }
+    if (fseeko(file, static_cast<off_t>(job.offset), SEEK_SET) != 0) {
+        job.failure = DvdReadContract::HostReadFailure::BadOffset;
+        return false;
+    }
+    if (std::fread(job.data.data(), 1, job.length, file) != job.length) {
+        std::clearerr(file);
+        job.failure = DvdReadContract::HostReadFailure::ShortRead;
+        return false;
+    }
+    return true;
+}
+
+void DvdWorkerLoop() {
+#if defined(__SWITCH__)
+    SwitchPinCurrentThread(1);  // (core 2 is the render thread's)
+#endif
+    for (;;) {
+        std::unique_ptr<DvdJob> job;
+        {
+            std::unique_lock<std::mutex> lock(g_dvdWorker.mutex);
+            g_dvdWorker.wake.wait(lock, [] { return !g_dvdWorker.queued.empty(); });
+            job = std::move(g_dvdWorker.queued.front());
+            g_dvdWorker.queued.pop_front();
+        }
+        job->ok = DvdWorkerRead(*job);
+        {
+            std::lock_guard<std::mutex> lock(g_dvdWorker.mutex);
+            g_dvdWorker.finished.push_back(std::move(job));
+            g_dvdWorker.finishedCount.fetch_add(1, std::memory_order_release);
+        }
+        g_guestSafePointRequest.store(1, std::memory_order_relaxed);  // (delivered at the next one)
+    }
+}
+
+// The block busy until the read is delivered; reads finish in the order asked.
+void DvdSubmit(std::unique_ptr<DvdJob> job) {
+    // (kept for the whole run rather than detached: libnx has no pthread_detach,
+    // and std::thread::detach threw "Function not implemented")
+    std::call_once(g_dvdWorker.started, [] { new std::thread(DvdWorkerLoop); });
+    Memory::Write32(job->block + DVD_CB_OFFSET_STATE, static_cast<uint32_t>(DVD_STATE_BUSY));
+    {
+        std::lock_guard<std::mutex> lock(g_dvdWorker.mutex);
+        g_dvdWorker.queued.push_back(std::move(job));
+    }
+    g_dvdWorker.wake.notify_one();
+}
+
+// Async reads only once guest threads exist: before the scheduler runs there
+// is nothing to sleep on, and nothing to deliver at.
+bool DvdAsyncReady() {
+    return kDvdAsync && TryGetCpuContext() != nullptr && Memory::Read32(0x800000E4u) != 0;
+}
+
+// Set while finished reads are delivered: their callbacks run there, and a
+// callback that reads again must not sleep - it would park whichever thread
+// the scheduler last ran, from inside the very pump that delivers its read
+// (the hang between menus).
+int g_dvdDelivering = 0;
+
+// Whether DVDReadPrio may sleep its caller: a guest thread proper, not a
+// completion, alarm or other deferred callback (the scheduler disabled).
+bool DvdCanSleep() {
+    return DvdAsyncReady() && g_dvdDelivering == 0 && Memory::Read32(kSchedulerIdleFlagAddr) == 0;
+}
+
+// The first reads queued and delivered, for a run that hangs on one
+std::atomic<int> g_dvdTraced{0};
+void DvdTrace(const char* what, const DvdJob& job) {
+    if (g_dvdTraced.fetch_add(1, std::memory_order_relaxed) >= 64) {
+        return;
+    }
+#if defined(__SWITCH__)
+    char line[200];
+    std::snprintf(line, sizeof(line), "[dvd] %s block=0x%08X len=%u callback=0x%08X sleeper=0x%08X thread=0x%08X",
+                  what, job.block, job.length, job.callback, job.waitQueue, Memory::Read32(0x800000E4u));
+    SwitchBootLogExternal(line);
+#else
+    (void)what;
+    (void)job;
+#endif
+}
+}  // namespace
 
 static void LoadFstIndex() {
     if (g_fstLoaded) {
@@ -830,6 +1025,65 @@ static void CompleteDvdCancelState()
 // host work (a stat per file), but on a Switch SD card it takes ~4.7s for
 // MKW's 2037 files. Running it before Aurora takes the display lets it happen
 // while the boot loading text is still on screen instead of on a black one.
+#if defined(__SWITCH__)
+// The disc's files listed through Horizon's own directory reads, which give
+// each entry's name, type and size in batches: the portable walk asked for
+// each file's type and then its size, two round trips to the card a file -
+// 2037 files, nearly five seconds before the game's first frame. False when
+// the root is not on the card, and the portable walk runs instead.
+static bool ScanDirectoryFast(const fs::path& root, const std::string& virtualPrefix) {
+    const std::string rootText = root.string();
+    constexpr std::string_view kDevice = "sdmc:";
+    if (rootText.compare(0, kDevice.size(), kDevice) != 0) {
+        return false;
+    }
+    FsFileSystem* card = fsdevGetDeviceFileSystem("sdmc");
+    if (!card) {
+        return false;
+    }
+    std::string prefix = virtualPrefix.empty() ? "/" : virtualPrefix;
+    if (prefix.back() != '/') {
+        prefix += '/';
+    }
+    std::vector<FsDirectoryEntry> entries(256);
+    // (directories still to list: the card path, and its path under the root)
+    std::vector<std::pair<std::string, std::string>> pending{{rootText.substr(kDevice.size()), std::string()}};
+    while (!pending.empty()) {
+        auto [cardPath, relative] = std::move(pending.back());
+        pending.pop_back();
+        if (cardPath.empty()) {
+            cardPath = "/";
+        }
+        char path[FS_MAX_PATH];
+        std::snprintf(path, sizeof(path), "%s", cardPath.c_str());
+        FsDir dir;
+        if (R_FAILED(fsFsOpenDirectory(card, path, FsDirOpenMode_ReadDirs | FsDirOpenMode_ReadFiles, &dir))) {
+            return false;
+        }
+        for (;;) {
+            s64 count = 0;
+            if (R_FAILED(fsDirRead(&dir, &count, entries.size(), entries.data())) || count <= 0) {
+                break;
+            }
+            for (s64 i = 0; i < count; ++i) {
+                const FsDirectoryEntry& e = entries[static_cast<size_t>(i)];
+                const std::string name = e.name;
+                const std::string childRelative = relative.empty() ? name : relative + "/" + name;
+                const std::string childCard = cardPath == "/" ? "/" + name : cardPath + "/" + name;
+                if (e.type == FsDirEntryType_Dir) {
+                    pending.emplace_back(childCard, childRelative);
+                } else {
+                    RegisterFileEntry(prefix + childRelative, fs::path(std::string(kDevice) + childCard),
+                                      static_cast<uint32_t>(e.file_size));
+                }
+            }
+        }
+        fsDirClose(&dir);
+    }
+    return true;
+}
+#endif
+
 void DVD_HLE_PrescanDisc()
 {
     if (g_discPrescanned || g_dvdInitialized) {
@@ -840,8 +1094,17 @@ void DVD_HLE_PrescanDisc()
         RT_LOGF(RT_TAG_DVD, "no disc to prescan: this title carries its own data\n");
         return;
     }
-    ScanDirectory(rootPath / "files", "/");
-    ScanDirectory(rootPath / "sys", "/sys/");
+#if defined(__SWITCH__)
+    const bool fast = ScanDirectoryFast(rootPath / "files", "/") && ScanDirectoryFast(rootPath / "sys", "/sys/");
+    if (!fast) {
+        g_fileEntries.clear();  // (a partial listing is redone whole by the portable walk)
+        g_pathToEntry.clear();
+#else
+    {
+#endif
+        ScanDirectory(rootPath / "files", "/");
+        ScanDirectory(rootPath / "sys", "/sys/");
+    }
     g_discPrescanned = true;
 }
 
@@ -939,6 +1202,150 @@ PPC_NATIVE_OVERRIDE_VOID(8015EA1C, DVDInit_8015EA1C, (), ());
 
 // FST-only DVD functions run translated so mods can override them safely.
 
+// A file read resolved to its host file and range; false - the block marked
+// fatal, `fatal` the result - when it cannot be.
+static bool ResolveFileRead(uint32_t fileInfoPtr, uint32_t bufferPtr, int32_t length, int32_t offset, DvdJob& job,
+                            int32_t& fatal) {
+    uint32_t startWords = 0;
+    try {
+        startWords = Memory::Read32(fileInfoPtr + DVD_FILEINFO_OFFSET_ADDR);
+    } catch (const Memory::AccessViolation&) {
+        fatal = DvdReadFatal(fileInfoPtr, "<invalid DVD file info>", offset,
+                            length > 0 ? static_cast<uint32_t>(length) : 0,
+                            "DVD file info is outside guest memory");
+        return false;
+    }
+
+    // Treat startAddr as an FST offset, including offsets inside a file.
+    const uint64_t startBytes = static_cast<uint64_t>(startWords) * 4ull;
+    const PublishedExtent* extent = FindPublishedExtentForByteOffset(startBytes);
+    if (!extent) {
+        fatal = DvdReadFatal(fileInfoPtr, "<unresolved DVD file handle>", offset,
+                            length > 0 ? static_cast<uint32_t>(length) : 0,
+                            "DVD file info does not reference a published FST extent");
+        return false;
+    }
+
+    const DVDFileEntry& entry = g_fileEntries[extent->entryIndex];
+
+    if (offset < 0 || length < 0) {
+        fatal = DvdReadFatal(fileInfoPtr, HostPathText(entry.hostPath), offset,
+                            length > 0 ? static_cast<uint32_t>(length) : 0,
+                            "negative DVD read offset or length");
+        return false;
+    }
+
+    const uint64_t extentBias = startBytes - extent->startBytes;
+    const uint64_t requestedOffset = extentBias + static_cast<uint32_t>(offset);
+    uint32_t uLength = (uint32_t)length;
+
+    if (requestedOffset >= entry.size) {
+        fatal = DvdReadFatal(fileInfoPtr, HostPathText(entry.hostPath), offset, uLength,
+                            "read offset is outside the indexed DVD file");
+        return false;
+    }
+    const uint32_t uOffset = static_cast<uint32_t>(requestedOffset);
+
+    if (uLength > entry.size - uOffset) {
+        uLength = entry.size - uOffset;
+    }
+
+    if (uLength != 0 && !Memory::Contains(bufferPtr, uLength)) {
+        fatal = DvdReadFatal(fileInfoPtr, HostPathText(entry.hostPath), offset, uLength,
+                            "DVD read destination is outside guest memory");
+        return false;
+    }
+
+    job.block = fileInfoPtr;
+    job.buffer = bufferPtr;
+    job.path = entry.hostPath;
+    job.offset = uOffset;
+    job.length = uLength;
+    job.reportOffset = offset;
+    return true;
+}
+
+// The read now, on this thread (through the open files the worker keeps).
+static int32_t DvdReadNow(DvdJob& job) {
+    if (!DvdWorkerRead(job)) {
+        return DvdReadFatal(job.block, HostPathText(job.path), job.reportOffset, job.length,
+                            DvdReadContract::Describe(job.failure));
+    }
+    if (job.length != 0) {
+        CopyToGuestAsDma(job.buffer, job.data.data(), job.length);
+    }
+    Memory::Write32(job.block + DVD_CB_OFFSET_TRANSFERRED, job.length);
+    Memory::Write32(job.block + DVD_CB_OFFSET_STATE, DVD_STATE_END);
+    CompleteDvdCancelState();
+    return static_cast<int32_t>(job.length);
+}
+
+// DVDReadPrio's wait, as the SDK's: the read queued, and the calling guest
+// thread asleep - on a queue in its own stack - until it is delivered. The
+// other guest threads run meanwhile; the game keeps drawing.
+static int32_t DvdReadAndWait(CpuContext* cpu, std::unique_ptr<DvdJob> job) {
+    const uint32_t block = job->block;
+    const uint32_t savedR1 = cpu->gpr[1], savedR3 = cpu->gpr[3];
+    cpu->gpr[1] = (savedR1 - 32u) & ~7u;
+    const uint32_t queue = cpu->gpr[1] + 8u;
+    Memory::Write32(queue, 0);
+    Memory::Write32(queue + 4u, 0);
+    job->waitQueue = queue;
+    DvdTrace("wait", *job);
+    DvdSubmit(std::move(job));
+    while (static_cast<int32_t>(Memory::Read32(block + DVD_CB_OFFSET_STATE)) == DVD_STATE_BUSY) {
+        cpu->gpr[3] = queue;
+        OSSleepThread_HLE_801aa9b8(cpu);
+    }
+    cpu->gpr[1] = savedR1;
+    cpu->gpr[3] = savedR3;
+    return static_cast<int32_t>(Memory::Read32(block + DVD_CB_OFFSET_STATE)) == DVD_STATE_END
+               ? static_cast<int32_t>(Memory::Read32(block + DVD_CB_OFFSET_TRANSFERRED))
+               : kDvdFatalError;
+}
+
+// (scheduler thread, with the alarms) finished reads into guest memory, their
+// blocks done, their callbacks run and their sleepers woken
+bool DVD_HLE_ProcessCompletions(CpuContext* cpu) {
+    if (g_dvdWorker.finishedCount.load(std::memory_order_acquire) == 0) {
+        return false;
+    }
+    std::deque<std::unique_ptr<DvdJob>> done;
+    {
+        std::lock_guard<std::mutex> lock(g_dvdWorker.mutex);
+        done.swap(g_dvdWorker.finished);
+        g_dvdWorker.finishedCount.store(0, std::memory_order_relaxed);
+    }
+    ++g_dvdDelivering;
+    for (auto& job : done) {
+        DvdTrace("done", *job);
+        int32_t result = kDvdFatalError;
+        try {
+            if (job->ok) {
+                if (job->length != 0) {
+                    CopyToGuestAsDma(job->buffer, job->data.data(), job->length);
+                }
+                Memory::Write32(job->block + DVD_CB_OFFSET_TRANSFERRED, job->length);
+                Memory::Write32(job->block + DVD_CB_OFFSET_STATE, DVD_STATE_END);
+                result = static_cast<int32_t>(job->length);
+            } else {
+                result = DvdReadFatal(job->block, HostPathText(job->path), job->reportOffset, job->length,
+                                      DvdReadContract::Describe(job->failure));
+            }
+        } catch (const Memory::AccessViolation&) {
+        }
+        CompleteDvdCancelState();
+        if (job->callback) {
+            InvokeDvdCallbackOn(cpu, job->callback, result, job->block);
+        }
+        if (job->waitQueue) {
+            OS_HLE_WakeupThreadNoReschedule(cpu, job->waitQueue);
+        }
+    }
+    --g_dvdDelivering;
+    return !done.empty();
+}
+
 // 0x8015E834 -> DVDReadPrio
 extern "C" int32_t DVDReadPrio_8015E834(uint32_t fileInfoPtr, uint32_t bufferPtr, int32_t length, int32_t offset, int32_t prio)
 {
@@ -960,70 +1367,20 @@ extern "C" int32_t DVDReadPrio_8015E834(uint32_t fileInfoPtr, uint32_t bufferPtr
 #endif
     (void)prio;
 
-    uint32_t startWords = 0;
-    try {
-        startWords = Memory::Read32(fileInfoPtr + DVD_FILEINFO_OFFSET_ADDR);
-    } catch (const Memory::AccessViolation&) {
-        return DvdReadFatal(fileInfoPtr, "<invalid DVD file info>", offset,
-                            length > 0 ? static_cast<uint32_t>(length) : 0,
-                            "DVD file info is outside guest memory");
+    DvdJob job;
+    int32_t fatal = kDvdFatalError;
+    if (!ResolveFileRead(fileInfoPtr, bufferPtr, length, offset, job, fatal)) {
+        return fatal;
     }
-
-    // Treat startAddr as an FST offset, including offsets inside a file.
-    const uint64_t startBytes = static_cast<uint64_t>(startWords) * 4ull;
-    const PublishedExtent* extent = FindPublishedExtentForByteOffset(startBytes);
-    if (!extent) {
-        return DvdReadFatal(fileInfoPtr, "<unresolved DVD file handle>", offset,
-                            length > 0 ? static_cast<uint32_t>(length) : 0,
-                            "DVD file info does not reference a published FST extent");
+    if (DvdCanSleep()) {
+        return DvdReadAndWait(TryGetCpuContext(), std::make_unique<DvdJob>(std::move(job)));
     }
-
-    const DVDFileEntry& entry = g_fileEntries[extent->entryIndex];
-
-    if (offset < 0 || length < 0) {
-        return DvdReadFatal(fileInfoPtr, HostPathText(entry.hostPath), offset,
-                            length > 0 ? static_cast<uint32_t>(length) : 0,
-                            "negative DVD read offset or length");
-    }
-
-    const uint64_t extentBias = startBytes - extent->startBytes;
-    const uint64_t requestedOffset = extentBias + static_cast<uint32_t>(offset);
-    uint32_t uLength = (uint32_t)length;
-
-    if (requestedOffset >= entry.size) {
-        return DvdReadFatal(fileInfoPtr, HostPathText(entry.hostPath), offset, uLength,
-                            "read offset is outside the indexed DVD file");
-    }
-    const uint32_t uOffset = static_cast<uint32_t>(requestedOffset);
-
-    if (uLength > entry.size - uOffset) {
-        uLength = entry.size - uOffset;
-    }
-
-    if (uLength != 0 && !Memory::Contains(bufferPtr, uLength)) {
-        return DvdReadFatal(fileInfoPtr, HostPathText(entry.hostPath), offset, uLength,
-                            "DVD read destination is outside guest memory");
-    }
-
-    std::vector<uint8_t> tempBuf;
-    DvdReadContract::HostReadFailure failure;
-    if (!DvdReadContract::ReadExact(entry.hostPath, uOffset, uLength, tempBuf, failure)) {
-        return DvdReadFatal(fileInfoPtr, HostPathText(entry.hostPath), offset, uLength,
-                            DvdReadContract::Describe(failure));
-    }
-
-    CopyToGuestAsDma(bufferPtr, tempBuf.data(), uLength);
-
-    Memory::Write32(fileInfoPtr + DVD_CB_OFFSET_TRANSFERRED, uLength);
-    Memory::Write32(fileInfoPtr + DVD_CB_OFFSET_STATE, DVD_STATE_END);
-    CompleteDvdCancelState();
-
-    return static_cast<int32_t>(uLength);
+    return DvdReadNow(job);
 }
 PPC_NATIVE_OVERRIDE(8015E834, DVDReadPrio_8015E834, int32_t, (uint32_t f, uint32_t b, int32_t l, int32_t o, int32_t p), (f, b, l, o, p));
 
 // 0x8015E74C -> DVDReadAsyncPrio (internal)
-// HLE: perform synchronous read and invoke callback immediately.
+// The read queued to the worker; the callback runs when it is delivered.
 extern "C" int32_t DVD__ReadAsyncPrio_HLE_8015e74c(uint32_t fileInfoPtr,
                                                    uint32_t bufferPtr,
                                                    int32_t length,
@@ -1031,7 +1388,18 @@ extern "C" int32_t DVD__ReadAsyncPrio_HLE_8015e74c(uint32_t fileInfoPtr,
                                                    uint32_t callbackPtr,
                                                    int32_t prio)
 {
-    const int32_t bytesRead = DVDReadPrio_8015E834(fileInfoPtr, bufferPtr, length, offset, prio);
+    (void)prio;
+    DvdJob job;
+    int32_t bytesRead = kDvdFatalError;
+    if (ResolveFileRead(fileInfoPtr, bufferPtr, length, offset, job, bytesRead)) {
+        if (DvdAsyncReady()) {
+            job.callback = callbackPtr;
+            DvdTrace("async", job);
+            DvdSubmit(std::make_unique<DvdJob>(std::move(job)));
+            return 1;
+        }
+        bytesRead = DvdReadNow(job);
+    }
 
     InvokeDvdCallback(callbackPtr, bytesRead, fileInfoPtr);
     CompleteDvdCancelState();
@@ -1071,6 +1439,18 @@ extern "C" int32_t DVD__ReadAbsAsyncPrio_HLE_801628cc(uint32_t cmdBlockPtr,
             bytesRead = DvdReadFatal(cmdBlockPtr, HostPathText(readInfo.entry->hostPath),
                                      readInfo.fileOffset, requestedLength,
                                      "DVD read destination is outside guest memory");
+        } else if (DvdAsyncReady()) {
+            auto job = std::make_unique<DvdJob>();
+            job->block = cmdBlockPtr;
+            job->buffer = bufferPtr;
+            job->callback = callbackPtr;
+            job->path = readInfo.entry->hostPath;
+            job->offset = readInfo.fileOffset;
+            job->length = readInfo.readLength;
+            job->reportOffset = readInfo.fileOffset;
+            DvdTrace("abs async", *job);
+            DvdSubmit(std::move(job));
+            return 1;
         } else {
             std::vector<uint8_t> tempBuf;
             DvdReadContract::HostReadFailure failure;

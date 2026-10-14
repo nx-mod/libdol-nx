@@ -91,7 +91,9 @@ ended up inside the library twice.
 finds each native's address in that game by:
 
 1. the game's `bindings.json`, where a scan put what it matched by code, and
-2. the game's symbol map, if it has one, matched by name.
+2. the game's symbol map, if it has one, matched by name - an SDK function the
+   map files under its module (`GX::InitTexObj`) matching the native's own
+   spelling (`GXInitTexObj`).
 
 It registers a native written for a particular build only in a game that links
 that build, and leaves alone any native a hand-written binding already claims -
@@ -102,3 +104,14 @@ So adding a native is three things: write it, list it in the module's table,
 and sign it once from a game whose symbols are known. Every other game picks it
 up, with or without a map of its own - Punch-Out!!, which has none, binds them
 by code.
+
+## A native's contract moves with it
+
+The translator also reads each native's register contract (what it reads and
+writes) and argument layout from the sources, where the address is the one the
+library was written against. Both go to the game's address through its
+bindings, as the registration does, and are dropped where the game does not
+bind the native (`RuntimeNativeIndex`). Until 2026-10-14 they stayed at Mario
+Kart Wii's addresses, so whatever another game keeps there was called as that
+native: Mega Man 9's nw4r reader at `0x801A65F8` as `__OSSetInterruptHandler`,
+its third argument never passed. Every title had between 1 and 15 such functions.

@@ -13,7 +13,9 @@ namespace {
 
 // command memory a frame records into, and staging its writes copy from
 constexpr uint32_t kCommandSlice = 4u * 1024 * 1024;
-constexpr uint32_t kStagingSlice = 16u * 1024 * 1024;
+// (a race's intro stages ~9,000 draws a frame at 128 bytes a vertex: 16 MB
+// refused tens of thousands of them a second - the models that were missing)
+constexpr uint32_t kStagingSlice = 48u * 1024 * 1024;
 
 
 // memory a frame writes as it goes: kFrames slices, the next taken at each

@@ -27,6 +27,8 @@ void write(const uint8_t* data, size_t size);
 // the result calls it first - a copy, a display list, the frame's end, a draw
 // sync; write() alone only buffers.
 void flush();
+// What has been written, sent on - GXFlush - without waiting for it to be drawn.
+void submit();
 // a display list at a guest address
 void call_list(uint32_t address, uint32_t size);
 
@@ -41,21 +43,36 @@ void end_efb();
 // presented. (The EFB is the screen for now - one EFB a frame, the display
 // copy implied; copies to textures come later.)
 void begin_frame();
-void end_frame();
+// GXCopyDisp: the EFB (the display source) into the XFB at `xfb`, kept as an
+// image. The next frame starts from a cleared EFB only when `clear` is set,
+// otherwise from the image the copy left, as on a Wii.
+void copy_display(uint32_t xfb, bool clear);
+// The flip: the screen shows the XFB at `xfb` (its last display copy; 0 or
+// one never copied into, black).
+void end_frame(uint32_t xfb);
 
 // GXCopyTex: the EFB rectangle (GX's 640x480 space) copied into a
 // `width` x `height` image for guest `address`, which textures bound there
 // sample (dk::efb_copy); the EFB cleared after it when `clear`.
+// `vfilter`: GXSetCopyFilter's seven vertical coefficients (in 64ths), or
+// null for none.
 void copy_tex(uint32_t address, uint16_t left, uint16_t top, uint16_t srcWidth, uint16_t srcHeight,
-              uint16_t width, uint16_t height, bool clear);
+              uint16_t width, uint16_t height, bool clear, uint32_t format, const uint8_t* vfilter);
+
+// GXSetDispCopySrc: the EFB rectangle the display copy takes, which VI then
+// stretches over the whole screen (Mario Kart Wii draws 608x456 of the 640x480)
+void set_display_source(uint16_t left, uint16_t top, uint16_t width, uint16_t height);
 
 wiinx::gx::State& state();
 
 struct Counts {
-    uint32_t draws = 0;    // made
+    uint32_t draws = 0;    // made (GX draws)
+    uint32_t batches = 0;  // GPU draws they became, merged where the state was shared
     uint32_t refused = 0;  // the shaders do not do what the state asks yet
     uint32_t dropped = 0;  // no EFB pass open
     uint32_t stalled = 0;  // bytes the command processor would not take
+    uint32_t alone = 0;    // strips and fans: drawn on their own
+    uint32_t split = 0;    // batches sent because the state changed under them
 };
 // this frame's, and reset
 Counts take_counts();

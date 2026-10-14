@@ -273,5 +273,19 @@ PPC_NATIVE_OVERRIDE(80172EB4, GX__EndDisplayList_80172eb4, uint32_t, (), ());
 // Flush
 // ============================================================================
 
-extern "C" void GX__Flush_8016e654() { GXFlush(); }
+extern "C" void GX__Flush_8016e654() {
+#if defined(WIINX_NATIVE_GX)
+    // as the SDK's: what the deferred setters left pending goes out first
+    try {
+        const uint32_t gd = GuestGxData();
+        if (gd && Memory::Read32(gd + 0x5FCu)) GX__SetDirtyState_8016ee78();
+    } catch (...) {}
+#else
+    GXFlush();
+#endif
+}
 PPC_NATIVE_OVERRIDE_VOID(8016e654, GX__Flush_8016e654, (), ());
+
+// The game's GX state (what __GXData points at), for the host interface's
+// gx_data: the GX natives in accel/sdk/gx update it as the SDK does.
+extern "C" uint32_t GX_HLE_GuestData() { return GuestGxData(); }

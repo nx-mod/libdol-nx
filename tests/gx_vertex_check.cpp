@@ -102,7 +102,7 @@ int main() {
         const std::string glsl = XfVertexGlsl(config);
         Check("lights accumulate in 8-bit integers", Contains(glsl, "ivec3 lighting"));
         Check("the material modulates as XF does", Contains(glsl, "(material * (lacc + (lacc >> 7))) >> 8"));
-        Check("spot attenuation", Contains(glsl, "cosAttn / distAttn"));
+        Check("spot attenuation, the cosine part clamped as Dolphin does", Contains(glsl, "max(0.0, cosAttn) / distAttn"));
         Check("UAM compiles it", Compiles(glsl, "lit"));
     }
 

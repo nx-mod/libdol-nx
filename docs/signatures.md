@@ -62,7 +62,13 @@ no-op - and only the address tells those registrations apart.
 
 The game the natives were read from is not special: its table says that each
 function is at its own reference address, which is simply what is true of it.
-A game with no table binds nothing and runs its own code throughout.
+`tools/wiinx-reference-bindings --game <folder>` writes it from the master
+table, keeping only addresses where that game's own map has a function (or a
+body entry just past one). Not every registration was read from that game: one
+written from Mega Man 9 names a Mega Man 9 address, and bound in Mario Kart Wii
+it would replace whatever code sits there. Run it whenever a native is added;
+until 2026-10-13 nobody did, and ten natives written since September never
+bound. A game with no table binds nothing and runs its own code throughout.
 
 A native that does not match is left unbound - reported as `not found`, with
 the number of matches - and the game's translated code runs.
@@ -157,6 +163,20 @@ instructions - is signed from its start through the functions that follow it,
 until there is enough code to be unique. The linker keeps a translation unit's
 functions in source order, so that run is the same wherever the library is
 linked, and a match gives the native's address directly.
+
+Two functions that differ only in what masking removes - which variable they
+store to, as `VISetPreRetraceCallback` and `VISetPostRetraceCallback` do - mask
+to the same signature. Those are signed through the functions after them too,
+which tells the pair apart.
+
+Every registration form is signed (`PPC_NATIVE_OVERRIDE` and
+`REGISTER_NATIVE_FUNCTION`), from libdol-nx and libwii-nx both. A few natives
+only work in the game they were written from - their bodies call that game's
+functions by address - and are never signed (`REFERENCE_ONLY` in the tool).
+Signing is additive: a run replaces an earlier signature from the same game
+only with a new one for the same native, so signatures made by `--by-name` or
+by hand stay. Until 2026-10-13 a run dropped them, and 225 natives had no
+signature at all - no game but Mario Kart Wii could bind them.
 
 Signing the same native from more than one game is what covers more of them:
 each game links a different build, and `--by-name` locates the registrations in

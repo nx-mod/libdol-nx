@@ -9,6 +9,7 @@ set(WIINX_CHECKS
     sdk_mtx_check       # the matrix library, including its paired-single order
     sdk_msl_check       # the C library's natives, against the standard
     sdk_thp_check       # the video decoder against a known frame
+    sdk_gx_check        # GX natives: texture objects and loads, against the original's words
     nand_sysconf_check  # SYSCONF, against a file the runtime wrote
     nand_mii_check      # the Mii database, against a file the runtime wrote
     nand_title_check    # tickets, TMDs and WADs, built here and read back
@@ -38,6 +39,7 @@ add_test(NAME nw4r_lyt COMMAND nw4r_lyt_check)
 add_test(NAME sdk_mtx COMMAND sdk_mtx_check)
 add_test(NAME sdk_msl COMMAND sdk_msl_check)
 add_test(NAME sdk_thp COMMAND sdk_thp_check)
+add_test(NAME sdk_gx COMMAND sdk_gx_check)
 add_test(NAME nand_sysconf COMMAND nand_sysconf_check ${CMAKE_CURRENT_SOURCE_DIR}/data/SYSCONF)
 add_test(NAME nand_mii COMMAND nand_mii_check ${CMAKE_CURRENT_SOURCE_DIR}/data/RFL_DB.dat)
 add_test(NAME nand_title COMMAND nand_title_check)

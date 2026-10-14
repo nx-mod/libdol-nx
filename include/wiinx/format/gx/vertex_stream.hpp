@@ -65,6 +65,9 @@ inline constexpr std::size_t kOffsetPosMtxIndex = 30 * 4;
 // The bytes one packed record of `format` takes; 0 when a format is invalid.
 std::size_t PackedVertexSize(const VertexFormat& format);
 
+// the bytes one attribute takes in a record, 0 when its format is invalid
+std::size_t PackedAttrSize(std::uint8_t attr, const AttrFormat& format);
+
 // `count` records from `src` (`size` bytes) into `out` (count * kVertexFloats
 // floats). Returns how many it converted: fewer than `count` when `size` runs
 // out or the format is invalid.

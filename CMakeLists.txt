@@ -74,6 +74,7 @@ add_library(wiinx_sdk STATIC
     src/accel/sdk/msl/msl.cpp
     src/accel/sdk/mtx/mtx.cpp
     src/accel/sdk/thp/thp.cpp
+    src/accel/sdk/gx/gx_texture.cpp
 )
 target_link_libraries(wiinx_sdk PUBLIC wiinx_core wiinx_format)
 wiinx_section(wiinx_sdk)

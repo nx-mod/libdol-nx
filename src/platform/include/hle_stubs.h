@@ -20,6 +20,7 @@ bool VI_HLE_IsAdvancingRetrace();
 // What VIGetTvFormat should answer: VI_NTSC(0), VI_PAL(1), VI_MPAL(2).
 // Zero until VIInit, which is what a console reports too.
 uint32_t VI_HLE_TvFormat();
+uint32_t VI_HLE_CopiesSincePresent();  // display copies since the screen last changed (native GX)
 void VI_HLE_SetXfbReady(uint32_t xfbAddr); // Called by GXCopyDisp to signal EFB→XFB copy
 // Work a console library does at each vblank, in the retrace's guest context,
 // right after the game's own pre- and post-retrace callbacks: where hardware that
@@ -36,6 +37,8 @@ void Audio_HLE_Poll(CpuContext* ctx);
 // arbitrary translated function.
 void Audio_HLE_PollDeferred();
 bool OS_HLE_InterruptsEnabled() noexcept;
+// A guest thread's own MSR[EE], put back when its fiber resumes (fiber_manager.cpp).
+void OS_HLE_SetInterruptsEnabled(bool enabled) noexcept;
 extern "C" void OS_HLE_ProcessAlarmsDeferred(int maxToProcess);
 extern "C" void OS_HLE_BeginDeferredGuestCallbacks();
 extern "C" void OS_HLE_EndDeferredGuestCallbacks();

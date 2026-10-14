@@ -117,6 +117,13 @@ class State {
     // XF: `count` words from `address` (matrix memory below 0x1000, registers
     // from it), already in host order
     void ApplyXF(std::uint32_t address, const std::uint32_t* words, std::uint32_t count);
+    // Whether a load would change nothing: the same words into registers or
+    // memory written before. GX games resend whole blocks of identical state
+    // before most draws, and each one split the batch and rebound the draw's
+    // state. Strobes (copies, tokens, draw done, TLUT and TMEM loads, cache
+    // invalidations) and a write under a pending mask always count.
+    bool BpUnchanged(std::uint32_t value) const;
+    bool XfUnchanged(std::uint32_t address, const std::uint32_t* words, std::uint32_t count) const;
     // texture map 0..7, and the palette load at a TMEM address
     TexMap Texture(std::uint8_t map) const;
     TlutLoad Tlut(std::uint32_t tmem) const;
@@ -124,8 +131,32 @@ class State {
     // 0x50 the colour, 0x51 the 24-bit depth), as 0..1
     std::array<float, 4> CopyClearColor() const;
     float CopyClearDepth() const;
+    // Bumped by every change to the state: a draw that finds it where the last
+    // draw left it can share that draw's shaders, uniforms and bindings - and
+    // its vertex buffer and GPU draw.
+    std::uint64_t Generation() const { return mGeneration; }
+
+    // What has changed since the renderer last asked, by what a draw makes of
+    // it: a draw redoes only those (a pane that loads its own matrix re-uploads
+    // the XF block and draws; its shaders, textures and pixel state stay bound).
+    enum Dirty : std::uint32_t {
+        kDirtyShader = 1u << 0,       // TEV and vertex configurations
+        kDirtyPixel = 1u << 1,        // blending, depth, culling, write masks
+        kDirtyTevUniforms = 1u << 2,  // TEV colours, konst, fog, indirect matrices
+        kDirtyXfUniforms = 1u << 3,   // matrices, lights, channel colours, projection
+        kDirtyTextures = 1u << 4,     // texture maps and palettes
+        kDirtyAll = 0x1Fu,
+    };
+    std::uint32_t TakeDirty() const {
+        const std::uint32_t dirty = mDirty;
+        mDirty = 0;
+        return dirty;
+    }
+
     // a BP register as last loaded (its 24-bit value)
     std::uint32_t Bp(std::uint8_t reg) const { return mBpRegs[reg] & 0x00FFFFFF; }
+    // PE_CONTROL loads so far (diagnosis: whether a game changes the EFB's format)
+    std::uint32_t PeControlWrites() const { return mPeControlWrites; }
     // XF's viewport registers: scale x, y, z and offset x, y, z
     const std::array<float, 6>& Viewport() const { return mViewport; }
 
@@ -136,6 +167,11 @@ class State {
     // tev.hpp's TevBlock (160 bytes) and vertex.hpp's XfBlock, std140
     std::vector<std::uint8_t> TevUniforms() const;
     std::vector<std::uint8_t> XfUniforms() const;
+    // the same, into `out` (resized, and its capacity kept): a renderer fills
+    // these for most draws, and a fresh vector each time was a heap allocation
+    // and a 3 KB copy per draw
+    void TevUniforms(std::vector<std::uint8_t>& out) const;
+    void XfUniforms(std::vector<std::uint8_t>& out) const;
 
     static constexpr std::size_t kTevBlockSize = 256;  // + the indirect matrices, 6 ivec4
     static constexpr std::size_t kXfBlockSize = 3184;
@@ -161,11 +197,18 @@ class State {
     std::array<std::uint8_t, 21> mVtxDesc{};
     std::array<std::uint32_t, 256> mBpRegs{};
     std::uint32_t mBpMask = 0x00FFFFFF;
+    std::uint32_t mPeControlWrites = 0;
+    std::array<std::uint64_t, 4> mBpWritten{};  // (a register never loaded holds the setters' defaults)
+    static constexpr std::uint32_t kXfShadow = 0x1100;
+    std::vector<std::uint32_t> mXfRaw = std::vector<std::uint32_t>(kXfShadow);
+    std::vector<std::uint8_t> mXfWritten = std::vector<std::uint8_t>(kXfShadow);
     std::array<float, 6> mViewport{};
     std::array<float, 6> mProjParams{};
     bool mProjOrtho = false;
     // TMEM's palette area by 512-byte line: what was loaded at each
     std::array<TlutLoad, 1024> mTluts{};
+    std::uint64_t mGeneration = 0;
+    mutable std::uint32_t mDirty = kDirtyAll;
 
     void ApplyXFRegister(std::uint32_t reg, std::uint32_t value);
     void RebuildProjection();

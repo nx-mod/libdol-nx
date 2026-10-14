@@ -387,6 +387,10 @@ static void SwitchGuardCallback(uint32_t address) {
 }
 #endif
 
+// Display copies since the screen last changed (libdol's renderer presents at
+// the flip; game thread only).
+static uint32_t s_copiesSincePresent = 0;
+
 // Set while VI_HLE_PresentFrame runs its seal/pace/pre-warm sequence. Guest callbacks
 // serviced during that window (pace-loop alarms, GX timing polls) still see the stale
 // hasValidXfb/g_auroraFrameActive flags; a retrace-context present fired from them would
@@ -634,6 +638,9 @@ void AdvanceRetrace(CpuContext* ctx, Clock::time_point retraceStamp, bool servic
                       static_cast<unsigned long long>((drawDoneUs - lastDrawDoneUs) / deltaFrames));
         SwitchBootLogExternal(sched);
 
+#if !defined(WIINX_NATIVE_GX)
+        // (Aurora's decoder and draw counters: natively they only read zero,
+        // and every line here is a write to the card)
         static uint32_t lastFifoCalls = 0;
         static uint64_t lastFifoTicks = 0;
         const uint32_t fifoCalls = g_gxFifoCalls.load(std::memory_order_relaxed);
@@ -746,6 +753,7 @@ void AdvanceRetrace(CpuContext* ctx, Clock::time_point retraceStamp, bool servic
         lastDrawCount = drawCount;
         lastStorage = storage;
 
+#endif
         // Inside that idle time: alarms, timer events and audio run guest
         // callbacks here, so only `wait` is the scheduler genuinely doing
         // nothing. Everything else is work that merely happens in this loop.
@@ -841,6 +849,15 @@ bool AdvanceDueRetraces(CpuContext* ctx, int maxToProcess, bool serviceAurora)
 #endif
                 return advancedAny;
             }
+            // Far behind - the guest sat in one place for seconds (a long load,
+            // a start-up stall) - the retraces it missed are gone, as on the
+            // hardware: resynchronise to now rather than replay them. Replayed,
+            // a 20 s stall became 20 s of retraces at several times 60 Hz: the
+            // game's timing ran that fast and it only got a frame out every
+            // few retraces - Mega Man 9's flickering splash screens.
+            if (now - target > g_vi.retraceInterval * 4) {
+                target = now;
+            }
 #if defined(__SWITCH__)
             g_viRetracesFromDeadline.fetch_add(1, std::memory_order_relaxed);
             g_viRetraceLatenessUs.fetch_add(
@@ -876,11 +893,22 @@ uint32_t VI_HLE_TvFormat() { return g_vi.tvFormat; }
 // anything at all. Hardcoding either one is wrong in the other half of the
 // world; the format belongs to the VI layer, which knows what VIInit was given.
 //
-// VI_NTSC = 0, VI_PAL = 1, VI_MPAL = 2, and zero until VIInit, which is what a
-// console reports too.
+// As Mario Kart Wii's own (rvl.vi): the mode VIConfigure set (CurrTvMode, set
+// at the call, not at the next flush), through its table - NTSC 0 and PAL 1 and
+// MPAL 2 as themselves, DEBUG 3 as NTSC, DEBUG_PAL 4 as PAL, EURGB60 5 as
+// itself, 6 to 8 as NTSC, anything past 8 as itself. Zero until VIConfigure.
 extern "C" uint32_t HLE_VIGetTvFormat_801bacd8()
 {
-    return VI_HLE_TvFormat();
+    uint32_t mode;
+    {
+        std::lock_guard<std::mutex> lock(g_viMutex);
+        mode = g_vi.pendingTvFormat;
+    }
+    if (mode > 8) {
+        return mode;
+    }
+    static constexpr uint8_t kFormat[9] = {0, 1, 2, 0, 1, 5, 0, 0, 0};
+    return kFormat[mode];
 }
 
 PPC_NATIVE_OVERRIDE(801BACD8, HLE_VIGetTvFormat_801bacd8, uint32_t, (), ());
@@ -1112,7 +1140,20 @@ void VI_HLE_PresentFrame(bool presentedXfb, bool paceToRetrace) {
     // screen, and this presents it (gx_native.h). The next frame's pass opens
     // at its first draw, so there is nothing to pre-warm.
     SWITCH_PHASE("gx_native end_frame");
-    dol::gx_native::end_frame();
+    {
+        // What VI shows from the flip this presents: the XFB the game set
+        // (VISetNextFrameBuffer), or the last one copied into; black while
+        // VISetBlack holds the screen.
+        uint32_t shown = 0;
+        {
+            std::lock_guard<std::mutex> lock(g_viMutex);
+            if (!g_vi.pendingBlack) {
+                shown = g_vi.pendingNextFrameBuffer ? g_vi.pendingNextFrameBuffer : g_vi.readyXfb;
+            }
+        }
+        s_copiesSincePresent = 0;
+        dol::gx_native::end_frame(shown);
+    }
 #else
     SWITCH_PHASE("aurora_end_frame");
     aurora_end_frame();
@@ -1156,7 +1197,10 @@ void VI_HLE_PresentFrame(bool presentedXfb, bool paceToRetrace) {
 // VI_HLE_SetXfbReady - Called by GXCopyDisp to signal EFB->XFB copy completed.
 // This marks that we now have valid framebuffer data to present.
 // -----------------------------------------------------------------------------
+uint32_t VI_HLE_CopiesSincePresent() { return s_copiesSincePresent; }
+
 void VI_HLE_SetXfbReady(uint32_t xfbAddr) {
+    ++s_copiesSincePresent;
     std::lock_guard<std::mutex> lock(g_viMutex);
     g_vi.hasValidXfb = true;
     g_vi.readyXfb = xfbAddr;
@@ -1369,6 +1413,17 @@ extern "C" void VIFlush_HLE_801ba9a4(CpuContext* ctx)
     // GXCopyDisp (which sets hasValidXfb = true), as that's when the EFB->XFB
     // copy is complete and we have a valid frame to present.
 
+#if defined(WIINX_NATIVE_GX)
+    // libdol's renderer presents at the flip, not at each display copy: a
+    // game can copy into the XFB more than once before it flips, and a Wii
+    // shows only the last. (Mega Man 9 copies a cleared EFB, then the frame
+    // scaled up; presenting both flickered white every other frame.) Only
+    // when something was copied since: a second flush in one frame shows
+    // nothing new.
+    if (s_copiesSincePresent > 0) {
+        VI_HLE_PresentFrame(/*presentedXfb=*/true, /*paceToRetrace=*/!VI_HLE_IsAdvancingRetrace());
+    }
+#endif
     ViSetR3(ctx, 0);
 }
 PPC_NATIVE_OVERRIDE_VOID(801BA9A4, VIFlush_HLE_801ba9a4, (CpuContext* ctx), (ctx));

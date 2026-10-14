@@ -31,6 +31,10 @@
 #include <string>
 #include <thread>
 
+#ifdef __SWITCH__
+void SwitchPinCurrentThread(int core) noexcept;  // (app/switch/switch_thread_stack.cpp)
+#endif
+
 namespace AxDspHle {
 namespace {
 
@@ -1377,6 +1381,9 @@ private:
         // libnx's time-sliced 0x3B it queued behind the other workers. 0x2D, just
         // under the game's own 0x2C; the buffer goes to audren from the backend,
         // so there is no output thread here for it to starve.
+        // On core 1 (SwitchPinCurrentThread): left free to move, it shared core 2
+        // with the render thread, which at the higher priority ran first.
+        SwitchPinCurrentThread(1);
         {
             const Result rc = svcSetThreadPriority(CUR_THREAD_HANDLE, 0x2D);
             RT_LOGF(RT_TAG_AUDIO, "AX mix worker priority 0x2D (rc 0x%x)\n", static_cast<unsigned>(rc));

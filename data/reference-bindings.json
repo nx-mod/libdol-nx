@@ -104,6 +104,11 @@
     "library": "libdol-nx",
     "native": "__AXOutInitDSP_801269bc"
   },
+  "0x8012B830": {
+    "file": "libdol-nx/src/platform/audio/ax_effects.cpp",
+    "library": "libdol-nx",
+    "native": "AXFXReverbStdExpCallback_8012b830"
+  },
   "0x8012E574": {
     "file": "libdol-nx/src/platform/os/os_init.cpp",
     "library": "libdol-nx",
@@ -309,16 +314,6 @@
     "library": "libdol-nx",
     "native": "DVDLowClearCoverInterrupt_80166964"
   },
-  "0x801671D0": {
-    "file": "libwii-nx/src/ios/esp.cpp",
-    "library": "libwii-nx",
-    "native": "ESP_InitLib_stub"
-  },
-  "0x80167224": {
-    "file": "libwii-nx/src/ios/esp.cpp",
-    "library": "libwii-nx",
-    "native": "ESP_CloseLib_stub"
-  },
   "0x80167904": {
     "file": "libwii-nx/src/ios/esp.cpp",
     "library": "libwii-nx",
@@ -368,6 +363,11 @@
     "file": "libdol-nx/src/platform/system/exi.cpp",
     "library": "libdol-nx",
     "native": "EXIUnlock_80169260"
+  },
+  "0x80169BCC": {
+    "file": "libwii-nx/src/nand/nand_isfs.cpp",
+    "library": "libwii-nx",
+    "native": "ISFS_OpenLib_HLE_80169BCC"
   },
   "0x8016B49C": {
     "file": "libdol-nx/src/platform/gx/gx_fatal_stubs.cpp",
@@ -2064,6 +2064,11 @@
     "library": "libwii-nx",
     "native": "NAND_IOS_Open_HLE"
   },
+  "0x801938FC": {
+    "file": "libwii-nx/src/nand/nand_isfs.cpp",
+    "library": "libwii-nx",
+    "native": "NAND_IOS_OpenBody_HLE_801938FC"
+  },
   "0x80193A18": {
     "file": "libwii-nx/src/ios/ios.cpp",
     "library": "libwii-nx",
@@ -2448,6 +2453,11 @@
     "file": "libdol-nx/src/platform/os/os_reset.cpp",
     "library": "libdol-nx",
     "native": "OS__Panic_801A2660_Cpu"
+  },
+  "0x801A4EC4": {
+    "file": "libdol-nx/src/platform/os/os_init.cpp",
+    "library": "libdol-nx",
+    "native": "OSFatal_HLE_801a4ec4"
   },
   "0x801A65AC": {
     "file": "libdol-nx/src/platform/os/os_interrupt.cpp",
@@ -2883,6 +2893,11 @@
     "file": "libwii-nx/src/input/wpad.cpp",
     "library": "libwii-nx",
     "native": "WUDGetStatus_HLE"
+  },
+  "0x801D8D30": {
+    "file": "libdol-nx/src/platform/net/network_config.cpp",
+    "library": "libdol-nx",
+    "native": "NHTTPStartup_Reentrant_HLE_801d8d30"
   },
   "0x8020FF9C": {
     "file": "libdol-nx/src/accel/egg/display_bind.cpp",

@@ -1,6 +1,7 @@
 // GX vertices as the vertex shader reads them (wiinx/format/gx/vertex_stream.hpp).
 #include "wiinx/format/gx/vertex_stream.hpp"
 
+#include <array>
 #include <cstring>
 
 namespace wiinx::gx {
@@ -120,62 +121,93 @@ std::size_t PackedVertexSize(const VertexFormat& format) {
     return total;
 }
 
+std::size_t PackedAttrSize(std::uint8_t attr, const AttrFormat& format) { return AttrSize(attr, format); }
+
 std::size_t ConvertVertices(const VertexFormat& format, const std::uint8_t* src, std::size_t size, std::size_t count,
                             float* out) {
-    const std::size_t stride = PackedVertexSize(format);
+    // the format read once: per vertex only the present attributes are
+    // walked, each with its offset, reader and target worked out here
+    enum : std::uint8_t { kMtxIdx, kSkip, kColor, kComp };
+    struct Step {
+        std::uint8_t kind, type, comp, n, keep, target;
+        std::uint16_t offset;
+        float scale;
+    };
+    std::array<Step, VaCount> steps;
+    unsigned stepCount = 0;
+    std::size_t stride = 0;
+    for (std::uint8_t attr = 0; attr < VaCount; ++attr) {
+        if (!format.present[attr]) {
+            continue;
+        }
+        const AttrFormat& f = format.format[attr];
+        const std::size_t bytes = AttrSize(attr, f);
+        if (bytes == 0) {
+            return 0;
+        }
+        Step s{kSkip, f.type, 0, 0, 0, 0, static_cast<std::uint16_t>(stride), 1.0f};
+        if (attr == VaPnMtxIdx) {
+            s.kind = kMtxIdx;
+        } else if (attr <= 8) {
+            // per-vertex texture matrices: not used by the shader yet
+        } else if (attr == VaClr0 || attr == VaClr1) {
+            s.kind = kColor;
+            s.target = attr == VaClr0 ? 6 : 10;
+        } else {
+            const CompType type = static_cast<CompType>(f.type);
+            s.kind = kComp;
+            s.comp = static_cast<std::uint8_t>(CompSize(type));
+            // normals: a fixed scale whatever the table says (GX ignores it
+            // for them): u8 7 fractional bits, s8 6, u16 15, s16 14
+            s.scale = 1.0f / static_cast<float>(1u << (f.frac & 31));
+            if (attr == VaNrm) {
+                switch (type) {
+                case CompType::U8: s.scale = 1.0f / 128.0f; break;
+                case CompType::S8: s.scale = 1.0f / 64.0f; break;
+                case CompType::U16: s.scale = 1.0f / 32768.0f; break;
+                case CompType::S16: s.scale = 1.0f / 16384.0f; break;
+                case CompType::F32: s.scale = 1.0f; break;
+                }
+            }
+            s.n = static_cast<std::uint8_t>(Components(attr, f.count));
+            // (an NBT normal's binormal and tangent are read past, not kept)
+            s.keep = attr == VaNrm ? 3 : s.n;
+            s.target = static_cast<std::uint8_t>(attr == VaPos ? 0 : attr == VaNrm ? 3 : 14 + (attr - VaTex0) * 2);
+        }
+        if (s.kind != kSkip) {
+            steps[stepCount++] = s;
+        }
+        stride += bytes;
+    }
     if (stride == 0 || src == nullptr || out == nullptr) {
         return 0;
     }
+    // (vertices without colours read opaque white: the shader decides which
+    // it uses, from the vertex configuration)
+    const bool white0 = !format.present[VaClr0], white1 = !format.present[VaClr1];
     std::size_t done = 0;
     for (; done < count && (done + 1) * stride <= size; ++done) {
         const std::uint8_t* p = src + done * stride;
         float* v = out + done * kVertexFloats;
         std::memset(v, 0, kVertexFloats * sizeof(float));
-        // (vertices without colours read opaque white: the shader decides which
-        // it uses, from the vertex configuration)
-        for (std::uint8_t attr = 0; attr < VaCount; ++attr) {
-            if (!format.present[attr]) {
-                continue;
-            }
-            const AttrFormat& f = format.format[attr];
-            if (attr == VaPnMtxIdx) {
-                v[30] = p[0];
-            } else if (attr <= 8) {
-                // per-vertex texture matrices: not used by the shader yet
-            } else if (attr == VaClr0 || attr == VaClr1) {
-                ReadColor(p, static_cast<ColorType>(f.type), v + (attr == VaClr0 ? 6 : 10));
+        for (unsigned i = 0; i < stepCount; ++i) {
+            const Step& s = steps[i];
+            const std::uint8_t* a = p + s.offset;
+            if (s.kind == kComp) {
+                const CompType type = static_cast<CompType>(s.type);
+                for (unsigned c = 0; c < s.keep; ++c) {
+                    v[s.target + c] = ReadComp(a + c * s.comp, type, s.scale);
+                }
+            } else if (s.kind == kColor) {
+                ReadColor(a, static_cast<ColorType>(s.type), v + s.target);
             } else {
-                const CompType type = static_cast<CompType>(f.type);
-                const std::size_t comp = CompSize(type);
-                // normals: a fixed scale whatever the table says (GX ignores it
-                // for them): u8 7 fractional bits, s8 6, u16 15, s16 14
-                float scale = 1.0f / static_cast<float>(1u << (f.frac & 31));
-                if (attr == VaNrm) {
-                    switch (type) {
-                    case CompType::U8: scale = 1.0f / 128.0f; break;
-                    case CompType::S8: scale = 1.0f / 64.0f; break;
-                    case CompType::U16: scale = 1.0f / 32768.0f; break;
-                    case CompType::S16: scale = 1.0f / 16384.0f; break;
-                    case CompType::F32: scale = 1.0f; break;
-                    }
-                }
-                const unsigned n = Components(attr, f.count);
-                float* target = attr == VaPos ? v + 0 : attr == VaNrm ? v + 3 : v + 14 + (attr - VaTex0) * 2;
-                // (an NBT normal's binormal and tangent are read past, not kept)
-                const unsigned keep = attr == VaNrm ? 3 : n;
-                for (unsigned c = 0; c < n; ++c) {
-                    const float value = ReadComp(p + c * comp, type, scale);
-                    if (c < keep) {
-                        target[c] = value;
-                    }
-                }
+                v[30] = a[0];
             }
-            p += AttrSize(attr, f);
         }
-        if (!format.present[VaClr0]) {
+        if (white0) {
             v[6] = v[7] = v[8] = v[9] = 1.0f;
         }
-        if (!format.present[VaClr1]) {
+        if (white1) {
             v[10] = v[11] = v[12] = v[13] = 1.0f;
         }
     }

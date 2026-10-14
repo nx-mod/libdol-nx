@@ -1,6 +1,11 @@
 #include "audio_backend.h"
 
 #include <atomic>
+#include <condition_variable>
+#include <deque>
+#include <mutex>
+#include <thread>
+#include <vector>
 #include <chrono>
 
 #include "runtime_log.h"
@@ -81,6 +86,7 @@ AudioBackend& AudioBackend::Instance() {
     static AudioBackend instance;
     return instance;
 }
+
 
 float AudioBackend::EffectiveGainLocked() const {
     return m_muted ? 0.0f : m_masterVolume;
@@ -481,6 +487,56 @@ void AudioStatsTick(size_t samples, bool dropped) {
     SwitchBootLogExternal(line);
 }
 }  // namespace
+
+#if defined(__SWITCH__)
+// Defined in app/switch/switch_thread_stack.cpp.
+void SwitchPinCurrentThread(int core) noexcept;
+
+namespace {
+// The renderer's side of output, on a thread of its own on core 1: the game
+// thread only converts each block and queues it. Handing a block to audren
+// (audrvUpdate) is an IPC round trip per 3 ms block - 24 of them in each race
+// frame, every one on the game thread before this.
+struct OutputQueue {
+    std::mutex mutex;
+    std::condition_variable wake;
+    std::deque<std::vector<int16_t>> blocks;
+    std::vector<std::vector<int16_t>> spare;  // (blocks reused, not reallocated)
+    std::once_flag started;
+};
+OutputQueue g_output;
+constexpr size_t kMaxQueuedBlocks = 64;  // ~200 ms: past that the renderer is not keeping up
+
+void OutputLoop() {
+    SwitchPinCurrentThread(1);
+    for (;;) {
+        std::vector<int16_t> block;
+        {
+            std::unique_lock<std::mutex> lock(g_output.mutex);
+            g_output.wake.wait(lock, [] { return !g_output.blocks.empty(); });
+            block = std::move(g_output.blocks.front());
+            g_output.blocks.pop_front();
+        }
+        AudioBackend::Instance().SubmitConverted(block.data(), block.size());
+        std::lock_guard<std::mutex> lock(g_output.mutex);
+        g_output.spare.push_back(std::move(block));
+    }
+}
+}  // namespace
+
+void AudioBackend::SubmitConverted(const int16_t* samples, size_t sampleCount) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (!m_initialized) {
+        return;
+    }
+    const int lenBytes = static_cast<int>(sampleCount * sizeof(int16_t));
+    if (!QueueHasCapacityLocked(lenBytes)) {
+        g_audioDropped.fetch_add(1, std::memory_order_relaxed);
+        return;
+    }
+    AppendSamplesLocked(samples, sampleCount);
+}
+#endif
 #endif
 
 bool AudioBackend::PushWiiAiSamplesBE16(const uint8_t* data, size_t bytes) {
@@ -530,15 +586,32 @@ bool AudioBackend::PushWiiAiSamplesBE16(const uint8_t* data, size_t bytes) {
 #endif
 
     const size_t lenSamples = frameCount * 2;
+#if defined(__SWITCH__)
+    // (submitted on the output thread: OutputLoop)
+    {
+        std::lock_guard<std::mutex> queueLock(g_output.mutex);
+        if (g_output.blocks.size() >= kMaxQueuedBlocks) {
+            g_audioDropped.fetch_add(1, std::memory_order_relaxed);
+            return true;
+        }
+        std::vector<int16_t> block;
+        if (!g_output.spare.empty()) {
+            block = std::move(g_output.spare.back());
+            g_output.spare.pop_back();
+        }
+        block.assign(m_convertBuffer.begin(), m_convertBuffer.begin() + static_cast<std::ptrdiff_t>(lenSamples));
+        g_output.blocks.push_back(std::move(block));
+    }
+    std::call_once(g_output.started, [] { new std::thread(OutputLoop); });  // (libnx has no detach)
+    g_output.wake.notify_one();
+    return true;
+#else
     const int lenBytes = static_cast<int>(lenSamples * sizeof(int16_t));
     if (!QueueHasCapacityLocked(lenBytes)) {
-#if defined(__SWITCH__)
-        // This drop used to be silent - it returned before anything counted it.
-        g_audioDropped.fetch_add(1, std::memory_order_relaxed);
-#endif
         return true;
     }
     return AppendSamplesLocked(m_convertBuffer.data(), lenSamples);
+#endif
 }
 
 bool AudioBackend::PushSamplesLE16(const int16_t* samples, size_t sampleCount) {

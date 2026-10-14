@@ -25,6 +25,7 @@ extern "C" __attribute__((weak)) void func_801A0620(CpuContext* ctx);
 // Alarm queue helpers
 // ============================================================================
 extern bool NandProcessPendingCallbacks(CpuContext* cpu, int maxToProcess);
+extern bool DVD_HLE_ProcessCompletions(CpuContext* cpu);
 
 namespace {
 // OSAlarm link layout matches InsertAlarm in the original RVL OS:
@@ -341,6 +342,12 @@ bool ProcessAlarmQueue(CpuContext* cpu, int maxToProcess)
     }
 
     if (NandProcessPendingCallbacks(cpu, maxToProcess)) {
+        handledAny = true;
+        completionNeedsReschedule = true;
+    }
+    // Disc reads the DVD worker finished (dvd.cpp): their data, callbacks and
+    // sleeping readers, as the drive's interrupt
+    if (DVD_HLE_ProcessCompletions(cpu)) {
         handledAny = true;
         completionNeedsReschedule = true;
     }

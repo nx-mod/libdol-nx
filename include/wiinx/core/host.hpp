@@ -44,6 +44,14 @@ struct Host {
     // the way a DMA would - textures sampled from there must be re-read.
     void (*notify_write)(GuestAddr addr, u32 size) = nullptr;
 
+    // The graphics command stream: GX natives write their register words here,
+    // in order with the game's own, and the runtime sends them where the
+    // gather pipe goes (the renderer, or the display list being recorded).
+    void (*gx_write)(const u8* data, u32 size) = nullptr;
+    // The SDK's GX state in guest memory - what the game's __GXData points at -
+    // or 0 when the game has none bound.
+    GuestAddr (*gx_data)() = nullptr;
+
     // Optional: where natives send an occasional status line.
     void (*log)(const char* line) = nullptr;
 };

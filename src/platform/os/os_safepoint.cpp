@@ -10,7 +10,8 @@
 // Translated loops check g_guestSafePointRequest on every backward edge; the
 // watchdog thread raises it every couple of milliseconds. Here, with the
 // loop's registers published to ctx, the due retraces and alarms are
-// delivered (each on its own interrupt context, as before), and if one woke a
+// delivered (each on its own interrupt context, as before) with the audio
+// blocks that came due, and if one woke a
 // thread the scheduler picks again - the interrupt's return. Nothing happens
 // while the guest has interrupts disabled, during a retrace already being
 // delivered, or on a scratch context (an interrupt callback's own loop).
@@ -31,6 +32,11 @@ extern "C" void GuestSafePoint(CpuContext* ctx) {
     active = true;
     VI_HLE_ProcessRetracesDeferred(1);
     OS_HLE_ProcessAlarmsDeferred(8);
+    // And the audio blocks that came due: the Wii's AI interrupt arrives every
+    // 3 ms while the game runs, so the DSP mixes beside the game. Delivered only
+    // from the idle loop, a slow frame's ~25 blocks ran back to back there and
+    // each waited for the mix of the one before.
+    Audio_HLE_PollDeferred();
     active = false;
 
     if (ctx != &GetPersistentCpuContext() || VI_HLE_IsAdvancingRetrace()) {

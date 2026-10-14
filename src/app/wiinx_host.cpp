@@ -13,6 +13,8 @@
 #include "memory.h"
 #include "memory_access.h"
 
+extern "C" uint32_t GX_HLE_GuestData();  // platform/gx: the game's __GXData target, 0 when unbound
+
 #include <cstdio>
 
 extern "C" void GxNotifyGuestRamDmaWrite(uint32_t addr, uint32_t size);
@@ -61,6 +63,9 @@ void WiinxInstallHost() {
         InvokeIndirectCpu(target, ctx);
     };
     host.notify_write = [](wiinx::GuestAddr addr, wiinx::u32 size) { GxNotifyGuestRamDmaWrite(addr, size); };
+    // GX natives' commands take the gather pipe's own path, display lists included
+    host.gx_write = [](const wiinx::u8* data, wiinx::u32 size) { GX_HLE_FIFO_WriteBurst(data, size); };
+    host.gx_data = []() -> wiinx::GuestAddr { return GX_HLE_GuestData(); };
 #if defined(__SWITCH__)
     host.log = [](const char* line) { SwitchBootLogExternal(line); };
 #else

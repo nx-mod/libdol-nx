@@ -1,158 +1,63 @@
 # Performance, and what has been measured
 
-Numbers here come from a Switch running Mario Kart Wii built from libdol-nx,
-with the runtime's own per-frame counters sent over the network log
-(`wii-nx/config/loghost.txt` names a host; the runtime then reports every
-second and arms its sampling profiler after 30 seconds).
+Mario Kart Wii on a Switch, native GX (deko3d). The runtime logs per-frame
+counters to `logs/boot.log` every second; `[sched]`, `[idle]` and `[audio]` say
+where the game thread's time goes, `gx-native` what the renderer did.
+
+## A race frame, 2026-10-13 (build 51, ~12 fps)
+
+About 80 ms a frame:
+
+| | per frame | where |
+|---|---|---|
+| translated game code | ~45% | g3d 7.5%, EGG 3%, sound 2.8%, kart logic 2.8%, collision 1.7%, effects 1.4% |
+| guest memory through the checked path | ~15% | `Memory::Write32`/`WriteFloat32`/`Read32` and fallbacks, out of line |
+| the game's audio callback, in the idle loop | ~13 ms | 24 AX frames back to back: `guestcb` ~10.6 ms (nw4r snd, AXFX reverb), `push` ~2.2 ms |
+| `GXDrawDone` waiting for the render thread | 2-8 ms | |
+
+The render thread runs on core 2 at ~84%; the GPU often idles, waiting on it.
+
+## Fixed in build 52
+
+- **Guest memory.** On a Switch the flat guest view cannot be backed
+  (`guest_flat_memory.cpp`), so every access takes the checked path. That path
+  was a runtime test in every access plus an out-of-line call: clang outlined
+  the `Memory::` accessors in the big shards. `RequiresCheckedAccess()` is now
+  a constant on Switch and the accessors are forced inline - each access is a
+  table load and a byteswap. Expected: most of the ~15%.
+- **Audio output.** Handing each 3 ms block to audren (`audrvUpdate`, an IPC
+  call) moved to a thread on core 1; the game thread only converts and queues.
+- **Threads placed.** The render thread has core 2 to itself; the AX mixer,
+  the audio output and disc reads share core 1. Horizon runs one thread of a
+  priority on a core until it blocks, so two busy workers on one core took
+  turns.
+- **Diagnostics off.** Snapshots (80 MB of PPMs a run, a GPU stall each),
+  probe frames every two seconds (a full GPU wait) and the PC sampler (the
+  game thread paused a thousand times a second) all skewed the numbers. Each
+  is a constant now ([deko3d](deko3d.md#diagnostics-off-by-default)).
+
+## What would move it next, in order
+
+1. **The audio callback off the game thread.** On a Wii it runs from the DSP
+   interrupt, beside the game. Here it runs on the game thread in the time the
+   game waits for the retrace. Moving it to core 1 needs `OSDisableInterrupts`
+   to be a real lock (the game guards its sound data with it) and wakeups from
+   the callback handed to the game thread's scheduler. ~13 ms a race frame.
+2. **Vertex decode on the GPU.** The render thread converts every vertex to a
+   128-byte record; decoding the game's own vertex bytes in the shader cuts its
+   work and the upload. This is what lets `GXDrawDone` stop waiting.
+3. **Natives for the hot library code** (`accel/nw4r`, `accel/egg`): g3d's
+   material and shape loaders, `CalcWorld`, the AXFX reverb.
+4. **Async disc reads** (`kDvdAsync`): written, off since a hang between
+   menus that is not found yet.
 
 ## Watch out for
 
-- **`[video] threaded_gx` costs more than it saves.** Decoding graphics
-  commands on a worker was built to take work off the game thread. Measured on
-  hardware it does the opposite:
-
-  | per frame | threaded on | threaded off |
-  |---|---|---|
-  | GX `apply` | 1743 us | ~130 us |
-  | GX `sync` | 195 us | ~18 us |
-  | game thread waiting on the worker | 7353 us | 0 |
-  | audio inside the idle loop | 7323 us | ~1300 us |
-  | game-thread slack | 0 | 4000-5500 us |
-
-  The worker reported `idle, queued 0` while the game thread waited seven
-  milliseconds for it. The default is off, and a config left over from the
-  experiments is worth checking before measuring anything else: a game folder's
-  `config.toml` keeps whatever was last written there.
-
-- **Free memory sits at 3 MB of 3189 MB.** Every report above ends with
-  `[mem used=3185MB/3189MB free=3MB]`. Nothing has been traced to it yet, but
-  there is no headroom for anything new.
-
-- **Retraces get dropped**: `[retrace] SKIPPED, guard held` counted 16,400 in
-  one session.
-
-## What the game spends a race in
-
-The sampling profiler splits the main thread between translated game code and
-the native runtime, and ranks the guest functions it lands in. In a race:
-
-**80% translated game code, 20% the whole native runtime.**
-
-| share | function (Mario Kart Wii) |
-|---|---|
-| 14.9% | `0x80064FD0` - unnamed, immediately after `nw4r::g3d::detail::LoadMaterial` |
-| 12.6% | `0x80063870` - unnamed, among the `nw4r::g3d::G3DState::LoadRes*` loaders |
-| 3.2% | `nw4r::g3d::ScnMdl::G3dProc` |
-| 2.5% | `nw4r::g3d::CalcWorld` |
-| 1.9% | `0x80066AA0` - unnamed, same g3d block |
-| 1.4% + 0.9% | `nw4r::snd::detail::SoundThread::AxCallbackFunc`, `SoundThreadFunc` |
-| 1.3% | `nw4r::ef::DrawBillboardStrategy::DrawNormalBillboard` |
-| 1.1% | `__AXOutAiCallback` |
-| 1.0% | `RaceScene::OnCalc`, `WheelPhysics::UpdateCollision` |
-
-Over a quarter of the frame is nw4r g3d loading material and scene state into
-the GX FIFO, and almost none of the top of the list is the game's own logic.
-That is what the `accel/nw4r` g3d natives are for, and it is shared by every
-nw4r game rather than being Mario Kart Wii's problem.
-
-The two largest are unnamed in every map we have: Wii Sports' g3d is 2007-06,
-Brawl's is 2007-12, Mario Kart Wii's is 2008-03, and these particular functions
-differ enough between those builds that signatures do not carry the names
-across. Their neighbours place them.
-
-## The FIFO counters, which say more than the sampler
-
-`[gxfifo]` reports what decoding the guest's graphics commands costs. In a
-race:
-
-```
-per frame: writes=10255 decode=15231us
-split: bp=1379x 93us  cp=96x 3us  xf=1791x 608us
-       calldl=1492x 12649us  draw=0x 0us  vertex=1491x 1086us
-```
-
-**15.2 ms of a ~66 ms frame is FIFO decode, and 12.6 ms of it is display-list
-calls** - 1,492 a frame, about 8.5 us each. Two things follow:
-
-- `draw=0x`. Nothing is drawn immediate-mode in a race; every draw is inside a
-  display list. The raw direct-draw fast path in `gx_fifo.cpp`
-  (`TryGetRawDirectFifoVertexSize`, which gives up when any attribute is
-  indexed) therefore cannot help here, whatever it is made to accept.
-- The sampling profiler blames this on the game. It charges FIFO decode to
-  whichever guest function wrote the words, which is why `nw4r::g3d`'s material
-  and state loaders looked like the hot spots - they are the code emitting and
-  calling these lists.
-
-Where those 12.6 ms go, with the scan counters and section timers in place:
-
-| | per frame |
-|---|---|
-| inside Aurora's decoder (`process`: parse + submit draws) | 9.2 ms |
-| replaying the list's CP register writes | 2.1 ms |
-| the scan on a cache miss, flattening, index bounds | ~1 ms |
-| publishing vertex state afterwards | 0.2 ms |
-
-**Caching a display list does not work, and the cache cannot be fixed.**
-Measured in a race: 723 hits against 864 misses a frame. Keying the cache on
-the list's content rather than its address - so a list rebuilt into a different
-scratch buffer each frame would still be recognised - changed nothing: 952
-misses, and no digest collisions. The lists a game builds for its animated
-models differ in their own bytes every frame, matrix indices among them, so
-there is nothing for a cache to recognise. That attempt was reverted; only its
-counters were kept.
-
-What is left is Aurora's decoder itself, and the draws it submits: of the
-9.2 ms, about 3 ms was measured as draw submission (pipeline 1.0 ms, textures
-0.7 ms, vertex arrays 0.5 ms, bind 0.3 ms, uniforms 0.4 ms) when those timers
-were on, leaving roughly 6 ms parsing bytes that have to be parsed.
-
-## Where a frame goes (threaded off, menus)
-
-| | |
-|---|---|
-| graphics commands into Aurora | 1.8 - 2.5 ms (`aurora` 1.2-1.9, pipeline 0.6, textures 0.5-1.0) |
-| audio | ~5 ms (`guestcb` 2.7-3.3, `push` 1.9-2.6) |
-| idle / waiting | 4 - 5.5 ms |
-
-Audio is now the largest single cost, and most of it is the guest's own
-callback - translated game code, not the runtime's mixer.
-
-## What would actually move it, in order
-
-The frame is ~66 ms. Everything below was measured on hardware, not guessed.
-
-**1. The 160,000 GX register writes a frame.** 1,600 display-list calls, around
-100 register writes each, replayed into Aurora's GX state: 9.2 ms. Aurora
-already skips a write whose value has not changed, so this is volume, not
-waste. It goes away only when a native applies a material's state once instead
-of the guest emitting a list that we decode. That is `Draw1Mat1ShpDirectly`
-(14.9% of the frame by itself) with `G3DState::LoadResShpPrimitive` (12.6%)
-behind it - the two together build the lists we then spend 12.6 ms decoding.
-
-**2. Smaller natives, ordered by what the profiler measured.** ogws is CC0 and
-has the source for all of these, so each is a reading job rather than a
-reverse-engineering one:
-
-| share | function | shape of the work |
-|---|---|---|
-| 2.5% | `nw4r::g3d::CalcWorld` | matrix math over a node-tree bytecode; needs ResMdl/ResNode layouts and one call back for animation |
-| 3.2% | `nw4r::g3d::ScnMdl::G3dProc` | scene walk |
-| 1.3% | `nw4r::ef::DrawBillboardStrategy::DrawNormalBillboard` | self-contained |
-| 1.4% + 0.9% | `nw4r::snd::detail::SoundThread` callbacks | audio, independent of the graphics work |
-| 0.7% | `nw4r::lyt::Material::SetupGX` | small, and menus lean on it |
-
-A native that only computes - `CalcWorld` is the clearest - is the safe place
-to start: if it is wrong the model moves visibly, rather than corrupting
-renderer state.
-
-**3. What is not worth doing.** The threaded decoder (measured: worse), and any
-cache keyed on a display list's bytes (measured: the bytes differ every frame).
-
-## Notes
-
-- 2026-09-23: the graphics-command worker is not the thing to fix. It lives in
-  the 20% the native runtime costs, and the whole graphics path is under 2.5 ms
-  of a ~66 ms frame; the 53 ms is translated code.
-- 2026-09-23: first measurements of a libdol-nx build on hardware. The game
-  reaches a race; it runs about four times slower than the console, which is
-  where it was before the port, so the move cost nothing measurable.
+- Profile and log numbers from a build with diagnostics on are not speed
+  numbers.
+- `[retrace] SKIPPED, guard held` is re-entry, not lost retraces: the retrace
+  count still advances ~59.5 a second.
+- `free=3MB` on every log line is the allocator holding the whole app heap,
+  not a shortage.
+- The game thread being idle is not always idle: `[idle] ... audio=` is work
+  done there, and `wait=` alone is time with nothing to run.

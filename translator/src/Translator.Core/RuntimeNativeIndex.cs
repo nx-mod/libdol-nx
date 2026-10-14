@@ -86,17 +86,43 @@ public static class RuntimeNativeIndexBuilder
         var gameSources = !string.IsNullOrWhiteSpace(gameNativeDirectory) && Directory.Exists(gameNativeDirectory)
             ? NativeSourceParsing.ReadDirectory(Path.GetFullPath(gameNativeDirectory)).ToList()
             : [];
-        var sources = engineSources.Concat(gameSources).ToList();
-        var effects = RuntimeNativeGuestEffectAnalyzer.AnalyzeSources(sources);
-        var abis = RuntimeNativeFunctionAbiProvider.AnalyzeVoidStubAbis(sources);
         var bindings = LoadBindings(bindingsPath);
+        var engineRegistrations = ScanRegistrations(engineSources).ToList();
+        // A native's register contract and argument ABI go where the native
+        // goes. Keyed by the engine's addresses, they described whatever this
+        // game keeps there instead: Mega Man 9's nw4r reader at 0x801A65F8 was
+        // called as Mario Kart Wii's __OSSetInterruptHandler (r3 and r4 only),
+        // its third argument never written back, and it read another
+        // function's r5 - a pointer where a sound index belonged.
+        var moves = ReferenceToGameAddresses(engineRegistrations, bindings);
+        var engineEffects = RuntimeNativeGuestEffectAnalyzer.AnalyzeSources(engineSources);
+        var gameEffects = RuntimeNativeGuestEffectAnalyzer.AnalyzeSources(gameSources);
+        var effectContracts = new Dictionary<uint, GuestAbiContract>();
+        var preciseEffects = new HashSet<uint>();
+        foreach (var (address, contract) in engineEffects.Contracts)
+        {
+            if (!TryMove(moves, address, out var moved)) continue;
+            effectContracts[moved] = contract;
+            if (engineEffects.PreciseContracts.Contains(address)) preciseEffects.Add(moved);
+        }
+        foreach (var (address, contract) in gameEffects.Contracts)
+        {
+            effectContracts[address] = contract;
+            if (gameEffects.PreciseContracts.Contains(address)) preciseEffects.Add(address);
+            else preciseEffects.Remove(address);
+        }
+        var abis = new Dictionary<uint, GuestFunctionAbi>();
+        foreach (var (address, abi) in RuntimeNativeFunctionAbiProvider.AnalyzeVoidStubAbis(engineSources))
+            if (TryMove(moves, address, out var moved)) abis[moved] = abi;
+        foreach (var (address, abi) in RuntimeNativeFunctionAbiProvider.AnalyzeVoidStubAbis(gameSources))
+            abis[address] = abi;
         return new RuntimeNativeIndex(
             // Only the engine's registrations are rebound: their addresses belong
             // to the game the runtime was written against. A game's own native
             // directory is already written for this game, so its addresses are
             // used as they stand - rebinding would drop them, and the function
             // would be both translated and replaced at the same address.
-            Rebind(ScanRegistrations(engineSources), bindings)
+            Rebind(engineRegistrations, bindings)
                 .Concat(ScanRegistrations(gameSources))
                 .OrderBy(static registration => registration.Address)
                 .ThenBy(static registration => registration.Symbol, StringComparer.Ordinal)
@@ -107,10 +133,50 @@ public static class RuntimeNativeIndexBuilder
                     item.Value.ArgumentRegisters.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
                     item.Value.ScalarFloatArgumentRegisters.Order(StringComparer.OrdinalIgnoreCase).ToArray()))
                 .ToArray(),
-            effects.Contracts.OrderBy(static item => item.Key)
+            effectContracts.OrderBy(static item => item.Key)
                 .Select(item => new RuntimeNativeEffectEntry(
-                    item.Key, item.Value, effects.PreciseContracts.Contains(item.Key)))
+                    item.Key, item.Value, preciseEffects.Contains(item.Key)))
                 .ToArray());
+    }
+
+    /// <summary>
+    /// Where this game keeps each engine native, by the address the engine's
+    /// sources wrote it at: the same choice <see cref="Rebind"/> makes. Null with
+    /// no bindings (the game the sources were written against).
+    /// </summary>
+    private static IReadOnlyDictionary<uint, uint>? ReferenceToGameAddresses(
+        IReadOnlyList<RuntimeNativeRegistration> registrations,
+        IReadOnlyDictionary<string, uint>? bindings)
+    {
+        if (bindings is null)
+            return null;
+        var byReference = bindings
+            .Where(entry => entry.Key.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+            .ToDictionary(entry => GuestTargetParser.ParseHexAddress(entry.Key), entry => entry.Value);
+        if (byReference.Count != 0)
+            return byReference;
+        var ambiguous = registrations
+            .GroupBy(registration => registration.Symbol, StringComparer.Ordinal)
+            .Where(group => group.Select(registration => registration.Address).Distinct().Count() > 1)
+            .Select(group => group.Key)
+            .ToHashSet(StringComparer.Ordinal);
+        var moves = new Dictionary<uint, uint>();
+        foreach (var registration in registrations)
+            if (!ambiguous.Contains(registration.Symbol) &&
+                bindings.TryGetValue(registration.Symbol, out var address))
+                moves[registration.Address] = address;
+        return moves;
+    }
+
+    /// <summary>An engine address moved to this game's, or false when the game does not bind it.</summary>
+    private static bool TryMove(IReadOnlyDictionary<uint, uint>? moves, uint address, out uint moved)
+    {
+        if (moves is null)
+        {
+            moved = address;
+            return true;
+        }
+        return moves.TryGetValue(address, out moved);
     }
 
     /// <summary>

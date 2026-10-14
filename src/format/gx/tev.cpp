@@ -28,12 +28,15 @@ int tev_idot(ivec3 a, ivec3 b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
 float tev_wrap(float v) { float s = v * 255.0; return (s - floor(s / 256.0) * 256.0) / 255.0; }
 vec3 tev_wrap(vec3 v) { vec3 s = v * 255.0; return (s - floor(s / 256.0) * 256.0) / 255.0; }
 
-int tev_regular(int a, int b, int c, int d, int bias, int scale, bool sub) {
+// `alpha`: the alpha combiner, which rounds the other way about - colour adds
+// the rounding term unless the scale halves, alpha only when it halves
+// (Dolphin's hardware-tested tev_lerp_bias)
+int tev_regular(int a, int b, int c, int d, int bias, int scale, bool sub, bool alpha) {
     int d_part = d + bias;
     int lerp_part = (a << 8) + (b - a) * (c + (c >> 7));
     if (scale == 1) { d_part <<= 1; lerp_part <<= 1; }
     if (scale == 2) { d_part <<= 2; lerp_part <<= 2; }
-    if (scale != 3) { lerp_part += sub ? 127 : 128; }
+    if ((scale == 3) == alpha) { lerp_part += sub ? 127 : 128; }
     int lerp = lerp_part >> 8;
     int result = sub ? d_part - lerp : d_part + lerp;
     if (scale == 3) { result >>= 1; }
@@ -42,14 +45,19 @@ int tev_regular(int a, int b, int c, int d, int bias, int scale, bool sub) {
 
 int tev_byte(float v) { return int(round(v * 255.0)); }
 
+// the alpha combiner's (a scalar) and the colour combiner's (a vec3)
 float tev_regular(float a, float b, float c, float d, int bias, int scale, bool sub) {
-    return float(tev_regular(tev_byte(a), tev_byte(b), tev_byte(c), tev_byte(d), bias, scale, sub)) / 255.0;
+    return float(tev_regular(tev_byte(a), tev_byte(b), tev_byte(c), tev_byte(d), bias, scale, sub, true)) / 255.0;
+}
+
+float tev_regular_color(float a, float b, float c, float d, int bias, int scale, bool sub) {
+    return float(tev_regular(tev_byte(a), tev_byte(b), tev_byte(c), tev_byte(d), bias, scale, sub, false)) / 255.0;
 }
 
 vec3 tev_regular(vec3 a, vec3 b, vec3 c, vec3 d, int bias, int scale, bool sub) {
-    return vec3(tev_regular(a.r, b.r, c.r, d.r, bias, scale, sub),
-                tev_regular(a.g, b.g, c.g, d.g, bias, scale, sub),
-                tev_regular(a.b, b.b, c.b, d.b, bias, scale, sub));
+    return vec3(tev_regular_color(a.r, b.r, c.r, d.r, bias, scale, sub),
+                tev_regular_color(a.g, b.g, c.g, d.g, bias, scale, sub),
+                tev_regular_color(a.b, b.b, c.b, d.b, bias, scale, sub));
 }
 
 float tev_r8(vec3 v) { return round(v.r * 255.0); }

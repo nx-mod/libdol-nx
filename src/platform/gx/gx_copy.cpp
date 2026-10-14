@@ -110,7 +110,19 @@ static void LogCopySetting(const char* what, uint32_t a, uint32_t b, uint32_t c,
 
 extern "C" void GX__SetDispCopySrc_8016f438(uint32_t l, uint32_t t, uint32_t w, uint32_t h) {
     LogCopySetting("dispcopy src", l, t, w, h);
+#if defined(WIINX_NATIVE_GX)
+    dol::gx_native::set_display_source((u16)l, (u16)t, (u16)w, (u16)h);
+    // And the two words the SDK's own keeps in gxData (rvl.gx@2007-12-11,
+    // read from Mario Kart Wii's GXSetDispCopySrc): BP 0x49 and 0x4A as they
+    // will be sent. Its GXSetDispCopyYScale counts the XFB lines from the
+    // second; left at 0 it read a height of 1 and answered one line.
+    if (const uint32_t gx = GX_HLE_GuestData()) {
+        Memory::Write32(gx + 0x230, 0x49u << 24 | (t & 0x3FF) << 10 | (l & 0x3FF));
+        Memory::Write32(gx + 0x234, 0x4Au << 24 | ((h - 1) & 0x3FF) << 10 | ((w - 1) & 0x3FF));
+    }
+#else
     GXSetDispCopySrc((u16)l, (u16)t, (u16)w, (u16)h);
+#endif
 }
 PPC_NATIVE_OVERRIDE_VOID(8016f438, GX__SetDispCopySrc_8016f438, (uint32_t l, uint32_t t, uint32_t w, uint32_t h), (l, t, w, h));
 
@@ -134,7 +146,7 @@ PPC_NATIVE_OVERRIDE_VOID(8016f478, GX__SetTexCopySrc_8016f478, (uint32_t l, uint
 extern "C" void GX__SetTexCopyDst_8016f4dc(uint32_t w, uint32_t h, uint32_t f, uint32_t m) {
     GXSetTexCopyDst((u16)w, (u16)h, (GXTexFmt)f, (GXBool)m);
     g_texCopyState.dstWidth=(u16)w; g_texCopyState.dstHeight=(u16)h;
-    g_texCopyState.dstFormat=f; g_texCopyState.dstMipmap=m;
+    g_texCopyState.dstFormat=f; g_texCopyState.dstMipmap=m & 0xFF;  // (GXBool: the low byte)
 }
 PPC_NATIVE_OVERRIDE_VOID(8016f4dc, GX__SetTexCopyDst_8016f4dc, (uint32_t w, uint32_t h, uint32_t f, uint32_t m), (w, h, f, m));
 
@@ -142,6 +154,9 @@ extern "C" void GX__SetCopyFilter_8016fa40(uint32_t aa, uint32_t spa, uint32_t v
     uint8_t sp[12][2]={}, vfb[7]={};
     if(spa) std::memcpy(sp, GuestToHostPtr(spa, 24), 24);
     if(vfa) std::memcpy(vfb, GuestToHostPtr(vfa, 7), 7);
+    // the vertical filter, for the native copies (GXBool: the low byte)
+    g_texCopyState.vfilterOn = (vf & 0xFF) != 0 && vfa != 0;
+    std::memcpy(g_texCopyState.vfilter, vfb, sizeof(vfb));
     GXSetCopyFilter((GXBool)aa, sp, (GXBool)vf, vfb);
 }
 PPC_NATIVE_OVERRIDE_VOID(8016fa40, GX__SetCopyFilter_8016fa40, (uint32_t aa, uint32_t spa, uint32_t vf, uint32_t vfa), (aa, spa, vf, vfa));
@@ -156,7 +171,9 @@ extern "C" uint32_t GX__SetDispCopyYScale_8016f8fc(float vscale) {
     LogCopySetting("dispcopy yscale lines", lines, static_cast<uint32_t>(vscale * 1000.0f), 0, 0);
     return lines;
 }
+#if !defined(WIINX_NATIVE_GX)  // the game's own SDK code counts them, from the source above
 PPC_NATIVE_OVERRIDE(8016f8fc, GX__SetDispCopyYScale_8016f8fc, uint32_t, (float vscale), (vscale));
+#endif
 
 extern "C" void GX__SetDispCopyGamma_8016fc24(uint32_t g) { GXSetDispCopyGamma((GXGamma)g); }
 PPC_NATIVE_OVERRIDE_VOID(8016fc24, GX__SetDispCopyGamma_8016fc24, (uint32_t g), (g));
@@ -167,14 +184,18 @@ PPC_NATIVE_OVERRIDE_VOID(8016fc24, GX__SetDispCopyGamma_8016fc24, (uint32_t g), 
 
 extern "C" void GX__CopyDisp_8016fc38(uint32_t da, uint32_t c) {
 #if defined(WIINX_NATIVE_GX)
-    // libdol's own renderer draws the EFB straight onto the screen, so the
-    // display copy is the frame's end: VI presents it and paces to the retrace.
+    // libdol's own renderer keeps the copy as that XFB's image; the screen
+    // shows it from the flip on (VIFlush presents and paces to the retrace).
     // (The copy's clear is the next frame's: begin_frame clears with the copy
-    // clear registers.)
-    (void)c;
+    // clear registers, if the copy asked for one.)
+    dol::gx_native::copy_display(da, c != 0);
     ++g_gxFrameCount;
     VI_HLE_SetXfbReady(da);
-    VI_HLE_PresentFrame(/*presentedXfb=*/true, /*paceToRetrace=*/true);
+    // A title that copies again and again without flipping still has its
+    // frames shown, a few copies late at worst.
+    if (VI_HLE_CopiesSincePresent() >= 3) {
+        VI_HLE_PresentFrame(/*presentedXfb=*/true, /*paceToRetrace=*/true);
+    }
     return;
 #endif
     SWITCH_PHASE("CopyDisp EnsureAuroraFrameActive");
@@ -220,8 +241,11 @@ extern "C" void GX__CopyTex_8016fd74(uint32_t da, uint32_t c) {
             width = static_cast<uint16_t>((width + 1) / 2);
             height = static_cast<uint16_t>((height + 1) / 2);
         }
+        // (GXBool: only the low byte is the argument - the caller leaves the
+        // rest of the register as it was, and every copy read as a clear)
         dol::gx_native::copy_tex(da, copy.srcLeft, copy.srcTop, copy.srcWidth, copy.srcHeight,
-                                 width, height, c != 0);
+                                 width, height, (c & 0xFF) != 0, copy.dstFormat,
+                                 copy.vfilterOn ? copy.vfilter : nullptr);
         return;
     }
 #endif

@@ -1,6 +1,8 @@
 #include "system_bridge.h"
 
 #include <cctype>
+#include <algorithm>
+#include <cstring>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -421,13 +423,26 @@ void SystemBridge::Initialize() {
     RT_LOG(RT_TAG_RUNTIME) << "Executed " << count << " static constructors." << std::endl;
 }
 
+// Through a small copy, never straight from guest RAM: on a Switch a buffer
+// handed to the file system is read-only to this process until the write
+// returns, and the game keeps running while a hang dump is written - its next
+// store to that memory faulted (Mega Man 9, writing the scheduler's counter).
+static void WriteGuestRange(std::ofstream& dump, uint32_t base, uint32_t size) {
+    constexpr uint32_t kChunk = 0x10000u;
+    std::vector<char> copy(kChunk);
+    for (uint32_t offset = 0; offset < size && dump.good(); offset += kChunk) {
+        const uint32_t length = std::min(kChunk, size - offset);
+        std::memcpy(copy.data(), Memory::GetPointer(base + offset, length), length);
+        dump.write(copy.data(), length);
+    }
+}
+
 void SystemBridge::WriteGuestMemorySnapshot(std::ostream& os, const std::filesystem::path& mem1Path) {
     constexpr uint32_t kMem1Base = 0x80000000u;
     constexpr uint32_t kMem1Size = 0x01800000u;
     if (Memory::Contains(kMem1Base, kMem1Size)) {
         std::ofstream dump(mem1Path, std::ios::binary | std::ios::trunc);
-        dump.write(reinterpret_cast<const char*>(Memory::GetPointer(kMem1Base, kMem1Size)),
-                   kMem1Size);
+        WriteGuestRange(dump, kMem1Base, kMem1Size);
         os << "[runtime] MEM1 snapshot written to " << RuntimeConfigFile::PathToUtf8(mem1Path)
            << (dump.good() ? "" : " (write failed)") << std::endl;
     }
@@ -439,8 +454,7 @@ void SystemBridge::WriteGuestMemorySnapshot(std::ostream& os, const std::filesys
         std::filesystem::path mem2Path = mem1Path;
         mem2Path += ".mem2";
         std::ofstream dump(mem2Path, std::ios::binary | std::ios::trunc);
-        dump.write(reinterpret_cast<const char*>(Memory::GetPointer(kMem2Base, mem2Size)),
-                   mem2Size);
+        WriteGuestRange(dump, kMem2Base, mem2Size);
         os << "[runtime] MEM2 snapshot written to " << RuntimeConfigFile::PathToUtf8(mem2Path)
            << (dump.good() ? "" : " (write failed)") << std::endl;
         break;

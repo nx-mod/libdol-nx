@@ -44,6 +44,10 @@ struct PixelState {
     CullMode cull = CullMode::Back;
     bool colorWrite = true;
     bool alphaWrite = false;
+    // whether the EFB keeps alpha at all (PE_CONTROL's pixel format: only
+    // RGBA6_Z24 does). Without it, GX reads destination alpha as full and
+    // copies come out opaque.
+    bool efbAlpha = false;
 };
 
 }  // namespace wiinx::gx

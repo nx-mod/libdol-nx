@@ -16,15 +16,20 @@ namespace msl {
 extern const Native kMslNatives[];
 extern const std::size_t kMslNativeCount;
 }  // namespace msl
+namespace gx {
+extern const Native kGxNatives[];
+extern const std::size_t kGxNativeCount;
+}  // namespace gx
 
 std::span<const Native> natives() noexcept {
     // One list out of the module's tables, built once. GD joins here.
     static const std::vector<Native> all = [] {
         std::vector<Native> table;
-        table.reserve(thp::kThpNativeCount + mtx::kMtxNativeCount + msl::kMslNativeCount);
+        table.reserve(thp::kThpNativeCount + mtx::kMtxNativeCount + msl::kMslNativeCount + gx::kGxNativeCount);
         table.insert(table.end(), thp::kThpNatives, thp::kThpNatives + thp::kThpNativeCount);
         table.insert(table.end(), mtx::kMtxNatives, mtx::kMtxNatives + mtx::kMtxNativeCount);
         table.insert(table.end(), msl::kMslNatives, msl::kMslNatives + msl::kMslNativeCount);
+        table.insert(table.end(), gx::kGxNatives, gx::kGxNatives + gx::kGxNativeCount);
         return table;
     }();
     return all;

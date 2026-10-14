@@ -71,10 +71,12 @@ below. No code is copied verbatim unless stated.
 - **libjpeg** - IJG License. This software is based in part on the work of the
   Independent JPEG Group. The THP decoder's IDCT is derived from libjpeg's float
   AAN IDCT (`jidctflt.c`), Copyright (C) 1994-1998, Thomas G. Lane. <https://ijg.org>
-- **projectPiki/pikmin2** - CC0-1.0. The SDK THP decoder (`THPDec.c`).
-  <https://github.com/projectPiki/pikmin2>
-- **doldecomp/ogws** (Wii Sports) - CC0-1.0. nw4r behavior and 2007 layouts.
-  <https://github.com/doldecomp/ogws>
+- **projectPiki/pikmin2** - CC0-1.0. The SDK THP decoder (`THPDec.c`), and
+  the GX field names `accel/sdk/gx` uses. <https://github.com/projectPiki/pikmin2>
+- **doldecomp/mkw** - CC0-1.0. Mario Kart Wii's GX instructions (`lib/rvl/gx`),
+  which `accel/sdk/gx` reproduces. <https://github.com/doldecomp/mkw>
+- **doldecomp/ogws** (Wii Sports) - CC0-1.0. nw4r behavior and 2007 layouts,
+  and the RVL SDK's GX in C. <https://github.com/doldecomp/ogws>
 - **doldecomp/mkw** (Mario Kart Wii) - CC0-1.0. Function names for 2008 builds.
   <https://github.com/doldecomp/mkw>
 

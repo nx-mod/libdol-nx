@@ -39,6 +39,53 @@ void PutColor(std::vector<std::uint8_t>& out, std::size_t offset, Color8 c) {
 }  // namespace state_detail
 
 using namespace state_detail;
+namespace {
+// Restores the dirty flags a register write found, and adds its own: the
+// setters a register is applied through mark everything, which would make
+// every matrix load redo every draw's shaders and bindings.
+struct DirtyScope {
+    std::uint32_t& dirty;
+    std::uint32_t bits;
+    std::uint32_t saved;
+    DirtyScope(std::uint32_t& d, std::uint32_t b) : dirty(d), bits(b), saved(d) {}
+    ~DirtyScope() { dirty = saved | bits; }
+};
+
+// What a BP register feeds (Dolphin's register map). Unlisted registers mark
+// everything, so a register nobody classified can only cost speed.
+std::uint32_t BpDirty(std::uint32_t reg) {
+    if (reg == 0x00) return State::kDirtyShader | State::kDirtyPixel;     // GENMODE
+    if (reg >= 0x06 && reg <= 0x0E) return State::kDirtyTevUniforms;       // IND_MTX
+    if (reg >= 0x0F && reg <= 0x1F) return State::kDirtyShader;            // IND_IMASK, TEVINDn
+    if (reg == 0x20 || reg == 0x21 || reg == 0x59) return 0;               // scissor: read per draw
+    if (reg >= 0x22 && reg <= 0x2F) return State::kDirtyShader;            // SU_LPSIZE.., RAS1_SS/IREF, TREF
+    if (reg >= 0x40 && reg <= 0x41) return State::kDirtyPixel;             // PE_ZMODE, PE_CMODE0
+    if (reg == 0x42) return State::kDirtyPixel | State::kDirtyShader | State::kDirtyTevUniforms;  // PE_CMODE1
+    if (reg == 0x43) return State::kDirtyPixel;                            // PE_CONTROL
+    if (reg >= 0x44 && reg <= 0x58) return 0;                              // copies, tokens, draw done
+    if (reg == 0x64 || reg == 0x65) return State::kDirtyTextures;          // TLUT loads
+    if (reg >= 0x80 && reg <= 0xBB) return State::kDirtyTextures;          // TX_*
+    if (reg >= 0xC0 && reg <= 0xDF) return State::kDirtyShader;            // TEV_COLOR/ALPHA_ENV
+    if (reg >= 0xE0 && reg <= 0xE7) return State::kDirtyTevUniforms;       // TEV_REGISTER (colours, konst)
+    if (reg >= 0xE8 && reg <= 0xF2) return State::kDirtyShader | State::kDirtyTevUniforms;  // fog
+    if (reg >= 0xF3 && reg <= 0xFD) return State::kDirtyShader;            // alpha compare, z env, ksel
+    if (reg == 0xFE) return 0;                                             // the mask
+    return State::kDirtyAll;
+}
+
+// What an XF register (its offset from 0x1000) feeds.
+std::uint32_t XfRegisterDirty(std::uint32_t reg) {
+    if (reg == 0x08 || reg == 0x09 || reg == 0x12) return State::kDirtyShader;  // vertex spec, channels, dual tex
+    if (reg >= 0x0A && reg <= 0x0D) return State::kDirtyXfUniforms;             // ambient, material colours
+    if (reg >= 0x0E && reg <= 0x11) return State::kDirtyShader;                 // channel control
+    if (reg == 0x18 || reg == 0x19) return State::kDirtyXfUniforms;             // matrix index (+shader if texgens move)
+    if (reg >= 0x1A && reg <= 0x1F) return 0;                                   // viewport: read per draw
+    if (reg >= 0x20 && reg <= 0x26) return State::kDirtyXfUniforms;             // projection
+    if (reg == 0x3F || (reg >= 0x40 && reg < 0x48) || (reg >= 0x50 && reg < 0x58)) return State::kDirtyShader;
+    return State::kDirtyAll;
+}
+}  // namespace
+
 
 State::State() {
     // GXInit: every stage textured from its own coordinate and map, lit by
@@ -74,9 +121,13 @@ State::State() {
 
 // --- TEV
 
-void State::SetNumTevStages(std::uint8_t count) { mTev.stageCount = count < 1 ? 1 : count > 16 ? 16 : count; }
+void State::SetNumTevStages(std::uint8_t count) {
+    ++mGeneration;
+    mDirty |= kDirtyAll; mTev.stageCount = count < 1 ? 1 : count > 16 ? 16 : count; }
 
 void State::SetTevOrder(std::uint8_t stage, std::uint8_t coord, std::uint32_t map, std::uint8_t channel) {
+    ++mGeneration;
+    mDirty |= kDirtyAll;
     if (stage >= 16) {
         return;
     }
@@ -87,6 +138,8 @@ void State::SetTevOrder(std::uint8_t stage, std::uint8_t coord, std::uint32_t ma
 }
 
 void State::SetTevColorIn(std::uint8_t stage, std::uint8_t a, std::uint8_t b, std::uint8_t c, std::uint8_t d) {
+    ++mGeneration;
+    mDirty |= kDirtyAll;
     if (stage < 16) {
         TevCombiner& k = mTev.stages[stage].color;
         k.a = a, k.b = b, k.c = c, k.d = d;
@@ -94,6 +147,8 @@ void State::SetTevColorIn(std::uint8_t stage, std::uint8_t a, std::uint8_t b, st
 }
 
 void State::SetTevAlphaIn(std::uint8_t stage, std::uint8_t a, std::uint8_t b, std::uint8_t c, std::uint8_t d) {
+    ++mGeneration;
+    mDirty |= kDirtyAll;
     if (stage < 16) {
         TevCombiner& k = mTev.stages[stage].alpha;
         k.a = a, k.b = b, k.c = c, k.d = d;
@@ -112,6 +167,8 @@ void SetOp(TevCombiner& k, std::uint8_t op, std::uint8_t bias, std::uint8_t scal
 
 void State::SetTevColorOp(std::uint8_t stage, std::uint8_t op, std::uint8_t bias, std::uint8_t scale, bool clamp,
                           std::uint8_t outReg) {
+    ++mGeneration;
+    mDirty |= kDirtyAll;
     if (stage < 16) {
         SetOp(mTev.stages[stage].color, op, bias, scale, clamp, outReg);
     }
@@ -119,6 +176,8 @@ void State::SetTevColorOp(std::uint8_t stage, std::uint8_t op, std::uint8_t bias
 
 void State::SetTevAlphaOp(std::uint8_t stage, std::uint8_t op, std::uint8_t bias, std::uint8_t scale, bool clamp,
                           std::uint8_t outReg) {
+    ++mGeneration;
+    mDirty |= kDirtyAll;
     if (stage < 16) {
         SetOp(mTev.stages[stage].alpha, op, bias, scale, clamp, outReg);
     }
@@ -127,6 +186,8 @@ void State::SetTevAlphaOp(std::uint8_t stage, std::uint8_t op, std::uint8_t bias
 // The SDK's presets: the rasterised colour on stage 0, the previous stage's
 // result after it.
 void State::SetTevOp(std::uint8_t stage, TevMode mode) {
+    ++mGeneration;
+    mDirty |= kDirtyAll;
     using C = TevColorArg;
     using A = TevAlphaArg;
     const auto c = [](C v) { return static_cast<std::uint8_t>(v); };
@@ -160,18 +221,24 @@ void State::SetTevOp(std::uint8_t stage, TevMode mode) {
 }
 
 void State::SetTevKColorSel(std::uint8_t stage, std::uint8_t sel) {
+    ++mGeneration;
+    mDirty |= kDirtyAll;
     if (stage < 16) {
         mTev.stages[stage].kcolorSel = sel;
     }
 }
 
 void State::SetTevKAlphaSel(std::uint8_t stage, std::uint8_t sel) {
+    ++mGeneration;
+    mDirty |= kDirtyAll;
     if (stage < 16) {
         mTev.stages[stage].kalphaSel = sel;
     }
 }
 
 void State::SetTevSwapMode(std::uint8_t stage, std::uint8_t rasSel, std::uint8_t texSel) {
+    ++mGeneration;
+    mDirty |= kDirtyAll;
     if (stage < 16) {
         mTev.stages[stage].rasSwap = rasSel & 3;
         mTev.stages[stage].texSwap = texSel & 3;
@@ -179,12 +246,16 @@ void State::SetTevSwapMode(std::uint8_t stage, std::uint8_t rasSel, std::uint8_t
 }
 
 void State::SetTevSwapModeTable(std::uint8_t table, std::uint8_t r, std::uint8_t g, std::uint8_t b, std::uint8_t a) {
+    ++mGeneration;
+    mDirty |= kDirtyAll;
     mTev.swapTable[table & 3] = {static_cast<SwapChannel>(r & 3), static_cast<SwapChannel>(g & 3),
                                  static_cast<SwapChannel>(b & 3), static_cast<SwapChannel>(a & 3)};
 }
 
 void State::SetAlphaCompare(std::uint8_t comp0, std::uint8_t ref0, std::uint8_t op, std::uint8_t comp1,
                             std::uint8_t ref1) {
+    ++mGeneration;
+    mDirty |= kDirtyAll;
     mTev.alphaComp0 = static_cast<Compare>(comp0 & 7);
     mTev.alphaRef0 = ref0;
     mTev.alphaOp = static_cast<AlphaOp>(op & 3);
@@ -193,25 +264,35 @@ void State::SetAlphaCompare(std::uint8_t comp0, std::uint8_t ref0, std::uint8_t 
 }
 
 void State::SetTevColor(std::uint8_t reg, Color8 color) {
+    ++mGeneration;
+    mDirty |= kDirtyAll;
     mTevRegs[reg & 3] = {color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f};
 }
 
 void State::SetTevColorS10(std::uint8_t reg, const std::int16_t rgba[4]) {
+    ++mGeneration;
+    mDirty |= kDirtyAll;
     for (int i = 0; i < 4; ++i) {
         mTevRegs[reg & 3][i] = rgba[i] / 255.0f;
     }
 }
 
 void State::SetTevKColor(std::uint8_t id, Color8 color) {
+    ++mGeneration;
+    mDirty |= kDirtyAll;
     mKColors[id & 3] = {color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f};
 }
 
 // --- channels, lights, texgens
 
-void State::SetNumChans(std::uint8_t count) { mVertex.channelCount = count > 2 ? 2 : count; }
+void State::SetNumChans(std::uint8_t count) {
+    ++mGeneration;
+    mDirty |= kDirtyAll; mVertex.channelCount = count > 2 ? 2 : count; }
 
 void State::SetChanCtrl(std::uint8_t channel, bool enable, std::uint8_t ambSrc, std::uint8_t matSrc,
                         std::uint32_t lightMask, std::uint8_t diffFn, std::uint8_t attnFn) {
+    ++mGeneration;
+    mDirty |= kDirtyAll;
     ColorChannel cc;
     cc.lighting = enable;
     cc.ambient = static_cast<ColorSrc>(ambSrc & 1);
@@ -229,6 +310,8 @@ void State::SetChanCtrl(std::uint8_t channel, bool enable, std::uint8_t ambSrc, 
 }
 
 void State::SetChanAmbColor(std::uint8_t channel, Color8 color) {
+    ++mGeneration;
+    mDirty |= kDirtyAll;
     // (a colour channel sets RGB, an alpha channel A, a pair all four)
     Color8& c = mChanAmb[channel & 1];
     if (channel == 0 || channel == 1 || channel >= 4) c.r = color.r, c.g = color.g, c.b = color.b;
@@ -236,12 +319,16 @@ void State::SetChanAmbColor(std::uint8_t channel, Color8 color) {
 }
 
 void State::SetChanMatColor(std::uint8_t channel, Color8 color) {
+    ++mGeneration;
+    mDirty |= kDirtyAll;
     Color8& c = mChanMat[channel & 1];
     if (channel == 0 || channel == 1 || channel >= 4) c.r = color.r, c.g = color.g, c.b = color.b;
     if (channel >= 2) c.a = color.a;
 }
 
 void State::LoadLight(std::uint32_t lightMask, const Light& light) {
+    ++mGeneration;
+    mDirty |= kDirtyAll;
     for (int i = 0; i < 8; ++i) {
         if (lightMask & (1u << i)) {
             mLights[i] = light;
@@ -250,10 +337,14 @@ void State::LoadLight(std::uint32_t lightMask, const Light& light) {
     }
 }
 
-void State::SetNumTexGens(std::uint8_t count) { mVertex.texGenCount = count > 8 ? 8 : count; }
+void State::SetNumTexGens(std::uint8_t count) {
+    ++mGeneration;
+    mDirty |= kDirtyAll; mVertex.texGenCount = count > 8 ? 8 : count; }
 
 void State::SetTexCoordGen2(std::uint8_t dst, std::uint8_t type, std::uint8_t src, std::uint32_t mtx, bool normalize,
                             std::uint32_t postMtx) {
+    ++mGeneration;
+    mDirty |= kDirtyAll;
     if (dst >= 8) {
         return;
     }
@@ -269,6 +360,8 @@ void State::SetTexCoordGen2(std::uint8_t dst, std::uint8_t type, std::uint8_t sr
 // --- matrices
 
 void State::LoadPosMtx(const float mtx[3][4], std::uint32_t id) {
+    ++mGeneration;
+    mDirty |= kDirtyAll;
     if (id + 3 > mPosRows.size()) {
         return;
     }
@@ -278,6 +371,8 @@ void State::LoadPosMtx(const float mtx[3][4], std::uint32_t id) {
 }
 
 void State::LoadNrmMtx(const float mtx[3][3], std::uint32_t id) {
+    ++mGeneration;
+    mDirty |= kDirtyAll;
     if (id + 3 > mNrmRows.size()) {
         return;
     }
@@ -287,6 +382,8 @@ void State::LoadNrmMtx(const float mtx[3][3], std::uint32_t id) {
 }
 
 void State::LoadTexMtx(const float mtx[3][4], std::uint32_t id, bool twoRows) {
+    ++mGeneration;
+    mDirty |= kDirtyAll;
     const int rows = twoRows ? 2 : 3;
     std::array<float, 4>* target = nullptr;
     if (id >= kTexMtx0 && id + 3 <= kTexMtx0 + 30) {
@@ -302,12 +399,16 @@ void State::LoadTexMtx(const float mtx[3][4], std::uint32_t id, bool twoRows) {
 }
 
 void State::SetCurrentMtx(std::uint32_t id) {
+    ++mGeneration;
+    mDirty |= kDirtyAll;
     if (id + 3 <= mPosRows.size()) {
         mCurrentPosRow = id;
     }
 }
 
 void State::SetProjection(const float mtx[4][4]) {
+    ++mGeneration;
+    mDirty |= kDirtyAll;
     for (int r = 0; r < 4; ++r) {
         mProj[r] = {mtx[r][0], mtx[r][1], mtx[r][2], mtx[r][3]};
     }
@@ -316,6 +417,8 @@ void State::SetProjection(const float mtx[4][4]) {
 // --- the pixel engine
 
 void State::SetBlendMode(std::uint8_t type, std::uint8_t src, std::uint8_t dst, std::uint8_t logicOp) {
+    ++mGeneration;
+    mDirty |= kDirtyAll;
     mPixel.blendMode = static_cast<BlendMode>(type & 3);
     mPixel.srcFactor = static_cast<BlendFactor>(src & 7);
     mPixel.dstFactor = static_cast<BlendFactor>(dst & 7);
@@ -323,20 +426,32 @@ void State::SetBlendMode(std::uint8_t type, std::uint8_t src, std::uint8_t dst, 
 }
 
 void State::SetZMode(bool enable, std::uint8_t func, bool update) {
+    ++mGeneration;
+    mDirty |= kDirtyAll;
     mPixel.depthTest = enable;
     mPixel.depthCompare = func & 7;
     mPixel.depthWrite = update;
 }
 
-void State::SetCullMode(std::uint8_t mode) { mPixel.cull = static_cast<CullMode>(mode & 3); }
-void State::SetColorUpdate(bool update) { mPixel.colorWrite = update; }
-void State::SetAlphaUpdate(bool update) { mPixel.alphaWrite = update; }
+void State::SetCullMode(std::uint8_t mode) {
+    ++mGeneration;
+    mDirty |= kDirtyAll; mPixel.cull = static_cast<CullMode>(mode & 3); }
+void State::SetColorUpdate(bool update) {
+    ++mGeneration;
+    mDirty |= kDirtyAll; mPixel.colorWrite = update; }
+void State::SetAlphaUpdate(bool update) {
+    ++mGeneration;
+    mDirty |= kDirtyAll; mPixel.alphaWrite = update; }
 
 // --- vertices
 
-void State::ClearVtxDesc() { mVtxDesc.fill(0); }
+void State::ClearVtxDesc() {
+    ++mGeneration;
+    mDirty |= kDirtyShader; mVtxDesc.fill(0); }
 
 void State::SetVtxDesc(std::uint8_t attr, std::uint8_t type) {
+    ++mGeneration;
+    mDirty |= kDirtyShader;
     if (attr == kVaNbt) {
         attr = kVaNrm;  // (normal, binormal, tangent: the normal is what lights)
     }
@@ -345,7 +460,9 @@ void State::SetVtxDesc(std::uint8_t attr, std::uint8_t type) {
     }
 }
 
-void State::SetDualTexture(bool enable) { mVertex.dualTexture = enable; }
+void State::SetDualTexture(bool enable) {
+    ++mGeneration;
+    mDirty |= kDirtyAll; mVertex.dualTexture = enable; }
 
 // --- the hardware's registers
 //
@@ -395,7 +512,31 @@ std::uint8_t TexMtxSlotFromRow(std::uint32_t row) {
 }
 }  // namespace
 
+bool State::BpUnchanged(std::uint32_t value) const {
+    const std::uint32_t reg = value >> 24;
+    if (mBpMask != 0x00FFFFFF || reg == 0xFE || (reg >= 0x44 && reg <= 0x58) || (reg >= 0x60 && reg <= 0x6F) ||
+        !(mBpWritten[reg / 64] >> (reg % 64) & 1)) {
+        return false;
+    }
+    return (mBpRegs[reg] & 0x00FFFFFF) == (value & 0x00FFFFFF);
+}
+
+bool State::XfUnchanged(std::uint32_t address, const std::uint32_t* words, std::uint32_t count) const {
+    if (address + count > kXfShadow) {
+        return false;
+    }
+    for (std::uint32_t i = 0; i < count; ++i) {
+        if (!mXfWritten[address + i] || mXfRaw[address + i] != words[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
 void State::ApplyBP(std::uint32_t value) {
+    ++mGeneration;
+    mBpWritten[(value >> 24) / 64] |= 1ull << ((value >> 24) % 64);
+    DirtyScope dirtyScope{mDirty, BpDirty(value >> 24)};
     const std::uint32_t reg = value >> 24;
     if (reg == 0xFE) {
         mBpMask = value & 0x00FFFFFF;  // the next write's mask
@@ -499,6 +640,10 @@ void State::ApplyBP(std::uint32_t value) {
     case 0x40:  // z mode
         SetZMode(Bits(v, 1, 0) != 0, static_cast<std::uint8_t>(Bits(v, 3, 1)), Bits(v, 1, 4) != 0);
         break;
+    case 0x43:  // PE control: the EFB's pixel format (1 = RGBA6_Z24, the one with alpha)
+        mPixel.efbAlpha = Bits(v, 3, 0) == 1;
+        ++mPeControlWrites;
+        break;
     case 0x41: {  // blend mode
         const std::uint8_t type = Bits(v, 1, 11) ? 3 : Bits(v, 1, 0) ? 1 : Bits(v, 1, 1) ? 2 : 0;
         SetBlendMode(type, static_cast<std::uint8_t>(Bits(v, 3, 8)), static_cast<std::uint8_t>(Bits(v, 3, 5)),
@@ -535,6 +680,14 @@ void State::ApplyBP(std::uint32_t value) {
 }
 
 void State::ApplyXF(std::uint32_t address, const std::uint32_t* words, std::uint32_t count) {
+    ++mGeneration;
+    for (std::uint32_t i = 0; i < count && address + i < kXfShadow; ++i) {
+        mXfRaw[address + i] = words[i];
+        mXfWritten[address + i] = 1;
+    }
+    if (address < 0x1000) {
+        mDirty |= kDirtyXfUniforms;  // matrix and light memory (registers mark themselves)
+    }
     for (std::uint32_t i = 0; i < count; ++i) {
         const std::uint32_t a = address + i;
         const float f = AsFloat(words[i]);
@@ -574,6 +727,8 @@ void State::ApplyXF(std::uint32_t address, const std::uint32_t* words, std::uint
 }
 
 void State::ApplyXFRegister(std::uint32_t reg, std::uint32_t v) {
+    ++mGeneration;
+    DirtyScope dirtyScope{mDirty, XfRegisterDirty(reg)};
     switch (reg) {
     case 0x09: SetNumChans(static_cast<std::uint8_t>(v)); return;
     case 0x0A: case 0x0B: SetChanAmbColor(static_cast<std::uint8_t>(4 + reg - 0x0A), ColorFromXF(v)); return;
@@ -589,12 +744,20 @@ void State::ApplyXFRegister(std::uint32_t reg, std::uint32_t v) {
     case 0x18:
         SetCurrentMtx(Bits(v, 6, 0));
         for (unsigned t = 0; t < 4; ++t) {
-            mVertex.texGens[t].matrix = TexMtxSlotFromRow(Bits(v, 6, 6 + t * 6));
+            const auto slot = TexMtxSlotFromRow(Bits(v, 6, 6 + t * 6));
+            if (mVertex.texGens[t].matrix != slot) {
+                mVertex.texGens[t].matrix = slot;
+                dirtyScope.bits |= kDirtyShader;
+            }
         }
         return;
     case 0x19:
         for (unsigned t = 0; t < 4; ++t) {
-            mVertex.texGens[4 + t].matrix = TexMtxSlotFromRow(Bits(v, 6, t * 6));
+            const auto slot = TexMtxSlotFromRow(Bits(v, 6, t * 6));
+            if (mVertex.texGens[4 + t].matrix != slot) {
+                mVertex.texGens[4 + t].matrix = slot;
+                dirtyScope.bits |= kDirtyShader;
+            }
         }
         return;
     case 0x3F: SetNumTexGens(static_cast<std::uint8_t>(v)); return;
@@ -721,7 +884,13 @@ VertexConfig State::Vertex() const {
 }
 
 std::vector<std::uint8_t> State::TevUniforms() const {
-    std::vector<std::uint8_t> out(kTevBlockSize, 0);
+    std::vector<std::uint8_t> out;
+    TevUniforms(out);
+    return out;
+}
+
+void State::TevUniforms(std::vector<std::uint8_t>& out) const {
+    out.assign(kTevBlockSize, 0);
     PutRows(out, 0, mTevRegs.data(), 4);
     PutRows(out, 64, mKColors.data(), 4);
     Put(out, 128, mFogColor.data(), 4);
@@ -741,11 +910,16 @@ std::vector<std::uint8_t> State::TevUniforms() const {
         };
         std::memcpy(out.data() + 160 + m * 32, rows, sizeof(rows));
     }
-    return out;
 }
 
 std::vector<std::uint8_t> State::XfUniforms() const {
-    std::vector<std::uint8_t> out(kXfBlockSize, 0);
+    std::vector<std::uint8_t> out;
+    XfUniforms(out);
+    return out;
+}
+
+void State::XfUniforms(std::vector<std::uint8_t>& out) const {
+    out.assign(kXfBlockSize, 0);
     PutRows(out, 0, mPosRows.data(), 30);
     PutRows(out, 480, mNrmRows.data(), 30);
     PutRows(out, 960, mTexRows.data(), 30);
@@ -770,7 +944,6 @@ std::vector<std::uint8_t> State::XfUniforms() const {
     }
     const std::int32_t index[4] = {static_cast<std::int32_t>(mCurrentPosRow), 0, 0, 0};
     std::memcpy(out.data() + 3168, index, sizeof(index));
-    return out;
 }
 
 }  // namespace wiinx::gx

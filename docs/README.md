@@ -9,7 +9,9 @@ need.
 | [Signatures and scanning](signatures.md) | binding a game, or a native is not found in a game |
 | [Writing a native](natives.md) | adding a native, or a new build of one |
 | [Game hooks](game-hooks.md) | a game needs something of its own from the runtime |
-| [Performance](performance.md) | what a frame costs on hardware, and the settings that have been measured |
+| [Performance](performance.md) | what a frame costs on hardware, and what would move it |
+| [GPU on deko3d](deko3d.md) | the native GX renderer: how GX reaches the GPU, its diagnostics, what is open |
+| [distcc](distcc.md) | spreading a build over other machines |
 | [Where names come from](symbol-sources.md) | naming a game's functions: the maps and symbol tables discs already carry |
 | [Getting something to run](running.md) | what a disc game, a title, a WiiWare game and homebrew each need before they start |
 | [Titles](titles.md) | installing or running the console's own software: system titles, channels, WiiWare, Virtual Console |

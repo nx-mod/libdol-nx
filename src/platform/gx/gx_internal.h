@@ -90,6 +90,7 @@ constexpr uint32_t kMaxTluts = 20;
 // --- External Declarations ---
 extern "C" void GXInitTexObjTlut(GXTexObj* obj, u32 tlut);
 extern "C" int32_t OS__DisableInterrupts_801a65ac();
+extern "C" uint32_t GX_HLE_GuestData();  // gxData (__GXData), 0 before GXInit (gx_init.cpp)
 extern "C" int32_t OS__RestoreInterrupts_801a65d4(int32_t level);
 extern "C" uint32_t __OSSetInterruptHandler_801a65f8_hle(uint32_t interrupt, uint32_t handler);
 extern "C" uint32_t __OSUnmaskInterrupts_801a69bc_hle(uint32_t mask);
@@ -308,6 +309,9 @@ struct TexCopyState {
     uint16_t dstHeight = 0;
     uint32_t dstFormat = 0;
     uint32_t dstMipmap = 0;
+    // GXSetCopyFilter's vertical filter, when on: seven coefficients in 64ths
+    bool vfilterOn = false;
+    uint8_t vfilter[7] = {0, 0, 21, 22, 21, 0, 0};
 };
 
 // --- Display list recording state (audit F2) ---

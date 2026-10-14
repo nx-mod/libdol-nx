@@ -24,6 +24,16 @@ constexpr int kMaxDepth = 4;  // (a list that calls a list that calls ...)
 
 using namespace command_detail;
 
+namespace {
+// an attribute's few bytes (memcpy of a size known only at run time is a
+// call into libc per attribute per vertex)
+inline void CopySmall(std::uint8_t* out, const std::uint8_t* in, std::size_t size) {
+    for (std::size_t i = 0; i < size; ++i) {
+        out[i] = in[i];
+    }
+}
+}  // namespace
+
 CommandProcessor::CommandProcessor(State& state, Memory memory, DrawFn draw)
     : mState(state), mMemory(std::move(memory)), mDraw(std::move(draw)) {}
 
@@ -63,15 +73,25 @@ AttrFormat CommandProcessor::Format(std::uint8_t table, std::uint8_t attr) const
 }
 
 VertexFormat CommandProcessor::DirectFormat(std::uint8_t table) const {
-    VertexFormat format;
+    table &= 7;
+    if (mFormatValid & (1u << table)) {
+        return mFormats[table];
+    }
+    VertexFormat& format = mFormats[table];
+    format = {};
     for (std::uint8_t attr = 0; attr < VaCount; ++attr) {
         format.present[attr] = AttrType(attr) != kNone;
         format.format[attr] = Format(table, attr);
     }
+    mFormatValid |= static_cast<std::uint8_t>(1u << table);
     return format;
 }
 
 void CommandProcessor::LoadCP(std::uint8_t reg, std::uint32_t value) {
+    // (the same descriptor or table again changes nothing a draw reads)
+    if ((reg == 0x50 && value == mVcdLo && mVcdSet) || (reg == 0x60 && value == mVcdHi && mVcdSet)) {
+        return;
+    }
     if (reg == 0x50) {
         mVcdLo = value;
     } else if (reg == 0x60) {
@@ -89,8 +109,13 @@ void CommandProcessor::LoadCP(std::uint8_t reg, std::uint32_t value) {
     } else {
         return;
     }
+    if (reg < 0xA0) {
+        mFormatValid = 0;  // the descriptor or a table: every cached format
+    }
     if (reg == 0x50 || reg == 0x60) {
+        mVcdSet = true;
         // the shaders follow the descriptor
+        BeforeChange(3u << 16 | reg);
         mState.ClearVtxDesc();
         for (std::uint8_t attr = 0; attr < VaCount; ++attr) {
             mState.SetVtxDesc(attr, AttrType(attr));
@@ -113,7 +138,10 @@ void CommandProcessor::LoadIndexed(std::uint8_t cmd, std::uint32_t value) {
     for (std::uint32_t i = 0; i < count; ++i) {
         words[i] = Be32(src + i * 4);
     }
-    mState.ApplyXF(address, words, count);
+    if (!mState.XfUnchanged(address, words, count)) {
+        BeforeChange(4u << 16 | array);
+        mState.ApplyXF(address, words, count);
+    }
 }
 
 bool CommandProcessor::RunDraw(std::uint8_t cmd, const std::uint8_t* data, std::size_t size, std::size_t& pos) {
@@ -127,26 +155,37 @@ bool CommandProcessor::RunDraw(std::uint8_t cmd, const std::uint8_t* data, std::
     draw.format = DirectFormat(draw.table);
     pos += 2;
 
-    // the stream's record size, indices as they are, and the direct one
-    std::size_t streamSize = 0;
+    // the draw's attributes in record order, worked out once: per vertex the
+    // loops below touch only what is present (re-deriving this per attribute
+    // per vertex was a third of a menu frame)
+    struct Attr {
+        std::uint8_t attr, type;
+        std::uint16_t size, offset;  // the direct size; the offset in a stream record
+        const std::uint8_t* base;    // an indexed array, resolved once for the draw
+    };
+    std::array<Attr, VaCount> attrs;
+    unsigned attrCount = 0;
+    std::size_t streamSize = 0, directSize = 0;
     bool indexed = false;
     for (std::uint8_t attr = 0; attr < VaCount; ++attr) {
         const std::uint8_t type = AttrType(attr);
-        if (type == kIndex8 || type == kIndex16) {
+        if (type == kNone) {
+            continue;
+        }
+        const std::size_t attrSize = PackedAttrSize(attr, draw.format.format[attr]);
+        if (attrSize == 0) {
+            return false;
+        }
+        attrs[attrCount++] = {attr, type, static_cast<std::uint16_t>(attrSize), static_cast<std::uint16_t>(streamSize),
+                              nullptr};
+        directSize += attrSize;
+        if (type == kDirect) {
+            streamSize += attrSize;
+        } else {
             indexed = true;
             streamSize += type == kIndex8 ? 1 : 2;
-        } else if (type == kDirect) {
-            VertexFormat one;
-            one.present[attr] = true;
-            one.format[attr] = draw.format.format[attr];
-            const std::size_t attrSize = PackedVertexSize(one);
-            if (attrSize == 0) {
-                return false;
-            }
-            streamSize += attrSize;
         }
     }
-    const std::size_t directSize = PackedVertexSize(draw.format);
     if (directSize == 0 && draw.count != 0) {
         return false;
     }
@@ -157,39 +196,49 @@ bool CommandProcessor::RunDraw(std::uint8_t cmd, const std::uint8_t* data, std::
     const std::uint8_t* in = data + pos;
     pos += streamBytes;
 
+    const auto indexAt = [&](const Attr& a, const std::uint8_t* record) -> std::uint32_t {
+        return a.type == kIndex8 ? record[a.offset] : Be16(record + a.offset);
+    };
     if (!indexed) {
         draw.records = in;
         draw.bytes = streamBytes;
     } else {
+        // each array as one window up to the highest index the draw reads;
+        // one that is not all there falls back to a lookup per vertex
+        for (unsigned i = 0; i < attrCount && mMemory; ++i) {
+            Attr& a = attrs[i];
+            if (a.type == kDirect) {
+                continue;
+            }
+            std::uint32_t highest = 0;
+            for (std::uint16_t v = 0; v < draw.count; ++v) {
+                const std::uint32_t index = indexAt(a, in + v * streamSize);
+                highest = index > highest ? index : highest;
+            }
+            const std::uint32_t array = a.attr - VaPos;
+            a.base = mMemory(mArrayBase[array], highest * mArrayStride[array] + a.size);
+        }
         mExpanded.resize(directSize * draw.count);
         std::uint8_t* out = mExpanded.data();
         for (std::uint16_t v = 0; v < draw.count; ++v) {
-            for (std::uint8_t attr = 0; attr < VaCount; ++attr) {
-                const std::uint8_t type = AttrType(attr);
-                if (type == kNone) {
-                    continue;
-                }
-                VertexFormat one;
-                one.present[attr] = true;
-                one.format[attr] = draw.format.format[attr];
-                const std::size_t attrSize = PackedVertexSize(one);
-                if (type == kDirect) {
-                    std::memcpy(out, in, attrSize);
-                    in += attrSize;
+            const std::uint8_t* record = in + v * streamSize;
+            for (unsigned i = 0; i < attrCount; ++i) {
+                const Attr& a = attrs[i];
+                if (a.type == kDirect) {
+                    CopySmall(out, record + a.offset, a.size);
                 } else {
-                    const std::uint32_t index = type == kIndex8 ? in[0] : Be16(in);
-                    in += type == kIndex8 ? 1 : 2;
-                    const std::uint32_t array = attr - VaPos;
-                    const std::uint8_t* src =
-                        mMemory ? mMemory(mArrayBase[array] + index * mArrayStride[array], static_cast<std::uint32_t>(attrSize))
-                                : nullptr;
+                    const std::uint32_t index = indexAt(a, record);
+                    const std::uint32_t array = a.attr - VaPos;
+                    const std::uint8_t* src = a.base ? a.base + index * mArrayStride[array]
+                                              : mMemory ? mMemory(mArrayBase[array] + index * mArrayStride[array], a.size)
+                                                        : nullptr;
                     if (src) {
-                        std::memcpy(out, src, attrSize);
+                        CopySmall(out, src, a.size);
                     } else {
-                        std::memset(out, 0, attrSize);
+                        std::memset(out, 0, a.size);
                     }
                 }
-                out += attrSize;
+                out += a.size;
             }
         }
         draw.records = mExpanded.data();
@@ -231,11 +280,17 @@ std::size_t CommandProcessor::Run(const std::uint8_t* data, std::size_t size) {
             if (size - pos - 4 < static_cast<std::size_t>(count) * 4) {
                 return start;
             }
-            std::vector<std::uint32_t> words(count);
-            for (std::uint32_t i = 0; i < count; ++i) {
-                words[i] = Be32(data + pos + 4 + i * 4);
+            // (kept between loads: a menu makes thousands a frame)
+            if (mXfWords.size() < count) {
+                mXfWords.resize(count);
             }
-            mState.ApplyXF(header & 0xFFFF, words.data(), count);
+            for (std::uint32_t i = 0; i < count; ++i) {
+                mXfWords[i] = Be32(data + pos + 4 + i * 4);
+            }
+            if (!mState.XfUnchanged(header & 0xFFFF, mXfWords.data(), count)) {
+                BeforeChange(2u << 16 | (header & 0xFFFF));
+                mState.ApplyXF(header & 0xFFFF, mXfWords.data(), count);
+            }
             pos += 4 + static_cast<std::size_t>(count) * 4;
             break;
         }
@@ -268,7 +323,10 @@ std::size_t CommandProcessor::Run(const std::uint8_t* data, std::size_t size) {
             if (size - pos < 4) {
                 return start;
             }
-            mState.ApplyBP(Be32(data + pos));
+            if (!mState.BpUnchanged(Be32(data + pos))) {
+                BeforeChange(1u << 16 | data[pos]);
+                mState.ApplyBP(Be32(data + pos));
+            }
             pos += 4;
             break;
         default:

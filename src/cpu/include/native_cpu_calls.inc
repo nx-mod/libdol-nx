@@ -9,12 +9,15 @@
 extern "C" void nw4r__lyt__detail__DrawQuad_800847c0(CpuContext* ctx);
 extern "C" void nw4r__lyt__detail__DrawQuad_80084d20(CpuContext* ctx);
 
+#if !defined(WIINX_NATIVE_GX)  // Aurora's bridge; natively the game's own GX code runs
 extern "C" void GX__SetVtxDesc_8016d3a4(uint32_t a, uint32_t t);
 extern "C" void GX__ClearVtxDesc_8016dc34();
 extern "C" void GX__SetVtxAttrFmt_8016dc68(uint32_t vf, uint32_t a, uint32_t c, uint32_t t, uint32_t fr);
 extern "C" void GX__SetTexCoordGen2_8016e37c(uint32_t dc, uint32_t f, uint32_t sp, uint32_t m, uint32_t n, uint32_t pm);
 extern "C" void GX__SetNumTexGens_8016e5a4(uint32_t n);
+#endif
 extern "C" void GX__DrawDone_8016eab0();
+#if !defined(WIINX_NATIVE_GX)  // Aurora's bridge; natively the game's own GX code runs
 extern "C" void GX__Begin_8016f0f0(uint32_t t, uint32_t vf, uint32_t nv);
 extern "C" void GX__SetLineWidth_8016f314(uint32_t width, uint32_t texOffsets);
 extern "C" void GX__SetPointSize_8016f348(uint32_t pointSize, uint32_t texOffsets);
@@ -42,6 +45,7 @@ extern "C" void GX__SetNumTevStages_801722a8(uint32_t n);
 extern "C" void GX__SetBlendMode_8017277c(uint32_t t, uint32_t s, uint32_t d, uint32_t op);
 extern "C" void GX__LoadPosMtxImm_8017310c(uint32_t ma, uint32_t id);
 extern "C" void GX__SetCurrentMtx_80173214(uint32_t id);
+#endif
 
 #define MKW_KNOWN_TYPED_NATIVE(addr, fn, ...) \
 template <> struct KnownTypedNativeCpuCall<addr> { \
@@ -49,12 +53,15 @@ template <> struct KnownTypedNativeCpuCall<addr> { \
     static void Invoke(CpuContext* cpu) { (void)cpu; fn(__VA_ARGS__); } \
 }
 
+#if !defined(WIINX_NATIVE_GX)  // Aurora's bridge; natively the game's own GX code runs
 MKW_KNOWN_TYPED_NATIVE(0x8016D3A4u, GX__SetVtxDesc_8016d3a4, cpu->gpr[3], cpu->gpr[4]);
 MKW_KNOWN_TYPED_NATIVE(0x8016DC34u, GX__ClearVtxDesc_8016dc34);
 MKW_KNOWN_TYPED_NATIVE(0x8016DC68u, GX__SetVtxAttrFmt_8016dc68, cpu->gpr[3], cpu->gpr[4], cpu->gpr[5], cpu->gpr[6], cpu->gpr[7]);
 MKW_KNOWN_TYPED_NATIVE(0x8016E37Cu, GX__SetTexCoordGen2_8016e37c, cpu->gpr[3], cpu->gpr[4], cpu->gpr[5], cpu->gpr[6], cpu->gpr[7], cpu->gpr[8]);
 MKW_KNOWN_TYPED_NATIVE(0x8016E5A4u, GX__SetNumTexGens_8016e5a4, cpu->gpr[3]);
+#endif
 MKW_KNOWN_TYPED_NATIVE(0x8016EAB0u, GX__DrawDone_8016eab0);
+#if !defined(WIINX_NATIVE_GX)  // Aurora's bridge; natively the game's own GX code runs
 MKW_KNOWN_TYPED_NATIVE(0x8016F0F0u, GX__Begin_8016f0f0, cpu->gpr[3], cpu->gpr[4], cpu->gpr[5]);
 MKW_KNOWN_TYPED_NATIVE(0x8016F314u, GX__SetLineWidth_8016f314, cpu->gpr[3], cpu->gpr[4]);
 MKW_KNOWN_TYPED_NATIVE(0x8016F348u, GX__SetPointSize_8016f348, cpu->gpr[3], cpu->gpr[4]);
@@ -82,6 +89,7 @@ MKW_KNOWN_TYPED_NATIVE(0x801722A8u, GX__SetNumTevStages_801722a8, cpu->gpr[3]);
 MKW_KNOWN_TYPED_NATIVE(0x8017277Cu, GX__SetBlendMode_8017277c, cpu->gpr[3], cpu->gpr[4], cpu->gpr[5], cpu->gpr[6]);
 MKW_KNOWN_TYPED_NATIVE(0x8017310Cu, GX__LoadPosMtxImm_8017310c, cpu->gpr[3], cpu->gpr[4]);
 MKW_KNOWN_TYPED_NATIVE(0x80173214u, GX__SetCurrentMtx_80173214, cpu->gpr[3]);
+#endif
 
 #undef MKW_KNOWN_TYPED_NATIVE
 

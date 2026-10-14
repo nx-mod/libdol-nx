@@ -60,10 +60,18 @@ def version_ids(src_root):
 
 def build_id(constant):
     """The id string behind a generated build constant ("nw4r.lyt@2008-03-08")."""
-    header = os.path.join(HERE, "..", "include", "wiinx", "builds.hpp")
-    try:
-        text = open(header, errors="ignore").read()
-    except OSError:
+    # (core/builds.hpp; the old path matched nothing, so every native versioned
+    # by a build constant - the GX natives - kept the constant's name as its id
+    # and never bound)
+    text = None
+    for header in (os.path.join(HERE, "..", "include", "wiinx", "core", "builds.hpp"),
+                   os.path.join(HERE, "..", "include", "wiinx", "builds.hpp")):
+        try:
+            text = open(header, errors="ignore").read()
+            break
+        except OSError:
+            continue
+    if text is None:
         return constant
     pattern = re.escape(constant) + r'\s*\{\s*"([^"]+)"'
     match = re.search(pattern, text)
@@ -152,6 +160,12 @@ def main(argv):
     by_name = {}
     for address, name in symbol_map(game):
         by_name.setdefault(canonical(name), address)
+        # A map that files an SDK function under its module ("GX::InitTexObj",
+        # "VI::GetTvFormat") drops the prefix the native's name keeps
+        # (GXInitTexObj): index it under both.
+        parts = name.split("::")
+        if len(parts) == 2 and parts[0].isupper() and parts[0].isalpha():
+            by_name.setdefault(canonical(parts[0] + parts[1]), address)
 
     natives = library_natives(src_root)
     ids = version_ids(src_root)

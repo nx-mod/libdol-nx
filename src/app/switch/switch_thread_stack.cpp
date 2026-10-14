@@ -57,6 +57,21 @@ void* WorkerTrampoline(void* raw) {
 }
 }  // namespace
 
+// Moves the calling thread onto `core` alone: the render thread, a whole core
+// of work, gets core 2 to itself, and the lighter workers (audio output and
+// mix, disc reads) share core 1 instead of queueing behind it - Horizon runs
+// one thread of a priority on a core until it blocks, so two busy workers on
+// one core take turns.
+void SwitchPinCurrentThread(int core) noexcept {
+    const Result rc = svcSetThreadCoreMask(CUR_THREAD_HANDLE, core, 1u << core);
+    if (SwitchDevLoggingEnabled()) {
+        char line[96];
+        std::snprintf(line, sizeof(line), "[thread] pinned to core %d (rc=0x%X, now on %u)", core,
+                      static_cast<unsigned>(rc), static_cast<unsigned>(svcGetCurrentProcessorNumber()));
+        SwitchBootLogExternal(line);
+    }
+}
+
 extern "C" {
 int __real_pthread_create(pthread_t* thread, const pthread_attr_t* attr, void* (*start)(void*),
                           void* arg);

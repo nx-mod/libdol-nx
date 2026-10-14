@@ -17,6 +17,9 @@ extern std::atomic<uint64_t> g_gxDrawDoneUs;
 #define SWITCH_PHASE(name) ((void)0)
 #endif
 #include "runtime_log.h"
+#include "abi_bridge.h"
+#include "native_bindings.h"
+#include "native_guest_return.h"
 #if defined(WIINX_NATIVE_GX)
 #include "../gpu/gx_native.h"
 #endif
@@ -91,6 +94,11 @@ extern "C" void GX__DrawDone_8016eab0() {
     const auto drawDoneStart = std::chrono::steady_clock::now();
 #endif
 #if defined(WIINX_NATIVE_GX)
+    // (GXSetDrawDone ends in GXFlush: pending state goes out first)
+    try {
+        const uint32_t gd = GuestGxData();
+        if (gd && Memory::Read32(gd + 0x5FCu)) GX__SetDirtyState_8016ee78();
+    } catch (...) {}
     dol::gx_native::flush();  // every draw so far made; the GPU keeps their order
 #else
     GXDrawDone();
@@ -200,7 +208,36 @@ PPC_NATIVE_OVERRIDE_VOID(8016fecc, GX__ClearBoundingBox_8016fecc, (), ());
 // ============================================================================
 
 extern "C" void GX__SetDirtyState_8016ee78() {
+#if defined(WIINX_NATIVE_GX)
+    // The game's own __GXSetDirtyState: what GXSetProjection, GXSetViewport and
+    // the other deferred setters left pending is written to the FIFO, where the
+    // renderer reads it. Natives call this before work that needs the state
+    // current (a display list, a draw sync, recording a list). Only clearing
+    // the bits, as Aurora's state tracking allowed, dropped every pending
+    // projection: models drawn from display lists kept the 2D one and were
+    // clipped away whole (missing models, a black flyover and race intro).
+    try {
+        const uint32_t gd = GuestGxData();
+        if (!gd || Memory::Read32(gd + 0x5FCu) == 0) {
+            return;
+        }
+        static const uint32_t target = [] {
+            const uint32_t bound = NativeBindings::Resolve(0x8016ee78u);
+            return bound ? bound : NativeBindings::IsReferenceGame() ? 0x8016ee78u : 0u;
+        }();
+        CpuContext* cpu = TryGetCpuContext();
+        if (target && cpu) {
+            // (the binding's return address in lr, as wiinx::Host::call does: a
+            // callee dispatched as a jump resumes through it)
+            if (const uint32_t resume = RuntimeNativeGuestReturn::Current(); resume != 0) {
+                cpu->lr = resume;
+            }
+            InvokeIndirectCpu(target, cpu);
+        }
+    } catch (...) {}
+#else
     try { uint32_t gd = GuestGxData(); if (gd) Memory::Write32(gd + 0x5FCu, 0); } catch (...) {}
+#endif
 }
 #if !defined(WIINX_NATIVE_GX)  // the game's own SDK code sets this (docs/deko3d.md)
 PPC_NATIVE_OVERRIDE_VOID(8016ee78, GX__SetDirtyState_8016ee78, (), ());

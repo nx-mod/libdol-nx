@@ -11,6 +11,16 @@
    "registration": "Stub_8002001C"
   },
   {
+   "name": "AICheckInit",
+   "build": "any",
+   "size": 412,
+   "start": "2ee3566ac2eff7c5",
+   "body": "e652c7d5b35557a7",
+   "signed_from": "RMCP01",
+   "registration": "AICheckInit_80124094",
+   "spans": 4
+  },
+  {
    "name": "AIGetDMABytesLeft",
    "build": "any",
    "size": 400,
@@ -184,6 +194,16 @@
    "registration": "AIInitDMA_80123fcc"
   },
   {
+   "name": "AIRegisterDMACallback",
+   "build": "any",
+   "size": 192,
+   "start": "9f3d0cfd1e3fce27",
+   "body": "3c066873fa7dc2d0",
+   "signed_from": "RMCP01",
+   "registration": "AIRegisterDMACallback_80123f88",
+   "spans": 2
+  },
+  {
    "name": "AIStartDMA",
    "build": "any",
    "size": 420,
@@ -230,6 +250,15 @@
    "signed_from": "SUPP01",
    "registration": "AIStartDMA_80124048",
    "spans": 4
+  },
+  {
+   "name": "AXFXReverbStdExpCallback",
+   "build": "any",
+   "size": 876,
+   "start": "667a29156d906ac6",
+   "body": "3885fa74e722be73",
+   "signed_from": "RMCP01",
+   "registration": "AXFXReverbStdExpCallback_8012b830"
   },
   {
    "name": "BTM_IsDeviceUp",
@@ -463,6 +492,16 @@
    "body": "27399d06f1cd0d66",
    "signed_from": "SUPP01",
    "registration": "DSPAssertTask_8015d57c"
+  },
+  {
+   "name": "DSPCheckInit",
+   "build": "any",
+   "size": 120,
+   "start": "6e9b1134d9654789",
+   "body": "b526b684e70d6a48",
+   "signed_from": "RMCP01",
+   "registration": "DSPCheckInit_8015d504",
+   "spans": 3
   },
   {
    "name": "DSPCheckMailFromDSP",
@@ -1408,6 +1447,16 @@
    "registration": "GX__Flush_8016e654"
   },
   {
+   "name": "GX::GetCPUFifo",
+   "build": "any",
+   "size": 288,
+   "start": "0237d4ac69dfe52a",
+   "body": "d672413b841d15f2",
+   "signed_from": "RMCP01",
+   "registration": "GX__GetCPUFifo_8016cf10",
+   "spans": 2
+  },
+  {
    "name": "GX::GetTexObjAll",
    "build": "any",
    "size": 96,
@@ -1737,6 +1786,26 @@
    "spans": 4
   },
   {
+   "name": "GX::PokeAlphaUpdate",
+   "build": "any",
+   "size": 136,
+   "start": "686cd388e5f1195d",
+   "body": "1d021acbefe00e04",
+   "signed_from": "RMCP01",
+   "registration": "gx_stub_8016eba4",
+   "spans": 4
+  },
+  {
+   "name": "GX::PokeAlphaUpdate",
+   "build": "any",
+   "size": 112,
+   "start": "66ab424ed63103e9",
+   "body": "80aa28ac5988e8ca",
+   "signed_from": "RMCP01",
+   "registration": "gx_stub_8016ebbc",
+   "spans": 3
+  },
+  {
    "name": "GX::PokeBlendMode",
    "build": "any",
    "size": 96,
@@ -1814,6 +1883,15 @@
    "spans": 3
   },
   {
+   "name": "GX::SetArray",
+   "build": "any",
+   "size": 64,
+   "start": "c62172e324722a0c",
+   "body": "c62172e324722a0c",
+   "signed_from": "RMCP01",
+   "registration": "GX__SetArray_8016e32c"
+  },
+  {
    "name": "GX::SetBlendMode",
    "build": "any",
    "size": 80,
@@ -1821,6 +1899,16 @@
    "body": "20a14d9dcccaecde",
    "signed_from": "SMNE01",
    "registration": "GX__SetBlendMode_8017277c"
+  },
+  {
+   "name": "GX::SetBreakPtCallback",
+   "build": "any",
+   "size": 228,
+   "start": "9f3d0cfd1e3fce27",
+   "body": "041a08ec442bc84e",
+   "signed_from": "RMCP01",
+   "registration": "gx_stub_8016d054",
+   "spans": 2
   },
   {
    "name": "GX::SetCPUFifo",
@@ -2353,6 +2441,16 @@
    "registration": "GX__SetTexCopySrc_8016f478"
   },
   {
+   "name": "GX::SetViewport",
+   "build": "any",
+   "size": 76,
+   "start": "4ca5fbb82596d0bd",
+   "body": "45bb0800e2066a94",
+   "signed_from": "RMCP01",
+   "registration": "GX__SetViewport_801733b4",
+   "spans": 3
+  },
+  {
    "name": "GX::SetViewportJitter",
    "build": "any",
    "size": 64,
@@ -2752,9 +2850,9 @@
   {
    "name": "GXEnd",
    "build": "any",
-   "size": 1296,
-   "start": "6b84d413886a580d",
-   "body": "0576057679316981",
+   "size": 864,
+   "start": "4ef566bf3392fea1",
+   "body": "f54bf5681f26bc59",
    "signed_from": "RMCP01",
    "registration": "GX__End_80048c30",
    "spans": 3
@@ -4822,18 +4920,6 @@
    "name": "GXSetViewport",
    "build": "any",
    "size": 144,
-   "start": "4edfcd8b5e38a868",
-   "body": "3729dbdbf2aee78e",
-   "signed_from": "RMCP01",
-   "registration": "GX__SetViewport_801733b4",
-   "helper": "__GX::SetViewport",
-   "entry_size": 44,
-   "entry_body": "64ed14fede5ff4e9"
-  },
-  {
-   "name": "GXSetViewport",
-   "build": "any",
-   "size": 144,
    "start": "eee285fd6a7024c8",
    "body": "30643fc8a70d90c5",
    "signed_from": "SMNP01",
@@ -5590,6 +5676,26 @@
    "registration": "NANDCloseAsync_HLE"
   },
   {
+   "name": "NAND::Create",
+   "build": "any",
+   "size": 528,
+   "start": "e6e415b7fd856a95",
+   "body": "c9067b83c933b85c",
+   "signed_from": "RMCP01",
+   "registration": "NANDCreate_HLE",
+   "spans": 4
+  },
+  {
+   "name": "NAND::CreateDir",
+   "build": "any",
+   "size": 776,
+   "start": "e6e415b7fd856a95",
+   "body": "3a862dd20a24e75e",
+   "signed_from": "RMCP01",
+   "registration": "NANDCreateDir_HLE",
+   "spans": 4
+  },
+  {
    "name": "NAND::Delete",
    "build": "any",
    "size": 176,
@@ -5615,6 +5721,16 @@
    "body": "d9fb711a11c088ef",
    "signed_from": "SMNE01",
    "registration": "NANDGetLength_HLE"
+  },
+  {
+   "name": "NAND::GetStatus",
+   "build": "any",
+   "size": 332,
+   "start": "ad54f0fb6d5b2639",
+   "body": "e0c890e95c5ee8c0",
+   "signed_from": "RMCP01",
+   "registration": "NANDGetStatus_HLE",
+   "spans": 3
   },
   {
    "name": "NAND::GetType",
@@ -5644,6 +5760,16 @@
    "registration": "NANDInit_HLE"
   },
   {
+   "name": "NAND::Move",
+   "build": "any",
+   "size": 236,
+   "start": "ad54f0fb6d5b2639",
+   "body": "e7835c0600d98100",
+   "signed_from": "RMCP01",
+   "registration": "NANDMove_HLE",
+   "spans": 2
+  },
+  {
    "name": "NAND::Open",
    "build": "any",
    "size": 140,
@@ -5660,6 +5786,26 @@
    "body": "1649b6941d04ee1e",
    "signed_from": "SMNE01",
    "registration": "NANDOpenAsync_HLE"
+  },
+  {
+   "name": "NAND::Private::CreateAsync",
+   "build": "any",
+   "size": 296,
+   "start": "d05147e1ce0e485c",
+   "body": "707bca77b54c85b8",
+   "signed_from": "RMCP01",
+   "registration": "NANDPrivateCreateAsync_HLE",
+   "spans": 2
+  },
+  {
+   "name": "NAND::Private::CreateDirAsync",
+   "build": "any",
+   "size": 544,
+   "start": "d05147e1ce0e485c",
+   "body": "f1c908f2e5d115f9",
+   "signed_from": "RMCP01",
+   "registration": "NANDPrivateCreateDirAsync_HLE",
+   "spans": 2
   },
   {
    "name": "NAND::Private::GetStatusAsync",
@@ -5706,6 +5852,26 @@
    "signed_from": "RMCP01",
    "registration": "NANDPrivateSafeOpenAsync_HLE",
    "spans": 3
+  },
+  {
+   "name": "NAND::Read",
+   "build": "any",
+   "size": 328,
+   "start": "b07bba181732f594",
+   "body": "86f8279580287858",
+   "signed_from": "RMCP01",
+   "registration": "NANDRead_HLE",
+   "spans": 3
+  },
+  {
+   "name": "NAND::ReadAsync",
+   "build": "any",
+   "size": 224,
+   "start": "d05147e1ce0e485c",
+   "body": "a50241566ccf9653",
+   "signed_from": "RMCP01",
+   "registration": "NANDReadAsync_HLE",
+   "spans": 2
   },
   {
    "name": "NAND::SafeClose",
@@ -5774,6 +5940,26 @@
    "registration": "NANDSeekAsync_HLE"
   },
   {
+   "name": "NAND::Write",
+   "build": "any",
+   "size": 384,
+   "start": "b07bba181732f594",
+   "body": "51e4c894dda11cce",
+   "signed_from": "RMCP01",
+   "registration": "NANDWrite_HLE",
+   "spans": 3
+  },
+  {
+   "name": "NAND::WriteAsync",
+   "build": "any",
+   "size": 280,
+   "start": "d05147e1ce0e485c",
+   "body": "1d80c7144b77fe37",
+   "signed_from": "RMCP01",
+   "registration": "NANDWriteAsync_HLE",
+   "spans": 2
+  },
+  {
    "name": "NANDCheck",
    "build": "any",
    "size": 264,
@@ -5817,30 +6003,6 @@
    "body": "1c1ebdeb89e91f3d",
    "signed_from": "SMNP01",
    "registration": "NANDCreate_HLE"
-  },
-  {
-   "name": "NANDCreate",
-   "build": "any",
-   "size": 296,
-   "start": "18f497985a02b1ab",
-   "body": "4eef978a9940b839",
-   "signed_from": "RMCP01",
-   "registration": "NANDCreate_HLE",
-   "helper": "nandCreate",
-   "entry_size": 116,
-   "entry_body": "5543ddb6bca621e3"
-  },
-  {
-   "name": "NANDCreateDir",
-   "build": "any",
-   "size": 300,
-   "start": "18f497985a02b1ab",
-   "body": "2cfecfe018eb7ab0",
-   "signed_from": "RMCP01",
-   "registration": "NANDCreateDir_HLE",
-   "helper": "nandCreateDir",
-   "entry_size": 116,
-   "entry_body": "5543ddb6bca621e3"
   },
   {
    "name": "NANDDelete",
@@ -5891,18 +6053,6 @@
    "registration": "NANDGetLengthAsync_HLE"
   },
   {
-   "name": "NANDGetStatus",
-   "build": "any",
-   "size": 340,
-   "start": "bbd63a89a7a04851",
-   "body": "b0cc046f72926fe7",
-   "signed_from": "RMCP01",
-   "registration": "NANDGetStatus_HLE",
-   "helper": "nandGetStatus",
-   "entry_size": 100,
-   "entry_body": "838b4473ad1d095c"
-  },
-  {
    "name": "NANDGetType",
    "build": "any",
    "size": 80,
@@ -5928,18 +6078,6 @@
    "body": "9a1af41a3f2db31d",
    "signed_from": "SMNP01",
    "registration": "NANDMove_HLE"
-  },
-  {
-   "name": "NANDMove",
-   "build": "any",
-   "size": 424,
-   "start": "754151cc5eace40b",
-   "body": "f5937daf5c17a029",
-   "signed_from": "RMCP01",
-   "registration": "NANDMove_HLE",
-   "helper": "nandMove",
-   "entry_size": 100,
-   "entry_body": "838b4473ad1d095c"
   },
   {
    "name": "NANDOpen",
@@ -6154,6 +6292,15 @@
    "registration": "OS__ExceptionInit_801a00e0"
   },
   {
+   "name": "OS::Fatal",
+   "build": "any",
+   "size": 536,
+   "start": "a6cb409b70ee09cd",
+   "body": "b29dbfb9a3cfac63",
+   "signed_from": "RMCP01",
+   "registration": "OSFatal_HLE_801a4ec4"
+  },
+  {
    "name": "OS::GetConsoleType",
    "build": "any",
    "size": 608,
@@ -6170,6 +6317,16 @@
    "body": "913d1bb8a3898e90",
    "signed_from": "RMCP01",
    "registration": "OS__GetConsoleType_8019f33c"
+  },
+  {
+   "name": "OS::GetCurrentThread",
+   "build": "any",
+   "size": 116,
+   "start": "10d519609d90b954",
+   "body": "c44f0f6021819e93",
+   "signed_from": "RMCP01",
+   "registration": "OS__GetCurrentThread_801a98b0_hle",
+   "spans": 4
   },
   {
    "name": "OS::GetResetCode",
@@ -6202,6 +6359,15 @@
    "spans": 4
   },
   {
+   "name": "OS::InitMessageQueue",
+   "build": "any",
+   "size": 96,
+   "start": "1f327899005aa2f5",
+   "body": "5b8753a744675ea0",
+   "signed_from": "RMCP01",
+   "registration": "OS__InitMessageQueue_HLE_801a72fc"
+  },
+  {
    "name": "OS::IsTitleInstalled",
    "build": "any",
    "size": 132,
@@ -6209,6 +6375,15 @@
    "body": "4f4174e7ac1b1ac1",
    "signed_from": "RMCP01",
    "registration": "OS__IsTitleInstalled"
+  },
+  {
+   "name": "OS::JamMessage",
+   "build": "any",
+   "size": 208,
+   "start": "c18bb654f390cc23",
+   "body": "d27c4cafa1b9a3cc",
+   "signed_from": "RMCP01",
+   "registration": "OS__JamMessage_HLE_801a7500"
   },
   {
    "name": "OS::JoinThread",
@@ -6245,6 +6420,15 @@
    "body": "27452cea90b30f0e",
    "signed_from": "SMNE01",
    "registration": "OS__Panic_801A2660_Cpu"
+  },
+  {
+   "name": "OS::ReceiveMessage",
+   "build": "any",
+   "size": 220,
+   "start": "b1eccb9f2a92c6cc",
+   "body": "5073cd31b6e9d19b",
+   "signed_from": "RMCP01",
+   "registration": "OS__ReceiveMessage_HLE_801a7424"
   },
   {
    "name": "OS::Report",
@@ -6304,6 +6488,15 @@
    "registration": "OSResumeThread_HLE_801aa58c"
   },
   {
+   "name": "OS::SendMessage",
+   "build": "any",
+   "size": 200,
+   "start": "c18bb654f390cc23",
+   "body": "6809df187b78b559",
+   "signed_from": "RMCP01",
+   "registration": "OS__SendMessage_HLE_801a735c"
+  },
+  {
    "name": "OS::SetAlarm",
    "build": "any",
    "size": 112,
@@ -6331,6 +6524,16 @@
    "registration": "OS__SetPeriodicAlarm_801a08e0"
   },
   {
+   "name": "OS::SetPowerCallback",
+   "build": "any",
+   "size": 516,
+   "start": "d6d5ece1cd4a6003",
+   "body": "6ab741f8e12eb0d8",
+   "signed_from": "RMCP01",
+   "registration": "OSSetPowerCallback_801ab75c",
+   "spans": 2
+  },
+  {
    "name": "OS::SleepThread",
    "build": "any",
    "size": 240,
@@ -6338,6 +6541,15 @@
    "body": "44774d3daac361d9",
    "signed_from": "SMNE01",
    "registration": "OSSleepThread_HLE_801aa9b8"
+  },
+  {
+   "name": "OS::SleepTicks",
+   "build": "any",
+   "size": 180,
+   "start": "c6e493d84c3ea3c8",
+   "body": "2b8723cf2c82e8c3",
+   "signed_from": "RMCP01",
+   "registration": "OS__SleepTicks_HLE_801aaca8"
   },
   {
    "name": "OS::UnlockMutex",
@@ -6421,6 +6633,16 @@
    "registration": "OS____PSInit_801a04a0"
   },
   {
+   "name": "OS::__SetInterruptHandler",
+   "build": "any",
+   "size": 232,
+   "start": "50926f505f16e44a",
+   "body": "f23f0034d040ad28",
+   "signed_from": "RMCP01",
+   "registration": "__OSSetInterruptHandler_801a65f8_hle",
+   "spans": 4
+  },
+  {
    "name": "OS::__StopAudioSystem",
    "build": "any",
    "size": 208,
@@ -6428,6 +6650,15 @@
    "body": "b9154883141828ab",
    "signed_from": "SMNE01",
    "registration": "OSStopAudioSystem_801A1520"
+  },
+  {
+   "name": "OS::__UnmaskInterrupts",
+   "build": "any",
+   "size": 128,
+   "start": "d555c2c51dcad7ed",
+   "body": "bdfa357cf508d9b3",
+   "signed_from": "RMCP01",
+   "registration": "__OSUnmaskInterrupts_801a69bc_hle"
   },
   {
    "name": "OSCancelThread",
@@ -7574,6 +7805,26 @@
    "spans": 3
   },
   {
+   "name": "RVL::DSPCheckMailFromDSP",
+   "build": "any",
+   "size": 248,
+   "start": "60c5908253459343",
+   "body": "d2795dcf8bb320ed",
+   "signed_from": "RMCP01",
+   "registration": "DSPCheckMailFromDSP_8015d40c",
+   "spans": 5
+  },
+  {
+   "name": "RVL::DSPReadMailFromDSP",
+   "build": "any",
+   "size": 232,
+   "start": "9c4208ef395013a4",
+   "body": "065cbedd26c35e80",
+   "signed_from": "RMCP01",
+   "registration": "DSPReadMailFromDSP_8015d41c",
+   "spans": 4
+  },
+  {
    "name": "SCCheckStatus",
    "build": "any",
    "size": 284,
@@ -7830,6 +8081,15 @@
    "registration": "THPVideoDecode"
   },
   {
+   "name": "THPVideoDecode",
+   "build": "any",
+   "size": 704,
+   "start": "c9b9b1122a96b69c",
+   "body": "b7067c1bfd095fd8",
+   "signed_from": "RMCP01",
+   "registration": "THPVideoDecode_HLE"
+  },
+  {
    "name": "VIConfigure",
    "build": "any",
    "size": 1940,
@@ -8016,12 +8276,31 @@
    "spans": 3
   },
   {
+   "name": "VIGetTvFormat",
+   "build": "any",
+   "size": 64,
+   "start": "ad232cb8d576c00f",
+   "body": "ad232cb8d576c00f",
+   "signed_from": "RMCP01",
+   "registration": "HLE_VIGetTvFormat_801bacd8",
+   "spans": 4
+  },
+  {
    "name": "VIInit",
    "build": "any",
    "size": 1172,
    "start": "28dfbd2b4b7f3dec",
    "body": "e0467c2c7327b4a1",
    "signed_from": "SUPP01",
+   "registration": "VIInit_HLE_801b94a4"
+  },
+  {
+   "name": "VIInit",
+   "build": "any",
+   "size": 1164,
+   "start": "6f4887b0bb97f59b",
+   "body": "ecd02611bccae37d",
+   "signed_from": "RMCP01",
    "registration": "VIInit_HLE_801b94a4"
   },
   {
@@ -8083,6 +8362,26 @@
    "body": "d2f83e9df70773c7",
    "signed_from": "SUPP01",
    "registration": "VISetNextFrameBuffer_HLE_801baab8"
+  },
+  {
+   "name": "VISetPostRetraceCallback",
+   "build": "any",
+   "size": 96,
+   "start": "9f3d0cfd1e3fce27",
+   "body": "c6f7c5e27c06d072",
+   "signed_from": "RMCP01",
+   "registration": "VISetPostRetraceCallback_HLE_801b9138",
+   "spans": 2
+  },
+  {
+   "name": "VISetPreRetraceCallback",
+   "build": "any",
+   "size": 136,
+   "start": "9f3d0cfd1e3fce27",
+   "body": "2346f5a83c9412bc",
+   "signed_from": "RMCP01",
+   "registration": "VISetPreRetraceCallback_HLE_801b90f4",
+   "spans": 2
   },
   {
    "name": "VIWaitForRetrace",
@@ -8712,6 +9011,15 @@
    "registration": "gx_stub_80173544"
   },
   {
+   "name": "__GX::SetProjection",
+   "build": "any",
+   "size": 68,
+   "start": "356a6bb26dd4b1f1",
+   "body": "dd38c3e8a29712df",
+   "signed_from": "RMCP01",
+   "registration": "gx_stub_80172fd8"
+  },
+  {
    "name": "__GX::SetSUTexRegs",
    "build": "any",
    "size": 368,
@@ -8755,6 +9063,15 @@
    "body": "a436b177fb6e5d01",
    "signed_from": "SMNE01",
    "registration": "gx_stub_8016d814"
+  },
+  {
+   "name": "__GX::SetViewport",
+   "build": "any",
+   "size": 144,
+   "start": "4edfcd8b5e38a868",
+   "body": "3729dbdbf2aee78e",
+   "signed_from": "RMCP01",
+   "registration": "gx_stub_801732e8"
   },
   {
    "name": "__GX::Shutdown",
@@ -9512,6 +9829,33 @@
    "body": "9ef42c69bec34bf1",
    "signed_from": "RMCP01",
    "registration": "nw4r::lyt::Pane::CalculateMtx"
+  },
+  {
+   "name": "nw4r::lyt::Pane::CalculateMtx",
+   "build": "any",
+   "size": 768,
+   "start": "541510397e9b2cb9",
+   "body": "9ef42c69bec34bf1",
+   "signed_from": "RMCP01",
+   "registration": "LytPaneCalculateMtx_HLE"
+  },
+  {
+   "name": "nw4r::lyt::detail::DrawQuad",
+   "build": "any",
+   "size": 1376,
+   "start": "d56f482fc2d69e05",
+   "body": "d14fc76d29b93536",
+   "signed_from": "RMCP01",
+   "registration": "nw4r__lyt__detail__DrawQuad_800847c0"
+  },
+  {
+   "name": "nw4r::lyt::detail::DrawQuad",
+   "build": "any",
+   "size": 368,
+   "start": "18c8a798fbb5eca8",
+   "body": "1d344cee0d9c710e",
+   "signed_from": "RMCP01",
+   "registration": "nw4r__lyt__detail__DrawQuad_80084d20"
   },
   {
    "name": "nw4r::snd::SoundPlayer::SetVolume",

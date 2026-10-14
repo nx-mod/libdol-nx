@@ -1482,6 +1482,12 @@ struct DlSectionTimer {
 extern "C" void GX__CallDisplayList_80172f64(uint32_t listAddr, uint32_t nbytes) {
     if (nbytes == 0 || listAddr == 0) return;
 #if defined(WIINX_NATIVE_GX)
+    // as the SDK's GXCallDisplayList: pending state first (the list's draws
+    // read the projection and viewport set before the call)
+    try {
+        const uint32_t gd = GuestGxData();
+        if (gd && Memory::Read32(gd + 0x5FCu)) GX__SetDirtyState_8016ee78();
+    } catch (...) {}
     dol::gx_native::call_list(listAddr, nbytes);
     return;
 #endif

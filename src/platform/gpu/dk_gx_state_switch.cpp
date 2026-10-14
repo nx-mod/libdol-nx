@@ -36,6 +36,17 @@ DkBlendFactor destination_factor(BlendFactor factor) {
   }
 }
 
+// An EFB without alpha (PE_CONTROL's format) reads destination alpha as full:
+// its alpha factors are one and zero.
+BlendFactor full_alpha(const wiinx::gx::PixelState& state, BlendFactor factor) {
+  if (state.efbAlpha) {
+    return factor;
+  }
+  return factor == BlendFactor::DstAlpha ? BlendFactor::One
+       : factor == BlendFactor::InvDstAlpha ? BlendFactor::Zero
+                                            : factor;
+}
+
 } // namespace
 
 PipelineState pipeline_state(const wiinx::gx::PixelState& state) {
@@ -57,8 +68,9 @@ PipelineState pipeline_state(const wiinx::gx::PixelState& state) {
   case BlendMode::Blend:
     dkColorStateSetBlendEnable(&out.color, 0, true);
     out.blend.colorBlendOp = out.blend.alphaBlendOp = DkBlendOp_Add;
-    out.blend.srcColorBlendFactor = out.blend.srcAlphaBlendFactor = source_factor(state.srcFactor);
-    out.blend.dstColorBlendFactor = out.blend.dstAlphaBlendFactor = destination_factor(state.dstFactor);
+    out.blend.srcColorBlendFactor = out.blend.srcAlphaBlendFactor = source_factor(full_alpha(state, state.srcFactor));
+    out.blend.dstColorBlendFactor = out.blend.dstAlphaBlendFactor =
+        destination_factor(full_alpha(state, state.dstFactor));
     break;
   case BlendMode::Subtract:
     dkColorStateSetBlendEnable(&out.color, 0, true);

@@ -98,7 +98,7 @@ results: gameplay depends on it (ghosts, online).
 
 | Module    | Covers                                                      |
 |-----------|-------------------------------------------------------------|
-| `sdk`     | C library (memcpy, exact math), matrix math, GD, THP video  |
+| `sdk`     | C library (memcpy, exact math), matrix math, GD, THP video, GX texture objects |
 | `nw4r`    | lyt (layouts), g3d (models, animation), snd, ef, math       |
 | `egg`     | Nintendo EAD's framework                                    |
 | `jsystem` | the GameCube-era framework                                  |
@@ -167,8 +167,14 @@ tools/wiinx-build mygame.iso        # or a game folder made earlier
 extracts the disc, writes the project, scans the game for the natives libdol-nx
 can bind, translates its code, builds it and leaves `<game>/build/<game>.nro`
 for `sdmc:/wii-nx/games/<game>/`. It needs devkitPro's Switch toolchain with
-deko3d, and dawn-nx and aurora-nx checkouts (`--dawn`, `--aurora`) for their
-headers - neither is linked into a native build.
+deko3d, a UAM build for the shader compiler ([deko3d](docs/deko3d.md)), and
+dawn-nx and aurora-nx checkouts (`--dawn`, `--aurora`) for their headers -
+neither is linked into a native build. It takes the first checkouts it finds
+beside this one, skipping a Dawn without its submodules; with several around,
+name them (`--dawn`, `--aurora`) - a build directory remembers its first
+configure. `--skip-translate` rebuilds without
+translating again; `--distcc "host:3632/4"` spreads the compile over other
+machines ([distcc](docs/distcc.md)).
 
 Games are only ever built on the player's machine from their own disc; CI
 builds the library and tools, never a game.
@@ -181,7 +187,7 @@ builds the library and tools, never a game.
 | [`format`](src/format/README.md) | discs (raw, CISO, WBFS, RVZ, WIA), the NAND's files and WADs, Yaz0, THP |
 | [`cpu`](src/cpu/README.md) | registers, memory, calls, threads, the guest OS layout a game installs |
 | [`platform`](src/platform/README.md) | os, fs, gx, audio, input, net, system |
-| [`accel/sdk`](src/accel/sdk/README.md) | the C library, the matrix library, the THP decoder |
+| [`accel/sdk`](src/accel/sdk/README.md) | the C library, the matrix library, the THP decoder, GX texture objects (written, not yet bound) |
 | [`accel/nw4r`](src/accel/nw4r/README.md) | lyt `Pane::CalculateMtx`, two builds. g3d and snd are the largest gaps |
 | [`accel/egg`](src/accel/egg/README.md) | Yaz0 |
 | [translator](translator/README.md) | PowerPC → C++, one pass per game |

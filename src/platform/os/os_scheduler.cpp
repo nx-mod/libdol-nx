@@ -142,6 +142,13 @@ extern "C" void OSSleepThread_HLE_801aa9b8(CpuContext* ctx);
 
 static void TryInvokeSwitchCallback(uint32_t oldCtx, uint32_t newCtx, CpuContext* cpu)
 {
+    // A game whose layout does not name the pointer has none we can read: read
+    // at 0 it was low memory's game code, called a callback "RMCP" and logged
+    // that to the card on every thread switch (Mega Man 9: 2,586 lines, most of
+    // a 20-second start).
+    if (kSwitchThreadCallbackPtrAddr == 0) {
+        return;
+    }
     try {
         const uint32_t callbackAddr = ::Memory::Read32(kSwitchThreadCallbackPtrAddr);
         if (callbackAddr == 0) {
@@ -156,8 +163,12 @@ static void TryInvokeSwitchCallback(uint32_t oldCtx, uint32_t newCtx, CpuContext
             return;
         }
 
-        RT_LOG(RT_TAG_OS) << "__OSThreadInit: switchThreadCallback 0x" << std::hex << callbackAddr
-                  << std::dec << " not registered; skipping" << std::endl;
+        static bool reported = false;  // (once: this runs on every thread switch)
+        if (!reported) {
+            reported = true;
+            RT_LOG(RT_TAG_OS) << "__OSThreadInit: switchThreadCallback 0x" << std::hex << callbackAddr
+                      << std::dec << " not registered; skipping" << std::endl;
+        }
     } catch (const ::Memory::AccessViolation& e) {
         RT_LOG(RT_TAG_OS) << "__OSThreadInit: failed to read callback pointer (0x" << std::hex
                   << e.address() << std::dec << ")" << std::endl;

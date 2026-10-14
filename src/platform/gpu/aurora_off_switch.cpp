@@ -86,7 +86,7 @@ void GXSetCPUFifo(GXFifoObj*) {}
 void GXSetGPFifo(GXFifoObj*) {}
 void GXSaveCPUFifo(GXFifoObj*) {}
 GXFifoObj* GXGetCPUFifo(void) { return nullptr; }
-void GXFlush(void) { dol::gx_native::flush(); }
+void GXFlush(void) { dol::gx_native::submit(); }  // (sent on, not waited for: GXDrawDone waits)
 void GXPixModeSync(void) {}
 void GXSetTexCopySrc(u16, u16, u16, u16) {}
 void GXSetTexCopyDst(u16, u16, GXTexFmt, GXBool) {}

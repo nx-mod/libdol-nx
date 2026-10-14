@@ -15,6 +15,7 @@ PSMTX/VEC math, GD display-list builders, MSL (memcpy, math). Header:
 | Name             | Builds     | File                 |
 |------------------|------------|----------------------|
 | `THPVideoDecode` | 2007-08-08 | `thp/thp_decode.cpp` |
+| GX (texture objects and loads, more to come) | `rvl.gx@2007-12-11` | [`gx/`](gx/README.md) |
 
 `THPVideoDecode` decodes a THP frame (baseline JPEG with THP's own rules: no
 byte stuffing, restarts without markers, GX I8 tile output) straight into the

@@ -44,6 +44,9 @@ DkDevice device();
 DkQueue queue();
 // the commands the frame records, closed into a list and submitted by submit()
 DkCmdBuf commands();
+// a diagnosis frame (one in 120): the renderer measures and logs more in it
+bool probing();
+void probe_focus();  // (diagnosis) the rest of this frame probed
 void submit();
 // the frame's commands so far as one list, queued (flushed with the queue's own)
 void submit_list();
@@ -191,6 +194,13 @@ void bind(const PipelineState& state);
 // decoded, kept while their contents stay the same). `width` and `height` are
 // the target's: GX's 640-wide EFB space is scaled onto it. False when the
 // state asks for something the shaders do not do yet (the draw is skipped).
+// The same, for `count` vertices already converted into the vertex shader's
+// layout (vertex_stream.hpp): draws merged into one (gx_native_switch.cpp).
+// With `indices` (indexCount of them), the vertices drawn by index: merged
+// strips, fans and quads are one triangle list that way.
+bool draw_converted(const wiinx::gx::State& state, uint8_t gxPrimitive, const float* vertices, uint32_t count,
+                    uint32_t width, uint32_t height, const wiinx::gx::CommandProcessor::Memory& memory,
+                    const uint32_t* indices = nullptr, uint32_t indexCount = 0);
 bool draw_gx(const wiinx::gx::State& state, const wiinx::gx::Draw& draw, uint32_t width, uint32_t height,
              const wiinx::gx::CommandProcessor::Memory& memory);
 
@@ -198,11 +208,20 @@ bool draw_gx(const wiinx::gx::State& state, const wiinx::gx::Draw& draw, uint32_
 // `width` x `height` image kept for the guest address it was copied to. A
 // texture bound at that address then samples it rather than decoding RAM,
 // until the guest writes something else there. Outside a pass.
-void efb_copy(uint32_t address, uint32_t width, uint32_t height, const Texture& efb, const DkImageRect& source,
-              const wiinx::gx::CommandProcessor::Memory& memory);
+// It is made as the hardware makes it (a box filter, the copy filter's
+// vertical taps above, at and below each line - `lineStep` pixels apart - and
+// the format's conversion), from the EFB's colour or, for the Z formats, its
+// depth. `opaque`: the EFB keeps no alpha, so the copy's is full.
+void efb_copy(uint32_t address, uint32_t width, uint32_t height, const Texture& efb, TextureView& efbView,
+              TextureView& depthView, const DkImageRect& source, const wiinx::gx::CommandProcessor::Memory& memory,
+              uint32_t format, bool opaque, const float taps[3], uint32_t lineStep);
 
 // A frame presented: the GX caches age, and what has gone unused is freed.
 void gx_frame_done();
+// The next draw binds everything again, whatever changed: a new frame (its
+// command lists start without our bindings) and after a copy (an image a
+// texture binding points at may be new).
+void gx_rebind_all();
 
 // ---------- the screen
 

@@ -44,25 +44,50 @@ def library_natives(src_root):
     game - so they are signed under their own names."""
     pattern = re.compile(r'WIINX_NATIVE\(\s*"([^"]+)"')
     found = set()
-    for root, _, names in os.walk(src_root):
-        for name in names:
-            if name.endswith(".cpp"):
-                with open(os.path.join(root, name), errors="ignore") as handle:
-                    found.update(pattern.findall(handle.read()))
+    for top in roots(src_root):
+        for root, _, names in os.walk(top):
+            for name in names:
+                if name.endswith(".cpp"):
+                    with open(os.path.join(root, name), errors="ignore") as handle:
+                        found.update(pattern.findall(handle.read()))
     return found
 
 
+# Natives that only work in the game they were written from: their bodies call
+# that game's own functions by address, or need its original kept beside them.
+# Signed, they would bind in other games and call into unrelated code.
+REFERENCE_ONLY = {
+    "ISFS_OpenLib_HLE_80169BCC",       # calls 0x801949B8 / 0x80193040 directly
+    "NAND_IOS_OpenBody_HLE_801938FC",  # an entry four bytes into IOS_Open
+    "NHTTPStartup_Reentrant_HLE_801d8d30",  # runs the original through it
+    "GX__End_80044b30",                # Mario Kart Wii's own code, not the SDK's
+}
+
+
+def roots(src_root):
+    """The source roots: one, or several (libdol-nx and libwii-nx)."""
+    return [src_root] if isinstance(src_root, str) else list(src_root)
+
+
 def registrations(src_root):
-    """{address: registration name} for every PPC_NATIVE_OVERRIDE in the library."""
-    pattern = re.compile(r"PPC_NATIVE_OVERRIDE[A-Z_]*\(\s*([0-9A-Fa-f]{8})\s*,\s*([A-Za-z_]\w*)")
+    """{address: registration name} for every registration in the libraries:
+    PPC_NATIVE_OVERRIDE and the REGISTER_NATIVE_FUNCTION forms alike."""
+    patterns = (
+        re.compile(r"PPC_NATIVE_OVERRIDE[A-Z_]*\(\s*([0-9A-Fa-f]{8})\s*,\s*([A-Za-z_]\w*)"),
+        re.compile(r"REGISTER_NATIVE_FUNCTION(?:_AS)?\(\s*0x([0-9A-Fa-f]{8})\s*,\s*([A-Za-z_]\w*)"),
+    )
     found = {}
-    for root, _, names in os.walk(src_root):
-        for name in names:
-            if not name.endswith((".cpp", ".h", ".inc")):
-                continue
-            with open(os.path.join(root, name), errors="ignore") as handle:
-                for address, symbol in pattern.findall(handle.read()):
-                    found[int(address, 16)] = symbol
+    for top in roots(src_root):
+        for root, _, names in os.walk(top):
+            for name in names:
+                if not name.endswith((".cpp", ".h", ".inc")):
+                    continue
+                with open(os.path.join(root, name), errors="ignore") as handle:
+                    text = handle.read()
+                for pattern in patterns:
+                    for address, symbol in pattern.findall(text):
+                        if symbol not in REFERENCE_ONLY:
+                            found[int(address, 16)] = symbol
     return found
 
 
@@ -160,7 +185,14 @@ def main(argv):
         print(__doc__.strip())
         return 2
     dol_path, map_path = argv[0], argv[1]
-    src_root = argv[argv.index("--src") + 1] if "--src" in argv else os.path.join(HERE, "..", "src")
+    # Every library with registrations: signing from one game replaces what was
+    # signed from it before, so a root left out loses its signatures.
+    src_root = [argv[i + 1] for i, a in enumerate(argv) if a == "--src"]
+    if not src_root:
+        src_root = [os.path.join(HERE, "..", "src")]
+        wii = os.path.join(HERE, "..", "..", "libwii-nx", "src")
+        if os.path.isdir(wii):
+            src_root.append(wii)
     write = "--write" in argv
 
     scan = load_scan()
@@ -236,10 +268,30 @@ def main(argv):
             by_start.setdefault(scan.masked_hash(blob[offset:offset + WINDOW_BYTES]), []).append(start + offset)
     unique = []
     astray = 0
-    for entry in signed:
-        hits = [a for a in by_start.get(entry["start"], [])
+    def hits_of(entry):
+        return [a for a in by_start.get(entry["start"], [])
                 if (code := dol.read(a, entry["size"])) is not None
                 and scan.masked_hash(code) == entry["body"]]
+
+    for entry in signed:
+        hits = hits_of(entry)
+        if len(hits) > 1:
+            # Twins: functions that differ only in what masking removes - which
+            # variable they store to (VISetPreRetraceCallback and
+            # VISetPostRetraceCallback). Taking in the functions that follow, as
+            # for a short native, tells them apart.
+            address = next(a for a, r in natives.items() if r == entry["registration"])
+            index = next((i for i, (a, _) in enumerate(entries) if a == address), None)
+            spans = entry.get("spans", 1)
+            while len(hits) > 1 and index is not None and spans < 4 and index + spans < len(entries):
+                spans += 1
+                end = entries[index + spans][0] if index + spans < len(entries) else 0
+                size = end - address
+                code = dol.read(address, size) if size > 0 else None
+                if code is None:
+                    break
+                entry["size"], entry["body"], entry["spans"] = size, scan.masked_hash(code), spans
+                hits = hits_of(entry)
         if len(hits) != 1:
             ambiguous += 1
             continue
@@ -289,7 +341,25 @@ def main(argv):
     print(f"game's builds: {len(game)}")
 
     if write:
-        document["natives"] = others + proven
+        # Additive: a signature from this game is replaced only by a new one for
+        # the same native. A run used to drop every earlier signature from the
+        # same game, which deleted what the other mode signed (--by-name: memcpy,
+        # strlen, THP) and the hand-made helper entries (NANDCreate's nandCreate).
+        resigned = {e.get("registration") for e in proven}
+        kept = [e for e in document["natives"]
+                if e.get("registration") not in REFERENCE_ONLY
+                and ("exact" in e or e.get("signed_from") != source
+                     or e.get("registration") not in resigned
+                     # an identical signature is kept as it was, with the
+                     # other games it is signed from
+                     or any(e.get("start") == p.get("start") and e.get("body") == p.get("body")
+                            for p in proven if p.get("registration") == e.get("registration")))]
+        # (a signature already shipped - the same code, signed with another
+        # game's name beside this one's - is not listed twice)
+        shipped = {(e.get("registration"), e.get("start"), e.get("body"), e.get("size")) for e in kept}
+        proven = [e for e in proven
+                  if (e.get("registration"), e.get("start"), e.get("body"), e.get("size")) not in shipped]
+        document["natives"] = kept + proven
         document["natives"].sort(key=lambda e: (e["build"], e["name"]))
         with open(SIGNATURES, "w") as handle:
             json.dump(document, handle, indent=1)

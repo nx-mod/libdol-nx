@@ -1126,9 +1126,29 @@ void SwitchDurableLog(std::string_view text) noexcept {
             sendto(g_netLogSocket, line.data(), line.size(), 0,
                    reinterpret_cast<const sockaddr*>(&g_netLogAddr), sizeof(g_netLogAddr));
         }
-        if (FILE* file = std::fopen(WIINX_GAME_PATH("logs/boot.log"), "a")) {
+        // Opened once, buffered, and flushed at most four times a second - or
+        // at once for a line a crash or hang is read by. Opening and closing
+        // the file for every line stalled the game thread each second as the
+        // stats came out, and a flush per line was still 4% of the frame (each
+        // one a write to the card).
+        static FILE* file = [] {
+            FILE* f = std::fopen(WIINX_GAME_PATH("logs/boot.log"), "a");
+            if (f) {
+                std::setvbuf(f, nullptr, _IOFBF, 64 * 1024);
+            }
+            return f;
+        }();
+        if (file) {
             std::fwrite(line.data(), 1, line.size(), file);
-            std::fclose(file);
+            static long long lastFlush = 0;
+            const bool urgent = text.find("[exit]") != std::string_view::npos ||
+                                text.find("fatal") != std::string_view::npos ||
+                                text.find("[wd]") != std::string_view::npos ||
+                                text.find("crash") != std::string_view::npos;
+            if (urgent || ms - lastFlush >= 250) {
+                std::fflush(file);
+                lastFlush = ms;
+            }
         }
     } catch (...) {
     }
@@ -1897,6 +1917,7 @@ uint32_t g_pcSamples[kPcSamplesPerFlush * 2];
 size_t g_pcSampleCount = 0;
 FILE* g_pcSampleFile = nullptr;
 bool g_pcSamplerBroken = false;
+constexpr bool kPcSampler = false;  // (diagnosis) true to profile: scratchpad prof.py reads the file
 
 void PcSample() noexcept {
     if (g_pcSamplerBroken || g_switchMainThreadHandle == INVALID_HANDLE || g_pcSampleCount >= kPcSamplesPerFlush) {
@@ -2017,7 +2038,9 @@ void SwitchWatchdogMain(void*) {
             if (pcSamplerLive && !g_pcSamplerBroken) {
                 PcSampleFlush(nowMs);
             }
-            pcSamplerLive = SwitchDevLoggingEnabled() && nowMs - watchdogStartMs >= 30000;
+            // (off unless profiling: each sample pauses the game thread, a
+            // thousand times a second - kPcSampler)
+            pcSamplerLive = kPcSampler && SwitchDevLoggingEnabled() && nowMs - watchdogStartMs >= 30000;
         }
         if (++profileTicks >= 10 && SwitchDevLoggingEnabled()) {
             profileTicks = 0;
@@ -2048,6 +2071,28 @@ void SwitchWatchdogMain(void*) {
         if (addr != 0 && sameCount >= 3 && dumps < 3 && (sameCount % 5) == 3) {
             ++dumps;
             SwitchDumpTraceRing();
+        }
+        // A hang otherwise leaves only this line: once the guest has sat in one
+        // function for ten seconds, write the crash artifacts a crash would -
+        // its registers and stack back chain (published to the context at each
+        // loop's safe point), MEM1 and MEM2 - so the call chain into the loop
+        // can be read back. (The context is a plain global on Switch, so this
+        // thread sees the guest's.)
+        // (two at most, for two different places: a slow start-up must not use
+        // up the only dump before the hang that matters)
+        // Not while frames still present: the last function tracked can stay
+        // the same in a game that runs (Mega Man 9's GX::CopyDisp, where each
+        // frame waits for the retrace), and that once wrote a dump mid-game.
+        static uint32_t stuckDumps = 0, stuckDumpedAt = 0, lastPresents = 0, frozenSeconds = 0;
+        const uint32_t presents = VI_HLE_DebugPresentCount();
+        frozenSeconds = (addr == lastAddr && presents == lastPresents) ? frozenSeconds + 1 : 0;
+        lastPresents = presents;
+        if (addr != 0 && frozenSeconds == 10 && stuckDumps < 2 && addr != stuckDumpedAt) {
+            ++stuckDumps;
+            stuckDumpedAt = addr;
+            char why[96];
+            std::snprintf(why, sizeof(why), "the guest stayed in 0x%08X for ten seconds", addr);
+            RuntimeCrash::WriteCrashArtifacts("stuck", why, nullptr);
         }
         const long long ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  std::chrono::steady_clock::now() - g_switchBootStart)

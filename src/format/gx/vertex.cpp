@@ -86,14 +86,14 @@ struct Generator {
             attn = "            float cosine = max(0.0, dot(ldir, light.dir.xyz));\n"
                    "            float cosAttn = dot(light.cosAtt.xyz, vec3(1.0, cosine, cosine * cosine));\n"
                    "            float distAttn = dot(light.distAtt.xyz, vec3(1.0, dist, dist2));\n"
-                   "            attn = max(0.0, cosAttn / distAttn);\n";
+                   "            attn = max(0.0, cosAttn) / distAttn;\n";  // (only the cosine part is clamped)
             break;
         case AttnFn::Spec: {
             const std::string distAtt = cc.diffuse != DiffuseFn::None ? "normalize(light.distAtt.xyz)" : "light.distAtt.xyz";
             attn = "            attn = dot(mvNormal, ldir) >= 0.0 ? max(0.0, dot(mvNormal, light.dir.xyz)) : 0.0;\n"
                    "            float cosAttn = dot(light.cosAtt.xyz, vec3(1.0, attn, attn * attn));\n"
                    "            float distAttn = dot(" + distAtt + ", vec3(1.0, attn, attn * attn));\n"
-                   "            attn = distAttn != 0.0 ? max(0.0, cosAttn / distAttn) : (cosAttn > 0.0 ? 1.0 : 0.0);\n";
+                   "            attn = distAttn != 0.0 ? max(0.0, cosAttn) / distAttn : (cosAttn > 0.0 ? 1.0 : 0.0);\n";
             break;
         }
         default: ok = false; break;
@@ -244,6 +244,16 @@ struct Generator {
         for (unsigned c = 0; c < config.channelCount; ++c) {
             s += Channel(c, false);
             s += Channel(c, true);
+        }
+        // Channels the game left off still reach the TEV: colour 0 is the
+        // vertex colour (white without one), colour 1 the second vertex colour
+        // or else colour 0 - as Dolphin has it. Left at zero, a draw that reads
+        // the rasterised colour with GXSetNumChans(0) came out black.
+        if (config.channelCount == 0) {
+            s += config.hasColor0 ? "    vColor0 = aColor0;\n" : "    vColor0 = vec4(1.0);\n";
+        }
+        if (config.channelCount < 2) {
+            s += config.hasColor1 ? "    vColor1 = aColor1;\n" : "    vColor1 = vColor0;\n";
         }
         for (unsigned t = 0; t < config.texGenCount; ++t) {
             s += TexGenCode(t);
