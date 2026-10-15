@@ -83,21 +83,32 @@ std::uint32_t Mii::Id() const {
 }
 
 // static
+// As the Mii Channel formats it (byte for byte, checked against one it wrote):
+// the slot area's trailing flag byte, then the parade header and its 10000
+// empty entries, each a pair of 0x7FFF links and eight zero bytes.
 MiiDatabase MiiDatabase::Empty() {
+    constexpr std::size_t kSlotsEnd = kEntriesOffset + kMiiSlots * kMiiEntrySize;
+    constexpr std::size_t kParadeEntries = kMiiParadeOffset + 0x10;
+    constexpr std::size_t kParadeEntrySize = 12;
+    constexpr std::size_t kParadeEntryCount = 10000;
     MiiDatabase database;
-    database.mRest.assign(kMiiDatabaseSize, 0);
-    std::memcpy(database.mRest.data(), "RNOD", 4);
-    std::memcpy(database.mRest.data() + kMiiParadeOffset, "RNHD", 4);
+    database.mRest.assign(kMiiDatabaseFileSize, 0);
+    std::uint8_t* file = database.mRest.data();
+    std::memcpy(file, "RNOD", 4);
+    file[kSlotsEnd] = 0x80;
+    std::memcpy(file + kMiiParadeOffset, "RNHD\xFF\xFF\xFF\xFF", 8);
+    for (std::size_t entry = 0; entry < kParadeEntryCount; entry++) {
+        std::memcpy(file + kParadeEntries + entry * kParadeEntrySize, "\x7F\xFF\x7F\xFF", 4);
+    }
     return database;
 }
 
 // static
 std::optional<MiiDatabase> MiiDatabase::Parse(const std::vector<std::uint8_t>& file,
                                               bool* checksumValid) {
-    // Longer is accepted when the excess is zero: Dolphin on Android writes the
-    // database into a much larger file and pads the rest, and rejecting that on
-    // its size alone loses every Mii in it. Anything non-zero past the end is
-    // some other format wearing the same name, and is refused.
+    // Longer is accepted when the excess is zero: the console's own file is
+    // kMiiDatabaseFileSize, padded past the CRC. Anything non-zero past the end
+    // is some other format wearing the same name, and is refused.
     if (file.size() < kMiiDatabaseSize || std::memcmp(file.data(), "RNOD", 4) != 0 ||
         std::memcmp(file.data() + kMiiParadeOffset, "RNHD", 4) != 0) {
         return std::nullopt;
@@ -153,7 +164,7 @@ bool MiiDatabase::Remove(std::size_t slot) {
 
 std::vector<std::uint8_t> MiiDatabase::Build() const {
     std::vector<std::uint8_t> file = mRest;
-    file.resize(kMiiDatabaseSize, 0);
+    file.resize(std::max(file.size(), kMiiDatabaseFileSize), 0);
     std::memcpy(file.data(), "RNOD", 4);
     std::memcpy(file.data() + kMiiParadeOffset, "RNHD", 4);
     for (std::size_t slot = 0; slot < kMiiSlots; slot++) {

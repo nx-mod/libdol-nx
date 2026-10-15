@@ -27,7 +27,8 @@ namespace RuntimeNandFirstRun {
 // Mii database (/shared2/menu/FaceLib/RFL_DB.dat)
 // ============================================================================
 
-inline constexpr size_t kMiiDatabaseSize = 0x1F1E0;
+inline constexpr size_t kMiiDatabaseSize = 0x1F1E0;      // what the CRC covers, and the CRC
+inline constexpr size_t kMiiDatabaseFileSize = 0xBE6C0;  // the file, zero-padded; shorter is "corrupt"
 inline constexpr size_t kMiiDatabaseParadeOffset = 0x1D00;
 inline constexpr size_t kMiiDatabaseCrcOffset = 0x1F1DE;
 
@@ -44,14 +45,25 @@ inline uint16_t Crc16Ccitt(const uint8_t* data, size_t length) {
     return crc;
 }
 
-// An empty database: both section magics, no Mii entries, valid checksum.
+// An empty database as the Mii Channel formats one (byte for byte, checked
+// against one it wrote): no Miis, the slot area's trailing flag byte, the
+// parade header and its 10000 empty entries (a pair of 0x7FFF links and eight
+// zero bytes each), the checksum, and zeros to the file's full size.
 inline std::vector<uint8_t> MakeEmptyMiiDatabase() {
-    std::vector<uint8_t> db(kMiiDatabaseSize, 0);
-    const auto writeMagic = [&db](size_t offset, std::string_view magic) {
-        std::copy(magic.begin(), magic.end(), db.begin() + static_cast<ptrdiff_t>(offset));
+    constexpr size_t kSlotsEnd = 4 + 100 * 0x4A;
+    constexpr size_t kParadeEntries = kMiiDatabaseParadeOffset + 0x10;
+    constexpr size_t kParadeEntrySize = 12;
+    constexpr size_t kParadeEntryCount = 10000;
+    std::vector<uint8_t> db(kMiiDatabaseFileSize, 0);
+    const auto write = [&db](size_t offset, std::string_view bytes) {
+        std::copy(bytes.begin(), bytes.end(), db.begin() + static_cast<ptrdiff_t>(offset));
     };
-    writeMagic(0, "RNOD");                            // Mii entries
-    writeMagic(kMiiDatabaseParadeOffset, "RNHD");     // Mii Parade
+    write(0, "RNOD");                                     // Mii entries
+    db[kSlotsEnd] = 0x80;
+    write(kMiiDatabaseParadeOffset, "RNHD\xFF\xFF\xFF\xFF");  // Mii Parade
+    for (size_t entry = 0; entry < kParadeEntryCount; ++entry) {
+        write(kParadeEntries + entry * kParadeEntrySize, "\x7F\xFF\x7F\xFF");
+    }
 
     const uint16_t crc = Crc16Ccitt(db.data(), kMiiDatabaseCrcOffset);
     db[kMiiDatabaseCrcOffset] = static_cast<uint8_t>(crc >> 8);

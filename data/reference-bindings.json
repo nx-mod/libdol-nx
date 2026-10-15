@@ -204,16 +204,6 @@
     "library": "libwii-nx",
     "native": "BTM_IsDeviceUp_HLE_8013a300"
   },
-  "0x8015BC80": {
-    "file": "libwii-nx/src/nand/nand_api.cpp",
-    "library": "libwii-nx",
-    "native": "contentFastOpenNAND_HLE"
-  },
-  "0x8015BCF8": {
-    "file": "libwii-nx/src/nand/nand_api.cpp",
-    "library": "libwii-nx",
-    "native": "contentReadNAND_HLE"
-  },
   "0x8015D3FC": {
     "file": "libdol-nx/src/platform/audio/audio.cpp",
     "library": "libdol-nx",

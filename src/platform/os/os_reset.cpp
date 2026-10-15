@@ -1,5 +1,6 @@
 #include "memory.h"
 #include "audio/ax_dsp.h"
+#include "audio_backend.h"
 #include "hle_stubs.h"
 #include "ppc_runtime.h"
 #include "runtime_log.h"
@@ -141,6 +142,7 @@ extern "C" void RuntimeLeave(bool restart)
     // The AX mix worker holds resolved host pointers into the guest regions;
     // it must be stopped before those mappings are torn down.
     AxDspHle::ShutdownMixWorker();
+    AudioBackend::Instance().Shutdown();
     Memory::Reset();
     SetRuntimeExitCode(0);
     std::exit(EXIT_SUCCESS);

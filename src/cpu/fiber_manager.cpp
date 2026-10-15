@@ -507,8 +507,26 @@ void GuestFiberManager::SwitchToThread(uint32_t guestThreadAddr, CpuContext* cpu
     RecompMod::g_currentNativeTarget = targetNativeTarget;
 #endif
 
+    // A switch from a callback's scratch registers (a NAND completion run from
+    // RFLiIsWorking's pump, an interrupt) leaves the thread's own registers in
+    // the persistent file underneath. The thread that switches back loads our
+    // saved record - the callback's registers - into its file, which is that
+    // same persistent one, so the interrupted function resumed with them:
+    // Mario Kart Wii's MiiManager::Init got RFL's callback registers in r29-r31
+    // and called its heap through RFL's database manager. Put them back.
+    CpuContext* const threadFile = &GetPersistentCpuContext();
+    const bool fromScratch = cpu != nullptr && cpu != threadFile;
+    CpuContext interruptedFile{};
+    if (fromScratch) {
+        interruptedFile = *threadFile;
+    }
+
     // Switch to the target fiber (the target fiber will load its own context)
     SwitchKeepingAmbientContext(fiberHandle);
+
+    if (fromScratch) {
+        *threadFile = interruptedFile;
+    }
 
     // When we return here, the fiber that issued SwitchToThread has resumed.
     // That does not automatically mean the previous guest thread became runnable

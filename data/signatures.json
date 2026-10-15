@@ -9710,42 +9710,6 @@
    "registration": "ConsoleWrite_HLE_80015500"
   },
   {
-   "name": "contentFastOpenNAND",
-   "build": "any",
-   "size": 108,
-   "start": "c69d7abab1e03020",
-   "body": "bc3ce6ef22c37f70",
-   "signed_from": "RSPE01",
-   "registration": "contentFastOpenNAND_HLE"
-  },
-  {
-   "name": "contentFastOpenNAND",
-   "build": "any",
-   "size": 108,
-   "start": "e1c3cadb5cab7e31",
-   "body": "911827b09d2bfb5d",
-   "signed_from": "RMCP01",
-   "registration": "contentFastOpenNAND_HLE"
-  },
-  {
-   "name": "contentReadNAND",
-   "build": "any",
-   "size": 296,
-   "start": "33dd3655d6a03eea",
-   "body": "581743154170898d",
-   "signed_from": "RSPE01",
-   "registration": "contentReadNAND_HLE"
-  },
-  {
-   "name": "contentReadNAND",
-   "build": "any",
-   "size": 160,
-   "start": "b11cdd23b972ac80",
-   "body": "6563215848783c1f",
-   "signed_from": "RMCP01",
-   "registration": "contentReadNAND_HLE"
-  },
-  {
    "name": "exit",
    "build": "any",
    "size": 76,

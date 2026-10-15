@@ -33,7 +33,7 @@ public:
 
 private:
     AudioBackend() = default;
-    ~AudioBackend() = default;
+    ~AudioBackend() { Shutdown(); }  // at exit: hands the renderer's pages back (TeardownAudren)
     AudioBackend(const AudioBackend&) = delete;
     AudioBackend& operator=(const AudioBackend&) = delete;
 

@@ -8,6 +8,8 @@
 //
 // Layout: "RNOD", then 100 slots of 74 bytes; "RNHD" at 0x1D00 begins the Mii
 // Parade section; a CRC-16/CCITT over everything before it sits at 0x1F1DE.
+// The file itself is 0xBE6C0 bytes, zeros past the CRC: the size the Mii Channel
+// formats it to, and it calls a shorter one corrupt.
 //
 // A slot's 74 bytes are the console's own Mii structure. This reads the parts
 // needed to show and move Miis about - whether the slot is used, the Mii's name
@@ -22,7 +24,8 @@
 
 namespace wiinx::nand {
 
-inline constexpr std::size_t kMiiDatabaseSize = 0x1F1E0;
+inline constexpr std::size_t kMiiDatabaseSize = 0x1F1E0;      // what the CRC covers, and the CRC
+inline constexpr std::size_t kMiiDatabaseFileSize = 0xBE6C0;  // the file, zero-padded
 inline constexpr std::size_t kMiiEntrySize = 0x4A;
 inline constexpr std::size_t kMiiSlots = 100;
 inline constexpr std::size_t kMiiParadeOffset = 0x1D00;

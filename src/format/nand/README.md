@@ -6,7 +6,7 @@ The Wii's internal memory, as files.
 |---|---|
 | `wiinx/format/nand/isfs.hpp` | title ids, the paths IOS keeps things at, `setting.txt` |
 | `wiinx/format/nand/sysconf.hpp` | the settings every game reads: language, aspect, sound, sensor bar |
-| `wiinx/format/nand/mii.hpp` | `RFL_DB.dat`, the Mii database, read and written slot by slot |
+| `wiinx/format/nand/mii.hpp` | `RFL_DB.dat`, the Mii database, read and written slot by slot; 0xBE6C0 bytes, as the Mii Channel formats it |
 | `wiinx/format/nand/title.hpp` | tickets and TMDs: what a title is and what it carries |
 | `wiinx/format/nand/wad.hpp` | a title packed as one file, installable or boot2 |
 | `wiinx/format/nand/store.hpp` | a NAND to keep them in: install a title, list one, remove one |

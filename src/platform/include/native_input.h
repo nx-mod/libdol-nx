@@ -83,11 +83,20 @@ struct State {
     Motion right_motion;
 };
 
-// HID set up for kPlayers pads and their motion sensors
+// the console's touchscreen (handheld only): the first finger, in 0..1 of the
+// screen's width and height from the top left
+struct Touch {
+    bool down = false;
+    float x = 0.0f;
+    float y = 0.0f;
+};
+
+// HID set up for kPlayers pads, their motion sensors and the touchscreen
 void initialize();
 // every pad read: once a frame, from the main loop
 void update();
 const State& state(int player);
+const Touch& touch();
 // a player's rumble, 0..1 for the low and high frequency motors; 0, 0 stops it
 void rumble(int player, float low, float high);
 // for the settings overlay: "Pro Controller", "Joy-Con (L/R)", "Handheld", ...

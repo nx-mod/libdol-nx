@@ -52,6 +52,8 @@ struct KpadSample {
     int16_t clRStickRaw[2] = {};
     uint8_t clTriggerL = 0;      // 0..255; SDL only exposes the digital click
     uint8_t clTriggerR = 0;
+    bool pointerValid = false;   // pointing at the screen
+    float pointer[2] = {};       // where, as KPADStatus.pos: -1..1 across, +y down
 };
 
 // What the game should see on `chan`: the controller SDL has there right now,

@@ -40,6 +40,7 @@ AudioDriverWaveBuf s_waveBufs[kSwitchAudioBufferCount];
 AudioDriver s_audioDriver;
 bool s_audrenReady = false;
 bool s_driverReady = false;
+int s_poolId = -1;
 
 constexpr AudioRendererConfig kRendererConfig = {
     .output_rate = AudioRendererOutputRate_48kHz,
@@ -65,10 +66,22 @@ void AudioLog(const char* what, Result rc) {
     SwitchBootLogExternal(line);
 }
 
+// The sample buffers are in .bss and attached to the renderer as a memory pool.
+// The pool has to be detached (and the renderer told, by an update) before the
+// program ends: hbloader unmaps our .data/.bss when we exit, a page still lent
+// to the audio renderer makes that fail, and hbloader aborts (2347-0026) - every
+// exit and every OSResetSystem restart crashed that way.
 void TeardownAudren() {
     if (s_driverReady) {
         audrvVoiceStop(&s_audioDriver, kSwitchVoiceId);
+        if (s_poolId >= 0) {
+            audrvMemPoolDetach(&s_audioDriver, s_poolId);
+        }
         audrvUpdate(&s_audioDriver);
+        if (s_poolId >= 0) {
+            audrvMemPoolRemove(&s_audioDriver, s_poolId);
+            s_poolId = -1;
+        }
         audrvClose(&s_audioDriver);
         s_driverReady = false;
     }
@@ -154,8 +167,8 @@ bool AudioBackend::EnsureInitializedLocked(uint32_t sampleRate, uint32_t channel
     }
     s_driverReady = true;
 
-    const int poolId = audrvMemPoolAdd(&s_audioDriver, s_audioSampleData, sizeof(s_audioSampleData));
-    if (poolId < 0 || !audrvMemPoolAttach(&s_audioDriver, poolId)) {
+    s_poolId = audrvMemPoolAdd(&s_audioDriver, s_audioSampleData, sizeof(s_audioSampleData));
+    if (s_poolId < 0 || !audrvMemPoolAttach(&s_audioDriver, s_poolId)) {
         AudioLog("audrvMemPoolAdd/Attach", 1);
         TeardownAudren();
         return false;

@@ -12,6 +12,7 @@
 #include "guest_globals.h"
 #include "runtime_log.h"
 
+#include "rom.h"
 #include "sram.h"
 
 #include <cstdint>
@@ -48,6 +49,10 @@ constexpr uint32_t kExiRtcDevice = 1;
 // the device shifted into place, with bit 31 clear for a read.
 constexpr uint32_t kExiCmdRtcCounter = 0x20000000u;
 constexpr uint32_t kExiCmdSram = 0x20000100u;
+// A command word with the top three bits clear reads the boot ROM, at the
+// offset in its bits 6-28 (__ReadROM: the system fonts, system/rom.h).
+constexpr uint32_t kExiCmdRomMask = 0xE0000000u;
+constexpr uint32_t kExiCmdRomShift = 6;
 
 struct ExiDeviceSelection {
     bool selected = false;
@@ -82,6 +87,22 @@ bool ExiReadSelectedDevice(uint32_t guestBuffer, uint32_t length)
         rtc[3] = static_cast<uint8_t>(counter);
         source = rtc;
         available = sizeof(rtc);
+    } else if ((command & kExiCmdRomMask) == 0) {
+        // (served whole here: a font is up to 0x4D000 bytes, too much for a
+        // byte-at-a-time copy through the source pointer below)
+        const uint32_t offset = command >> kExiCmdRomShift;
+        uint8_t* host = ::Memory::GetPointer(guestBuffer, length);
+        if (host == nullptr) {
+            return false;
+        }
+        const bool found = wiinx::system::rom::Read(offset, host, length);
+        static int romLogged = 0;
+        if (romLogged++ < 4) {
+            RT_LOG(RT_TAG_OS) << "EXI: served " << length << " byte(s) of ROM at 0x" << std::hex << offset
+                              << " to 0x" << guestBuffer << std::dec << (found ? "" : " (no font source: zeros)")
+                              << std::endl;
+        }
+        return true;
     } else {
         return false;
     }

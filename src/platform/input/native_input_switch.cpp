@@ -26,6 +26,7 @@ struct Slot {
 };
 
 Slot g_slots[kPlayers];
+Touch g_touch;
 
 const HidNpadIdType kIds[kPlayers] = {
     HidNpadIdType_No1, HidNpadIdType_No2, HidNpadIdType_No3, HidNpadIdType_No4,
@@ -143,6 +144,7 @@ void initialize() {
         else
             padInitialize(&g_slots[player].pad, kIds[player]);
     }
+    hidInitializeTouchScreen();
 }
 
 void update() {
@@ -190,9 +192,21 @@ void update() {
             read_motion(slot.sensors[0], slot.state.right_motion);
         }
     }
+
+    // (the panel reports 1280x720 whatever the output resolution)
+    HidTouchScreenState touch{};
+    if (hidGetTouchScreenStates(&touch, 1) && touch.count > 0) {
+        g_touch.down = true;
+        g_touch.x = static_cast<float>(touch.touches[0].x) / 1280.0f;
+        g_touch.y = static_cast<float>(touch.touches[0].y) / 720.0f;
+    } else {
+        g_touch.down = false;
+    }
 }
 
 const State& state(int player) { return player >= 0 && player < kPlayers ? g_slots[player].state : kNone; }
+
+const Touch& touch() { return g_touch; }
 
 void rumble(int player, float low, float high) {
     if (player < 0 || player >= kPlayers || !g_slots[player].vibration_count)

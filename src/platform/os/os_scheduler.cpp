@@ -156,10 +156,19 @@ static void TryInvokeSwitchCallback(uint32_t oldCtx, uint32_t newCtx, CpuContext
         }
 
         if (TranslatedFunctionRegistry::FindByAddressPtr(callbackAddr)) {
-            CpuContext* ctx = cpu ? cpu : &GetPersistentCpuContext();
-            ctx->gpr[3] = oldCtx;
-            ctx->gpr[4] = newCtx;
-            InvokeIndirectCpu(callbackAddr, ctx);
+            // On a copy of the register file: the Wii calls it with the outgoing
+            // thread's context already saved. Called on the live one, it left
+            // its arguments in that thread's r3 and r4, and the switch saved
+            // them as the thread's own - harmless inside an OS call, where they
+            // are scratch, but a switch at a loop's safe point resumed the loop
+            // with them. Mario Kart Wii's module link then asked its heap for
+            // 0x80008E80 bytes on every try and never started.
+            const CpuContext* live = cpu ? cpu : &GetPersistentCpuContext();
+            CpuContext callbackCpu = *live;
+            callbackCpu.gpr[3] = oldCtx;
+            callbackCpu.gpr[4] = newCtx;
+            CpuContextScope scope(&callbackCpu);
+            InvokeIndirectCpu(callbackAddr, &callbackCpu);
             return;
         }
 
