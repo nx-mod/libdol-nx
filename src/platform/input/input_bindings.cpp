@@ -13,7 +13,7 @@
 #include <mutex>
 #include <unordered_map>
 
-#include <aurora/gamepad.h>
+#include "native_gamepad.h"
 
 namespace InputBindings {
 namespace {

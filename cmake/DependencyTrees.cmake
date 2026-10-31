@@ -17,14 +17,17 @@
 # and when more than one can, the choice is named rather than left to the order
 # of a list in this file.
 
-set(WIINX_AURORA_NAMES aurora-nx aurora-main aurora)
+# Native only: Aurora is headers, so the one libdol-nx is written against (aurora-wiicompiled) comes first.
+set(WIINX_AURORA_NAMES aurora-wiicompiled aurora-nx aurora-main aurora)
 set(WIINX_DAWN_NAMES dawn-nx dawn-main dawn)
 
 # What tells a ported Aurora from plain upstream. Both mention
 # CMAKE_CROSSCOMPILING, so that is no use as a marker; vendoring the dependencies
 # is the thing that actually makes the cross build work, and only the port does
 # it.
-set(WIINX_AURORA_CROSS_MARKER "_default_provider \"vendor\"")
+# Native only: nothing of Aurora is built, so whether it can cross-compile no longer matters.
+# set(WIINX_AURORA_CROSS_MARKER "_default_provider \"vendor\"")
+set(WIINX_AURORA_CROSS_MARKER "")
 
 # wiinx_find_tree(<out_var> <label> <root> NAMES <name>... [CROSS_MARKER <text>])
 #

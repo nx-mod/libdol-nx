@@ -2437,8 +2437,9 @@ int RuntimeMain(int argc, char** argv) {
         auroraConfig.desiredBackend = BACKEND_NULL;
         // and none of its pipelines: Aurora's cache of them is for its own
         // renderer, and prewarming it took 5.7 s of every boot for nothing
-        static const std::string nullPipelineCache = auroraCachePath + "/native-gx-unused";
-        auroraConfig.pipelineCachePath = nullPipelineCache.c_str();
+        // (native only: nothing of Aurora runs, so it has no pipeline cache to point away)
+        // static const std::string nullPipelineCache = auroraCachePath + "/native-gx-unused";
+        // auroraConfig.pipelineCachePath = nullPipelineCache.c_str();
 #endif
         const AuroraInfo auroraInfo = aurora_initialize(0, nullptr, &auroraConfig);
 #if defined(__SWITCH__)

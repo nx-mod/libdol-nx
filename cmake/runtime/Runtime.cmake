@@ -180,107 +180,134 @@ else()
     set(WIINX_AURORA_LIBRARIES aurora::gx aurora::pad aurora::si aurora::vi)
 endif()
 
-if(MKW_NATIVE_PREBUILT_DIR)
-    # Precompiled aurora + third-party archives. The source trees are still
-    # present (the runtime includes aurora headers directly), they are simply
-    # not compiled here.
-    include("${WIINX_ROOT}/cmake/runtime/NativePrebuilt.cmake")
-elseif(TARGET aurora_core)
-    # Already added by an outer project in this same configure (e.g. dawn's
-    # CMakeLists.txt, which add_subdirectory()s both aurora-main and this
-    # runtime so aurora-main reuses its already-built webgpu_dawn instead of
-    # FetchContent'ing a second, unpatched copy of Dawn from scratch).
-    message(STATUS "aurora: reusing existing aurora_core target")
-else()
-    if(NOT EXISTS ${MKW_AURORA_DIR}/CMakeLists.txt)
-        message(FATAL_ERROR "Requested aurora-main but ${MKW_AURORA_DIR} is missing")
-    endif()
-    set(DAWN_ENABLE_D3D11 OFF CACHE BOOL "" FORCE)
-    if(MKW_PLATFORM_WINDOWS)
-        set(DAWN_ENABLE_D3D12 ON CACHE BOOL "" FORCE)
-        set(DAWN_ENABLE_VULKAN ON CACHE BOOL "" FORCE)
-        set(DAWN_ENABLE_METAL OFF CACHE BOOL "" FORCE)
-        set(TINT_BUILD_HLSL_WRITER ON CACHE BOOL "" FORCE)
-    elseif(MKW_PLATFORM_MACOS)
-        set(DAWN_ENABLE_D3D12 OFF CACHE BOOL "" FORCE)
-        set(DAWN_ENABLE_VULKAN OFF CACHE BOOL "" FORCE)
-        set(DAWN_ENABLE_METAL ON CACHE BOOL "" FORCE)
-        set(TINT_BUILD_HLSL_WRITER OFF CACHE BOOL "" FORCE)
-    else()
-        set(DAWN_ENABLE_D3D12 OFF CACHE BOOL "" FORCE)
-        set(DAWN_ENABLE_VULKAN ON CACHE BOOL "" FORCE)
-        set(DAWN_ENABLE_METAL OFF CACHE BOOL "" FORCE)
-        set(TINT_BUILD_HLSL_WRITER OFF CACHE BOOL "" FORCE)
-    endif()
-    set(DAWN_BUILD_SAMPLES OFF CACHE BOOL "" FORCE)
-    set(DAWN_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-
-    # Provide a tiny stub for DXProgrammableCapture when the SDK/PIX headers are
-    # missing (common on MinGW). Dawn only includes the header; no symbols are
-    # referenced when PIX isn't present.
-    if(MKW_PLATFORM_WINDOWS)
-        set(MKW_DX_STUB_DIR "${CMAKE_BINARY_DIR}/aurora_dx_stubs")
-        if(NOT EXISTS "${MKW_DX_STUB_DIR}/DXProgrammableCapture.h")
-            file(MAKE_DIRECTORY ${MKW_DX_STUB_DIR})
-            file(WRITE "${MKW_DX_STUB_DIR}/DXProgrammableCapture.h"
-"#pragma once\n// Stubbed PIX capture header for Dawn; no functionality when PIX isn't present.\n")
-        endif()
-    endif()
-    # Deliberately NOT injected project-wide. Only a from-source Dawn build ever
-    # includes DXProgrammableCapture.h, and this tree consumes Dawn as a prebuilt
-    # package (AURORA_DAWN_PROVIDER=package), so the old
-    # include_directories()/add_compile_options(-I...) pair only added a dead
-    # -I to every one of the ~500 third-party and runtime compile lines. The
-    # aurora_* targets that do want it get it from the
-    # target_include_directories() call further down; a from-source Dawn build
-    # should add it to the Dawn targets the same way.
-
-    # Keep SDL3 lean when aurora is enabled.
-    set(SDL_SHARED OFF CACHE BOOL "" FORCE)
-    set(SDL_STATIC ON CACHE BOOL "" FORCE)
-    set(SDL_TEST OFF CACHE BOOL "" FORCE)
-
-    # MinGW/WSL can choke on SDL precompiled headers; disable PCH for aurora/SDL.
-    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
-    # Isolate aurora build products to a subdirectory under the main build dir.
-    add_subdirectory(${MKW_AURORA_DIR} ${CMAKE_BINARY_DIR}/aurora-build EXCLUDE_FROM_ALL)
-    set(CMAKE_DISABLE_PRECOMPILE_HEADERS OFF)
-
-    # Keep upstream Aurora split: several sources intentionally use file-local
-    # names that collide under this repo's aggressive unity build settings.
-    set(AURORA_TARGETS aurora_core aurora_gx aurora_pad aurora_si aurora_vi)
-    foreach(t ${AURORA_TARGETS})
-        if(TARGET ${t})
-            set_target_properties(${t} PROPERTIES UNITY_BUILD OFF)
-            target_compile_options(${t} PRIVATE -O3 -ffast-math -w -pipe)
-            if(MKW_PLATFORM_WINDOWS)
-                target_include_directories(${t} PRIVATE ${MKW_DX_STUB_DIR})
-            endif()
-            # Aurora's own sources include Windows headers and call std::min/max;
-            # they relied on the old project-wide NOMINMAX that no longer leaks
-            # into this subtree, so the define is applied per target here.
-            target_compile_definitions(${t} PRIVATE NOMINMAX)
-        endif()
-    endforeach()
-
-    # Frame interpolation filters guest NaN/Inf matrices out of a std::sort
-    # comparator, which makes its std::isfinite guards load-bearing for memory
-    # safety, not just match quality. -ffinite-math-only (part of -ffast-math
-    # above) folds those guards to constants and poisons NaN float arguments
-    # via nofpclass, so this one file opts back out of the finite-math
-    # assumption; the file #errors if built without this. Source-scoped
-    # COMPILE_OPTIONS append after the target options, so this overrides the
-    # target's -ffast-math for exactly this TU.
-    if(TARGET aurora_gx)
-        set_source_files_properties("${MKW_AURORA_DIR}/lib/gx/frame_interpolation.cpp"
-            TARGET_DIRECTORY aurora_gx
-            PROPERTIES COMPILE_OPTIONS "-fno-finite-math-only")
-    endif()
-
-    if(MKW_NATIVE_PREBUILT_EXPORT_DIR)
-        include("${WIINX_ROOT}/cmake/runtime/NativePrebuiltExport.cmake")
-    endif()
+# Native only (deko3d): Aurora is not built or linked. The runtime takes its headers, and the SDL3, xxHash and
+# Dear ImGui headers they, gx_dl.cpp and the settings overlay include; nothing is compiled from any of them.
+if(NOT EXISTS ${MKW_AURORA_DIR}/include/aurora/aurora.h)
+    message(FATAL_ERROR "No Aurora headers at ${MKW_AURORA_DIR}/include (-DWIINX_AURORA_DIR=<checkout>)")
 endif()
+include(FetchContent)
+FetchContent_Declare(wiinx_sdl3_headers
+    URL https://github.com/libsdl-org/SDL/archive/refs/tags/release-3.4.10.tar.gz
+    SOURCE_SUBDIR wiinx-headers-only)
+FetchContent_Declare(wiinx_xxhash_headers
+    URL https://github.com/Cyan4973/xxHash/archive/refs/tags/v0.8.3.tar.gz
+    URL_HASH SHA256=aae608dfe8213dfd05d909a57718ef82f30722c392344583d3f39050c7f29a80
+    SOURCE_SUBDIR wiinx-headers-only)
+# Aurora's pin (aurora-wiicompiled cmake/AuroraDearImguiProvider.cmake)
+FetchContent_Declare(wiinx_imgui_headers
+    URL https://github.com/ocornut/imgui/archive/refs/tags/v1.91.9b-docking.tar.gz
+    URL_HASH SHA256=466fdef9b18de15f0bb6e288e3d00ffa3d82200ec458ce5e4f724a161d9528a5
+    SOURCE_SUBDIR wiinx-headers-only)
+FetchContent_MakeAvailable(wiinx_sdl3_headers wiinx_xxhash_headers wiinx_imgui_headers)
+add_library(wiinx_aurora_headers INTERFACE)
+target_include_directories(wiinx_aurora_headers INTERFACE
+    "${MKW_AURORA_DIR}/include" "${wiinx_sdl3_headers_SOURCE_DIR}/include" "${wiinx_xxhash_headers_SOURCE_DIR}"
+    "${wiinx_imgui_headers_SOURCE_DIR}")
+foreach(_wiinx_aurora_lib aurora::core ${WIINX_AURORA_LIBRARIES})
+    add_library(${_wiinx_aurora_lib} ALIAS wiinx_aurora_headers)
+endforeach()
+
+# if(MKW_NATIVE_PREBUILT_DIR)
+#     # Precompiled aurora + third-party archives. The source trees are still
+#     # present (the runtime includes aurora headers directly), they are simply
+#     # not compiled here.
+#     include("${WIINX_ROOT}/cmake/runtime/NativePrebuilt.cmake")
+# elseif(TARGET aurora_core)
+#     # Already added by an outer project in this same configure (e.g. dawn's
+#     # CMakeLists.txt, which add_subdirectory()s both aurora-main and this
+#     # runtime so aurora-main reuses its already-built webgpu_dawn instead of
+#     # FetchContent'ing a second, unpatched copy of Dawn from scratch).
+#     message(STATUS "aurora: reusing existing aurora_core target")
+# else()
+#     if(NOT EXISTS ${MKW_AURORA_DIR}/CMakeLists.txt)
+#         message(FATAL_ERROR "Requested aurora-main but ${MKW_AURORA_DIR} is missing")
+#     endif()
+#     set(DAWN_ENABLE_D3D11 OFF CACHE BOOL "" FORCE)
+#     if(MKW_PLATFORM_WINDOWS)
+#         set(DAWN_ENABLE_D3D12 ON CACHE BOOL "" FORCE)
+#         set(DAWN_ENABLE_VULKAN ON CACHE BOOL "" FORCE)
+#         set(DAWN_ENABLE_METAL OFF CACHE BOOL "" FORCE)
+#         set(TINT_BUILD_HLSL_WRITER ON CACHE BOOL "" FORCE)
+#     elseif(MKW_PLATFORM_MACOS)
+#         set(DAWN_ENABLE_D3D12 OFF CACHE BOOL "" FORCE)
+#         set(DAWN_ENABLE_VULKAN OFF CACHE BOOL "" FORCE)
+#         set(DAWN_ENABLE_METAL ON CACHE BOOL "" FORCE)
+#         set(TINT_BUILD_HLSL_WRITER OFF CACHE BOOL "" FORCE)
+#     else()
+#         set(DAWN_ENABLE_D3D12 OFF CACHE BOOL "" FORCE)
+#         set(DAWN_ENABLE_VULKAN ON CACHE BOOL "" FORCE)
+#         set(DAWN_ENABLE_METAL OFF CACHE BOOL "" FORCE)
+#         set(TINT_BUILD_HLSL_WRITER OFF CACHE BOOL "" FORCE)
+#     endif()
+#     set(DAWN_BUILD_SAMPLES OFF CACHE BOOL "" FORCE)
+#     set(DAWN_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+#
+#     # Provide a tiny stub for DXProgrammableCapture when the SDK/PIX headers are
+#     # missing (common on MinGW). Dawn only includes the header; no symbols are
+#     # referenced when PIX isn't present.
+#     if(MKW_PLATFORM_WINDOWS)
+#         set(MKW_DX_STUB_DIR "${CMAKE_BINARY_DIR}/aurora_dx_stubs")
+#         if(NOT EXISTS "${MKW_DX_STUB_DIR}/DXProgrammableCapture.h")
+#             file(MAKE_DIRECTORY ${MKW_DX_STUB_DIR})
+#             file(WRITE "${MKW_DX_STUB_DIR}/DXProgrammableCapture.h"
+# "#pragma once\n// Stubbed PIX capture header for Dawn; no functionality when PIX isn't present.\n")
+#         endif()
+#     endif()
+#     # Deliberately NOT injected project-wide. Only a from-source Dawn build ever
+#     # includes DXProgrammableCapture.h, and this tree consumes Dawn as a prebuilt
+#     # package (AURORA_DAWN_PROVIDER=package), so the old
+#     # include_directories()/add_compile_options(-I...) pair only added a dead
+#     # -I to every one of the ~500 third-party and runtime compile lines. The
+#     # aurora_* targets that do want it get it from the
+#     # target_include_directories() call further down; a from-source Dawn build
+#     # should add it to the Dawn targets the same way.
+#
+#     # Keep SDL3 lean when aurora is enabled.
+#     set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+#     set(SDL_STATIC ON CACHE BOOL "" FORCE)
+#     set(SDL_TEST OFF CACHE BOOL "" FORCE)
+#
+#     # MinGW/WSL can choke on SDL precompiled headers; disable PCH for aurora/SDL.
+#     set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+#     # Isolate aurora build products to a subdirectory under the main build dir.
+#     add_subdirectory(${MKW_AURORA_DIR} ${CMAKE_BINARY_DIR}/aurora-build EXCLUDE_FROM_ALL)
+#     set(CMAKE_DISABLE_PRECOMPILE_HEADERS OFF)
+#
+#     # Keep upstream Aurora split: several sources intentionally use file-local
+#     # names that collide under this repo's aggressive unity build settings.
+#     set(AURORA_TARGETS aurora_core aurora_gx aurora_pad aurora_si aurora_vi)
+#     foreach(t ${AURORA_TARGETS})
+#         if(TARGET ${t})
+#             set_target_properties(${t} PROPERTIES UNITY_BUILD OFF)
+#             target_compile_options(${t} PRIVATE -O3 -ffast-math -w -pipe)
+#             if(MKW_PLATFORM_WINDOWS)
+#                 target_include_directories(${t} PRIVATE ${MKW_DX_STUB_DIR})
+#             endif()
+#             # Aurora's own sources include Windows headers and call std::min/max;
+#             # they relied on the old project-wide NOMINMAX that no longer leaks
+#             # into this subtree, so the define is applied per target here.
+#             target_compile_definitions(${t} PRIVATE NOMINMAX)
+#         endif()
+#     endforeach()
+#
+#     # Frame interpolation filters guest NaN/Inf matrices out of a std::sort
+#     # comparator, which makes its std::isfinite guards load-bearing for memory
+#     # safety, not just match quality. -ffinite-math-only (part of -ffast-math
+#     # above) folds those guards to constants and poisons NaN float arguments
+#     # via nofpclass, so this one file opts back out of the finite-math
+#     # assumption; the file #errors if built without this. Source-scoped
+#     # COMPILE_OPTIONS append after the target options, so this overrides the
+#     # target's -ffast-math for exactly this TU.
+#     if(TARGET aurora_gx)
+#         set_source_files_properties("${MKW_AURORA_DIR}/lib/gx/frame_interpolation.cpp"
+#             TARGET_DIRECTORY aurora_gx
+#             PROPERTIES COMPILE_OPTIONS "-fno-finite-math-only")
+#     endif()
+#
+#     if(MKW_NATIVE_PREBUILT_EXPORT_DIR)
+#         include("${WIINX_ROOT}/cmake/runtime/NativePrebuiltExport.cmake")
+#     endif()
+# endif()
 
 # Everything from here down is this project's own code, so this is where the
 # project definitions enter the directory scope. A directory-scoped definition

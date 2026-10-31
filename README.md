@@ -55,11 +55,10 @@ running console and need a game's translated code.
 
 On the Switch, GX is drawn by libdol's own renderer on deko3d, the console's
 GPU library ([docs/deko3d.md](docs/deko3d.md); the default since 2026-10-12).
-[aurora-nx](https://github.com/nx-mod/aurora-nx) (GX to WebGPU) and
-[dawn-nx](https://github.com/nx-mod/dawn-nx) (WebGPU to Vulkan) are still
-configured for their headers and for the desktop build, but not linked into a
-Switch game; `runtime.defines: []` in a game's `recomp.yml` builds it on them
-as before. [sqlite-nx](https://github.com/nx-mod/sqlite-nx) and libnx stay
+It is the only build: [aurora-wiicompiled](https://github.com/nx-mod/aurora-wiicompiled) is
+read for its headers alone, and nothing of Aurora, Dawn or Vulkan is built or
+linked. The Aurora and Dawn builds are commented out in the CMake files, kept
+for reference. [sqlite-nx](https://github.com/nx-mod/sqlite-nx) and libnx stay
 separate libraries; a game project sees this one and its console's.
 
 ### format - the consoles' own files
@@ -167,12 +166,11 @@ tools/wiinx-build mygame.iso        # or a game folder made earlier
 extracts the disc, writes the project, scans the game for the natives libdol-nx
 can bind, translates its code, builds it and leaves `<game>/build/<game>.nro`
 for `sdmc:/wii-nx/games/<game>/`. It needs devkitPro's Switch toolchain with
-deko3d, a UAM build for the shader compiler ([deko3d](docs/deko3d.md)), and
-dawn-nx and aurora-nx checkouts (`--dawn`, `--aurora`) for their headers -
-neither is linked into a native build. It takes the first checkouts it finds
-beside this one, skipping a Dawn without its submodules; with several around,
-name them (`--dawn`, `--aurora`) - a build directory remembers its first
-configure. `--skip-translate` rebuilds without
+deko3d, a UAM build for the shader compiler ([deko3d](docs/deko3d.md)), the
+.NET 8 SDK for the translator, and an aurora-wiicompiled checkout (`--aurora`) for its
+headers - nothing of it is linked, and Dawn is not needed. It takes the first
+checkout it finds beside this one; with several around, name it (`--aurora`) -
+a build directory remembers its first configure. `--skip-translate` rebuilds without
 translating again; `--distcc "host:3632/4"` spreads the compile over other
 machines ([distcc](docs/distcc.md)).
 

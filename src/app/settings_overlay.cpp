@@ -11,7 +11,7 @@
 #include "runtime_log.h"
 #include "wii_remote_input.h"
 
-#include <aurora/gamepad.h>
+#include "native_gamepad.h"
 #include <imgui.h>
 
 #include <array>

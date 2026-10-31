@@ -12,7 +12,7 @@
 #include <cstdlib>
 #include <cstring>
 
-#include <aurora/gamepad.h>
+#include "native_gamepad.h"
 #include <dolphin/pad.h>
 
 namespace {

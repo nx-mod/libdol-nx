@@ -55,6 +55,17 @@ void aurora_shutdown() { dol::dk::shutdown(); }
 AuroraDisplayMode aurora_get_display_mode() { return AURORA_DISPLAY_MODE_EXCLUSIVE; }
 void aurora_set_display_mode(AuroraDisplayMode) {}
 void aurora_set_threaded_gx(bool) {}
+bool aurora_gx_threaded() { return true; }  // the render thread (gx_native_switch.cpp)
+// the settings overlay is off on the native renderer: no keyboard focus, nothing pressed
+bool aurora_keyboard_focused() { return false; }
+const bool* aurora_keyboard_state(int* count) {
+  if (count) *count = 0;
+  return nullptr;
+}
+uint32_t aurora_mouse_buttons(float*, float*) { return 0; }
+const char* aurora_scancode_name(int) { return "Key"; }
+void aurora_set_cursor_visible(bool) {}  // the console has no cursor of its own
+void GXSetSourceVtxDesc(GXAttr, GXAttrType) {}  // the renderer reads the CP's own descriptor
 void aurora_set_skip_unready_pipelines(bool) {}
 void aurora_set_guest_write_hooks(AuroraGuestWriteGenerationCallback, AuroraGuestWriteNotifyCallback) {}
 void aurora_set_frame_worker_wait_callback(AuroraFrameWorkerWaitCallback) {}

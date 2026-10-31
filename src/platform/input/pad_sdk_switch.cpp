@@ -15,7 +15,7 @@
 #include "pad_native.h"
 #include "runtime_config.h"
 
-#include <aurora/gamepad.h>
+#include "native_gamepad.h"
 #include <dolphin/pad.h>
 #include <dolphin/si.h>
 

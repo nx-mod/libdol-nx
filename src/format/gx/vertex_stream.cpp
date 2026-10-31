@@ -201,7 +201,8 @@ std::size_t ConvertVertices(const VertexFormat& format, const std::uint8_t* src,
             } else if (s.kind == kColor) {
                 ReadColor(a, static_cast<ColorType>(s.type), v + s.target);
             } else {
-                v[30] = a[0];
+                // only the low six bits pick a matrix row, as on the hardware (Wiicompiled #376)
+                v[30] = a[0] & 0x3fu;
             }
         }
         if (white0) {

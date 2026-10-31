@@ -12,7 +12,7 @@
 #include <string>
 #include <string_view>
 
-#include <aurora/gamepad.h>
+#include "native_gamepad.h"
 #include <dolphin/pad.h>
 
 namespace ControllerNames {

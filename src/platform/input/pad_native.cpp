@@ -3,7 +3,7 @@
 #if !defined(__SWITCH__)
 #include "pad_native.h"
 
-#include <aurora/gamepad.h>
+#include "native_gamepad.h"
 #include <dolphin/pad.h>
 
 namespace {

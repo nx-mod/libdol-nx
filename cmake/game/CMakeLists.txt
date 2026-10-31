@@ -4,7 +4,7 @@
 #
 #   cmake -S cmake/game -B <game>/build -G Ninja \
 #         -DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/cmake/Switch.cmake \
-#         -DWIINX_GAME_DIR=<game> [-DWIINX_DAWN_DIR=<dawn>] [-DWIINX_AURORA_DIR=<aurora>]
+#         -DWIINX_GAME_DIR=<game> [-DWIINX_AURORA_DIR=<aurora>]
 # Build the game, not everything beside it:
 #
 #   cmake --build <dir> --target <game>_nro
@@ -38,9 +38,9 @@ set(CMAKE_DL_LIBS "")
 get_filename_component(WIINX_ROOT "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
 set(WIINX_GAME_DIR "" CACHE PATH "The game project to build")
 include("${WIINX_ROOT}/cmake/DependencyTrees.cmake")
-set(WIINX_DAWN_DIR "" CACHE PATH "Dawn checkout; unset searches for one")
+# set(WIINX_DAWN_DIR "" CACHE PATH "Dawn checkout; unset searches for one")
 set(WIINX_AURORA_DIR "" CACHE PATH "Aurora checkout; unset searches for one")
-wiinx_find_tree(WIINX_DAWN_DIR "Dawn" "${WIINX_ROOT}" NAMES ${WIINX_DAWN_NAMES})
+# wiinx_find_tree(WIINX_DAWN_DIR "Dawn" "${WIINX_ROOT}" NAMES ${WIINX_DAWN_NAMES})
 wiinx_find_tree(WIINX_AURORA_DIR "Aurora" "${WIINX_ROOT}"
     NAMES ${WIINX_AURORA_NAMES} CROSS_MARKER "${WIINX_AURORA_CROSS_MARKER}")
 
@@ -52,7 +52,7 @@ if (NOT EXISTS "${WIINX_GAME_DIR}/generated/build_shards/shards.cmake")
         "${WIINX_GAME_DIR} has no translated code yet. Translate it first:\n"
         "  tools/wiinx-translate ${WIINX_GAME_DIR}")
 endif ()
-foreach (piece DAWN AURORA)
+foreach (piece AURORA)  # native only: Dawn is not used (was: DAWN AURORA)
     if (NOT EXISTS "${WIINX_${piece}_DIR}/CMakeLists.txt")
         # Say where it looked. The old message named only the one path it had
         # guessed, which was a folder name nothing on disk uses.
@@ -64,72 +64,73 @@ foreach (piece DAWN AURORA)
 endforeach ()
 get_filename_component(WIINX_GAME_NAME "${WIINX_GAME_DIR}" NAME)
 
-# WebGPU. Dawn builds a game itself when it is the top-level project; here it is
-# not, so it builds only itself.
-set(DAWN_BUILD_MONOLITHIC_LIBRARY STATIC CACHE STRING "" FORCE)
-set(DAWN_BUILD_SAMPLES OFF CACHE BOOL "" FORCE)
-set(DAWN_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(DAWN_BUILD_PROTOBUF OFF CACHE BOOL "" FORCE)
-set(DAWN_FETCH_DEPENDENCIES OFF CACHE BOOL "" FORCE)
-set(DAWN_ENABLE_VULKAN ON CACHE BOOL "" FORCE)
-set(DAWN_USE_GLFW OFF CACHE BOOL "" FORCE)
-set(DAWN_USE_X11 OFF CACHE BOOL "" FORCE)
-set(DAWN_USE_WAYLAND OFF CACHE BOOL "" FORCE)
-set(TINT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(TINT_BUILD_CMD_TOOLS OFF CACHE BOOL "" FORCE)
-# Dawn is the same library whichever game is being built, and nothing here
-# compiles against its headers - it is linked and nothing else. Building it
-# again per game costs 4.9 GB and about an hour, so a build can point at one
-# that already exists and link that.
-#
-#   -DWIINX_DAWN_PREBUILT=<a build directory that has one>
-#
-# Left unset, it is built here as before.
-set(WIINX_DAWN_PREBUILT "" CACHE PATH "A Dawn build to link, rather than building one")
-set(_wiinx_dawn_library "${WIINX_DAWN_PREBUILT}/src/dawn/native/libwebgpu_dawn.a")
-if (WIINX_DAWN_PREBUILT AND EXISTS "${_wiinx_dawn_library}")
-    add_library(webgpu_dawn STATIC IMPORTED GLOBAL)
-    set_target_properties(webgpu_dawn PROPERTIES
-        IMPORTED_LOCATION "${_wiinx_dawn_library}"
-        INTERFACE_INCLUDE_DIRECTORIES
-            "${WIINX_DAWN_DIR}/include;${WIINX_DAWN_PREBUILT}/gen/include")
-    # Aurora asks for it under Dawn's own namespace, which a from-source build
-    # gets from Dawn's CMakeLists; nothing defines it when that never runs.
-    add_library(dawn::webgpu_dawn ALIAS webgpu_dawn)
-    # Aurora links absl::btree and absl::flat_hash_map, and takes them as given
-    # when they already exist - which they do when Dawn is built from source,
-    # because Dawn builds its own abseil. Without them Aurora fetches one and
-    # builds it, and abseil does not compile for Switch (pthread_t is not a
-    # pid_t there). They are header-only, and the little they do compile is
-    # already inside libwebgpu_dawn.a, so its headers are the whole of it.
-    foreach (_wiinx_absl btree flat_hash_map)
-        add_library(absl::${_wiinx_absl} INTERFACE IMPORTED GLOBAL)
-        set_target_properties(absl::${_wiinx_absl} PROPERTIES
-            INTERFACE_INCLUDE_DIRECTORIES "${WIINX_DAWN_DIR}/third_party/abseil-cpp")
-    endforeach ()
-    message(STATUS "libdol-nx: linking the Dawn already built in ${WIINX_DAWN_PREBUILT}")
-elseif (WIINX_DAWN_PREBUILT)
-    message(FATAL_ERROR
-        "No Dawn in ${WIINX_DAWN_PREBUILT}: expected ${_wiinx_dawn_library}")
-else ()
-    # EXCLUDE_FROM_ALL, as Aurora is below: only what a game links is built.
-    # Without it the default target also built Dawn's demo and abseil's
-    # signal handler, neither of which builds for the Switch.
-    add_subdirectory("${WIINX_DAWN_DIR}" dawn-build EXCLUDE_FROM_ALL)
-endif ()
+# Native only (deko3d): Dawn and Aurora are not built; the runtime takes Aurora's headers (cmake/runtime/Runtime.cmake).
+# # WebGPU. Dawn builds a game itself when it is the top-level project; here it is
+# # not, so it builds only itself.
+# set(DAWN_BUILD_MONOLITHIC_LIBRARY STATIC CACHE STRING "" FORCE)
+# set(DAWN_BUILD_SAMPLES OFF CACHE BOOL "" FORCE)
+# set(DAWN_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+# set(DAWN_BUILD_PROTOBUF OFF CACHE BOOL "" FORCE)
+# set(DAWN_FETCH_DEPENDENCIES OFF CACHE BOOL "" FORCE)
+# set(DAWN_ENABLE_VULKAN ON CACHE BOOL "" FORCE)
+# set(DAWN_USE_GLFW OFF CACHE BOOL "" FORCE)
+# set(DAWN_USE_X11 OFF CACHE BOOL "" FORCE)
+# set(DAWN_USE_WAYLAND OFF CACHE BOOL "" FORCE)
+# set(TINT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+# set(TINT_BUILD_CMD_TOOLS OFF CACHE BOOL "" FORCE)
+# # Dawn is the same library whichever game is being built, and nothing here
+# # compiles against its headers - it is linked and nothing else. Building it
+# # again per game costs 4.9 GB and about an hour, so a build can point at one
+# # that already exists and link that.
+# #
+# #   -DWIINX_DAWN_PREBUILT=<a build directory that has one>
+# #
+# # Left unset, it is built here as before.
+# set(WIINX_DAWN_PREBUILT "" CACHE PATH "A Dawn build to link, rather than building one")
+# set(_wiinx_dawn_library "${WIINX_DAWN_PREBUILT}/src/dawn/native/libwebgpu_dawn.a")
+# if (WIINX_DAWN_PREBUILT AND EXISTS "${_wiinx_dawn_library}")
+#     add_library(webgpu_dawn STATIC IMPORTED GLOBAL)
+#     set_target_properties(webgpu_dawn PROPERTIES
+#         IMPORTED_LOCATION "${_wiinx_dawn_library}"
+#         INTERFACE_INCLUDE_DIRECTORIES
+#             "${WIINX_DAWN_DIR}/include;${WIINX_DAWN_PREBUILT}/gen/include")
+#     # Aurora asks for it under Dawn's own namespace, which a from-source build
+#     # gets from Dawn's CMakeLists; nothing defines it when that never runs.
+#     add_library(dawn::webgpu_dawn ALIAS webgpu_dawn)
+#     # Aurora links absl::btree and absl::flat_hash_map, and takes them as given
+#     # when they already exist - which they do when Dawn is built from source,
+#     # because Dawn builds its own abseil. Without them Aurora fetches one and
+#     # builds it, and abseil does not compile for Switch (pthread_t is not a
+#     # pid_t there). They are header-only, and the little they do compile is
+#     # already inside libwebgpu_dawn.a, so its headers are the whole of it.
+#     foreach (_wiinx_absl btree flat_hash_map)
+#         add_library(absl::${_wiinx_absl} INTERFACE IMPORTED GLOBAL)
+#         set_target_properties(absl::${_wiinx_absl} PROPERTIES
+#             INTERFACE_INCLUDE_DIRECTORIES "${WIINX_DAWN_DIR}/third_party/abseil-cpp")
+#     endforeach ()
+#     message(STATUS "libdol-nx: linking the Dawn already built in ${WIINX_DAWN_PREBUILT}")
+# elseif (WIINX_DAWN_PREBUILT)
+#     message(FATAL_ERROR
+#         "No Dawn in ${WIINX_DAWN_PREBUILT}: expected ${_wiinx_dawn_library}")
+# else ()
+#     # EXCLUDE_FROM_ALL, as Aurora is below: only what a game links is built.
+#     # Without it the default target also built Dawn's demo and abseil's
+#     # signal handler, neither of which builds for the Switch.
+#     add_subdirectory("${WIINX_DAWN_DIR}" dawn-build EXCLUDE_FROM_ALL)
+# endif ()
 
-# Aurora (GX on WebGPU) reuses the Dawn added above rather than fetching its
-# own; its CMake checks for the target before doing so.
-set(AURORA_ENABLE_GX ON CACHE BOOL "" FORCE)
-set(AURORA_ENABLE_DVD OFF CACHE BOOL "" FORCE)
-set(AURORA_ENABLE_CARD OFF CACHE BOOL "" FORCE)
-set(AURORA_DAWN_PROVIDER "vendor" CACHE STRING "" FORCE)
-set(AURORA_SDL3_PROVIDER "vendor" CACHE STRING "" FORCE)
-# EXCLUDE_FROM_ALL, as the runtime adds it: only the targets something links
-# are built. aurora_core is the desktop application layer - a window, an event
-# loop, SDL - and a Switch build has its own, so nothing here links it and
-# nothing here needs SDL3.
-add_subdirectory("${WIINX_AURORA_DIR}" aurora-build EXCLUDE_FROM_ALL)
+# # Aurora (GX on WebGPU) reuses the Dawn added above rather than fetching its
+# # own; its CMake checks for the target before doing so.
+# set(AURORA_ENABLE_GX ON CACHE BOOL "" FORCE)
+# set(AURORA_ENABLE_DVD OFF CACHE BOOL "" FORCE)
+# set(AURORA_ENABLE_CARD OFF CACHE BOOL "" FORCE)
+# set(AURORA_DAWN_PROVIDER "vendor" CACHE STRING "" FORCE)
+# set(AURORA_SDL3_PROVIDER "vendor" CACHE STRING "" FORCE)
+# # EXCLUDE_FROM_ALL, as the runtime adds it: only the targets something links
+# # are built. aurora_core is the desktop application layer - a window, an event
+# # loop, SDL - and a Switch build has its own, so nothing here links it and
+# # nothing here needs SDL3.
+# add_subdirectory("${WIINX_AURORA_DIR}" aurora-build EXCLUDE_FROM_ALL)
 
 # Every game binds its natives through its own table (see native_bindings.h),
 # so there is nothing here to decide: no game's addresses are privileged.
@@ -188,12 +189,12 @@ if (TARGET mkw_base_shared)
 endif ()
 
 if (TARGET WiiCompiled)
-    # The graphics path ends at NVK; dawn-nx knows how it has to be linked.
-    if(NOT WIINX_NATIVE_GX)
-        # (libdol's own renderer is deko3d: no Dawn, no NVK)
-        include("${WIINX_DAWN_DIR}/switch_smoke_test/NvkLink.cmake")
-        dawn_switch_link_nvk(WiiCompiled)
-    endif()
+#     # The graphics path ends at NVK; dawn-nx knows how it has to be linked.
+#     if(NOT WIINX_NATIVE_GX)
+#         # (libdol's own renderer is deko3d: no Dawn, no NVK)
+#         include("${WIINX_DAWN_DIR}/switch_smoke_test/NvkLink.cmake")
+#         dawn_switch_link_nvk(WiiCompiled)
+#     endif()
     # libdol's own GPU layer (src/platform/gpu, docs/deko3d.md)
     # deko3d's debug build validates every call and reports what was wrong
     # through the device's debug callback (logged to boot.log) before it

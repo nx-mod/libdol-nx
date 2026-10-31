@@ -2,8 +2,10 @@
 
 The goal: on the Switch, a game is its translated code, libdol-nx and the
 console's own libraries (libnx, deko3d) - nothing in between. No Aurora, no
-Dawn, no SDL. The desktop builds keep Aurora; the Switch builds leave it, one
-section at a time, each one proven by rebuilding a title and running it.
+Dawn, no SDL. The Switch build is now the only one: Aurora is read for its
+headers alone, and its build, Dawn's and the desktop's are commented out. The
+sections below came off one at a time, each proven by rebuilding a title and
+running it.
 
 ## Sections
 
@@ -17,7 +19,7 @@ turn, smallest and most self-contained first.
 | 3 | main loop and events | `aurora_core` (window, events, the loop) | |
 | 4 | video timing and present | `aurora_vi` | stays until 6: Aurora's window, GX and GPU code read its render-mode state |
 | 5 | settings overlay | `aurora_core` (ImGui) | |
-| 6 | graphics | `aurora_gx`, Dawn | under way: the deko3d layer is in (`src/platform/gpu`, [deko3d.md](deko3d.md)), not yet drawn on |
+| 6 | graphics | `aurora_gx`, Dawn | done: libdol's deko3d renderer draws GX ([deko3d.md](deko3d.md)); Aurora's renderer and Dawn are not built |
 
 ## 2. Input
 
@@ -167,4 +169,4 @@ These are independent of Aurora leaving, and apply to every game.
   small machine its memory, and `-O0` ran the game's code several times slower.
   On a phone, build at `-j1`.
 - Rebuild a title's NRO alone: `cmake --build <title>/build --target <title>_nro`;
-  the default target also builds Dawn's demo, which does not build on the Switch.
+  the default target also builds targets the game does not link.

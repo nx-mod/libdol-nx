@@ -12,7 +12,7 @@
 #   3. builds it against libdol-nx           (cmake/game)
 #   4. leaves <game>/build/<game>.nro, ready for sdmc:/wii-nx/games/<game>/
 #
-#   --dawn DIR      Dawn checkout        (default: found next to libdol-nx)
+#   (no --dawn: native deko3d only, Dawn is not used)
 #   --aurora DIR    Aurora checkout      (default: found next to libdol-nx)
 #   --jobs N        parallel compiles    (default 2; translation is memory-hungry)
 #   --into DIR      put a new game's project here (its own repository, say)
@@ -43,23 +43,23 @@ find_tree() {
     done
     return 1
 }
-# A Dawn checkout without its submodules configures halfway and fails on
-# abseil: pick the first one that has them (dawn-nx is often checked out bare).
-find_dawn() {
-    for product in "" wiicompiled wiicompiled-nx gccompiled-nx wii-nx; do
-        for name in dawn-nx dawn-main dawn; do
-            candidate="$libwiinx/..${product:+/$product}/$name"
-            if [ -f "$candidate/CMakeLists.txt" ] &&
-               [ -f "$candidate/third_party/abseil-cpp/CMakeLists.txt" ]; then
-                (cd "$candidate" && pwd)
-                return 0
-            fi
-        done
-    done
-    return 1
-}
-dawn=$(find_dawn || true)
-aurora=$(find_tree aurora-nx aurora-main aurora || true)
+# # A Dawn checkout without its submodules configures halfway and fails on
+# # abseil: pick the first one that has them (dawn-nx is often checked out bare).
+# find_dawn() {
+#     for product in "" wiicompiled wiicompiled-nx gccompiled-nx wii-nx; do
+#         for name in dawn-nx dawn-main dawn; do
+#             candidate="$libwiinx/..${product:+/$product}/$name"
+#             if [ -f "$candidate/CMakeLists.txt" ] &&
+#                [ -f "$candidate/third_party/abseil-cpp/CMakeLists.txt" ]; then
+#                 (cd "$candidate" && pwd)
+#                 return 0
+#             fi
+#         done
+#     done
+#     return 1
+# }
+# dawn=$(find_dawn || true)
+aurora=$(find_tree aurora-wiicompiled aurora-nx aurora-main aurora || true)
 jobs=2
 translate=1
 into=
@@ -67,7 +67,7 @@ distcc=
 explicit=
 while [ $# -gt 0 ]; do
     case $1 in
-        --dawn) dawn=$2; explicit="$explicit --dawn "; shift 2 ;;
+#       --dawn) dawn=$2; explicit="$explicit --dawn "; shift 2 ;;
         --aurora) aurora=$2; explicit="$explicit --aurora "; shift 2 ;;
         --jobs) jobs=$2; shift 2 ;;
         --into) into=$2; shift 2 ;;
@@ -121,7 +121,7 @@ command -v cmake >/dev/null || { echo "cmake not found" >&2; exit 1; }
 
 # An empty one of these would reach cmake as the empty path, and `cd "" && pwd`
 # succeeds - it would have handed over whatever directory this ran from.
-for piece in dawn aurora; do
+for piece in aurora; do  # native only (was: dawn aurora)
     eval "path=\${$piece}"
     [ -n "$path" ] || {
         echo "no $piece checkout found beside $libwiinx (--$piece DIR)" >&2; exit 1; }
@@ -161,7 +161,7 @@ fi
 # silently and failed in a fresh SDL configure. --aurora/--dawn still override.
 cache="$game/build/CMakeCache.txt"
 if [ -f "$cache" ]; then
-    for piece in dawn aurora; do
+    for piece in aurora; do  # native only (was: dawn aurora)
         upper=$(echo "$piece" | tr a-z A-Z)
         case "$explicit" in *" --$piece "*) continue ;; esac
         cached=$(sed -n "s/^WIINX_${upper}_DIR:PATH=//p" "$cache")
@@ -189,7 +189,7 @@ echo "== building $(basename "$game")"
 cmake -S "$libwiinx/cmake/game" -B "$game/build" -G Ninja \
     -DWIINX_NATIVE_GX="$native_gx" \
     -DCMAKE_TOOLCHAIN_FILE="$DEVKITPRO/cmake/Switch.cmake" \
-    -DWIINX_GAME_DIR="$game" -DWIINX_DAWN_DIR="$dawn" \
+    -DWIINX_GAME_DIR="$game" \
     -DWIINX_AURORA_DIR="$aurora" \
     -DCMAKE_C_COMPILER_LAUNCHER="$launcher" -DCMAKE_CXX_COMPILER_LAUNCHER="$launcher"
 # The game's own target, not everything: a plain build compiles every target
