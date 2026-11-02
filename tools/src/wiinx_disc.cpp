@@ -218,6 +218,19 @@ int main(int argc, char** argv) {
 
     if (command == "info") {
         PrintHeader(image);
+        // The IOS the game partition's TMD asks for: its system version, low word.
+        const Source raw = opened.rvz ? opened.rvz->AsSource() : opened.container->AsSource();
+        for (const Partition& partition : image.Partitions()) {
+            std::uint8_t word[4], version[8];
+            if (!partition.Game() || !raw.Read(partition.offset + 0x2A8, word, 4)) {
+                continue;
+            }
+            const std::uint64_t tmd =
+                partition.offset + (std::uint64_t{word[0]} << 26 | word[1] << 18 | word[2] << 10 | word[3] << 2);
+            if (raw.Read(tmd + 0x184, version, 8)) {
+                std::printf("   ios:       IOS%u\n", version[6] << 8 | version[7]);
+            }
+        }
         if (!image.ReadFileTable()) {
             std::printf("   could not read the file table\n");
             return 1;

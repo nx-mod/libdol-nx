@@ -428,6 +428,11 @@ internal sealed class TranslationProjectConfig
         // for one; it is here so a project can say what it is.
         public string? TitleId { get; init; }
         public string? Region { get; init; }
+        // The IOS its TMD asks for, and whether it sees a development console. The runtime presents
+        // them (cmake/game reads both); nothing is translated differently for either.
+        public int? Ios { get; init; }
+        public string? Console { get; init; }
+        public string? Remote { get; init; }
         public string? BaseManifestFormat { get; init; }
         public string? BaseManifestStem { get; init; }
     }
@@ -450,6 +455,8 @@ internal sealed class TranslationProjectConfig
     {
         public string Path { get; init; } = string.Empty;
         public string? Sha256 { get; init; }
+        // Patched for Wiimmfi before translating (tools/wiinx-build); Sha256 is then the patched one.
+        public bool? Wiimmfi { get; init; }
     }
 
     private sealed class RelInputDto : BinaryInputDto

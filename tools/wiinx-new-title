@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Create a project from a title you own, start to finish.
 
-    tools/wiinx-new-title <file.wad> <folder>
+    tools/wiinx-new-title <file.wad or homebrew.dol> <folder>
 
 A title from a WAD takes two steps a disc game does not: the WAD is decrypted,
 and the content its loader would have expanded is expanded. After that it is an
@@ -88,7 +88,12 @@ def main(argv):
     os.makedirs(game, exist_ok=True)
 
     print(f">> {os.path.basename(wad)}")
-    unpacked = run("wiinx-wad", wad, game, quiet=True)
+    homebrew = wad.lower().endswith(".dol")
+    if homebrew:
+        # Homebrew is its own executable: no WAD to unpack, and no title ID of its own.
+        shutil.copyfile(wad, os.path.join(game, "main.dol"))
+    else:
+        unpacked = run("wiinx-wad", wad, game, quiet=True)
 
     # The title's own code: what its loader expands, or the boot content when
     # there is nothing else.
@@ -99,11 +104,24 @@ def main(argv):
         raise SystemExit("no executable came out of that WAD")
     print(f"   {os.path.basename(executable)}: {os.path.getsize(executable):,} bytes")
 
-    # Unpacking does not print the title; wiinx-wad's summary does.
-    summary = run("wiinx-wad", wad, quiet=True)
-    title = re.search(r"^\s*title\s+(\w{8})/(\w{8})\s+\((\w{4})\)", summary, re.MULTILINE)
-    identifier = title.group(3) if title else "unknown"
-    title_id = (title.group(1) + title.group(2)).lower() if title else None
+    if homebrew:
+        # H, two letters of its name, E: a region letter the launcher can read
+        letters = re.sub(r"[^A-Za-z]", "", os.path.basename(os.path.abspath(folder)).removesuffix("-nx")).upper()
+        identifier = f"H{(letters + 'XX')[:2]}E"
+        title_id = None
+    else:
+        # Unpacking does not print the title; wiinx-wad's summary does.
+        summary = run("wiinx-wad", wad, quiet=True)
+        title = re.search(r"^\s*title\s+(\w{8})/(\w{8})\s+\((\w{4})\)", summary, re.MULTILINE)
+        identifier = title.group(3) if title else "unknown"
+        title_id = (title.group(1) + title.group(2)).lower() if title else None
+
+    # The IOS its TMD asks for (system version, low word at 0x18A). Homebrew runs under the
+    # Homebrew Channel's, IOS58.
+    ios = 58
+    if not homebrew:
+        tmd = os.path.join(game, "tmd")
+        ios = int.from_bytes(open(tmd, "rb").read()[0x18A:0x18C], "big") if os.path.exists(tmd) else None
 
     # Everything else is read out of the executable.
     layout = run("wiinx-inspect-dol", executable, "--yaml", quiet=True)
@@ -139,7 +157,7 @@ project:
   id: {stem}-{identifier.lower()}
   display_name: {stem}
   game_id: {identifier}
-{f"  title_id: {title_id}" + chr(10) if title_id else ""}  region: {identifier[3] if len(identifier) == 4 else 'E'}
+{f"  title_id: {title_id}" + chr(10) if title_id else ""}{f"  ios: {ios}" + chr(10) if ios else ""}  region: {identifier[3] if len(identifier) == 4 else 'E'}
   base_manifest_format: mkwii-recomp-base-manifest
   base_manifest_stem: {stem}_base
 

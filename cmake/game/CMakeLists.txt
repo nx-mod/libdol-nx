@@ -169,6 +169,27 @@ else ()
 endif ()
 message(STATUS "libdol-nx: ${WIINX_GAME_NAME} keeps its data in ${_wiinx_shelf}/")
 
+# The IOS the title's TMD asks for (project.ios, written by wiinx-new-game / wiinx-new-title). The runtime
+# presents that IOS's version and memory layout (src/platform/system/ios_versions.h); an SDK checks it.
+if (_wiinx_entry_project MATCHES "\n[ \t]+ios:[ \t]*([0-9]+)")
+    add_compile_definitions(WIINX_TITLE_IOS=${CMAKE_MATCH_1})
+    message(STATUS "libdol-nx: ${WIINX_GAME_NAME} runs under IOS${CMAKE_MATCH_1}")
+else ()
+    message(WARNING "No project.ios in ${WIINX_GAME_DIR}/recomp.yml: presenting IOS36. "
+                    "Its TMD says which: tools/wiinx-disc info <image>, or the title's title.tmd.")
+endif ()
+# A retail console unless the title asks for a development one (project.console: ndev).
+if (_wiinx_entry_project MATCHES "\n[ \t]+console:[ \t]*ndev")
+    add_compile_definitions(WIINX_CONSOLE_NDEV=1)
+    message(STATUS "libdol-nx: ${WIINX_GAME_NAME} sees a development console (NDEV)")
+endif ()
+# How the title has the Wii Remote held (project.remote: sideways): the Switch's
+# controls turn with it. Players can change it (controller.wii_remote_sideways).
+if (_wiinx_entry_project MATCHES "\n[ \t]+remote:[ \t]*sideways")
+    add_compile_definitions(WIINX_REMOTE_SIDEWAYS=1)
+    message(STATUS "libdol-nx: ${WIINX_GAME_NAME} holds the Wii Remote sideways")
+endif ()
+
 # libdol-nx: the CPU runtime, the console, the app, and this game's code.
 set(MKW_BUILD_PRODUCTS ON CACHE BOOL "" FORCE)
 set(MKW_GAME_WORKSPACE_DIR "${WIINX_GAME_DIR}" CACHE PATH "" FORCE)

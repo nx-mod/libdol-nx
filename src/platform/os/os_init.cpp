@@ -78,15 +78,20 @@ extern "C" uint32_t OS____InitMemoryProtection_801a7dfc(uint32_t r3, uint32_t r4
 
 PPC_NATIVE_OVERRIDE(801A7DFC, OS____InitMemoryProtection_801a7dfc, uint32_t, (uint32_t r3, uint32_t r4, uint32_t r5, uint32_t r6, uint32_t r7, uint32_t r8), (r3, r4, r5, r6, r7, r8));
 
-// OSGetConsoleType (0x8019f33c): standard Wii = 0x12, NDEV (expanded MEM2) = 0x10000012;
-// MKWii uses the NDEV result to enable its extra-memory heap path.
+// OSGetConsoleType (0x8019f33c): a retail Wii is 0x23 (RVL retail 3, as Dolphin presents one; 0x12 is
+// pre-production board 2-1), NDEV 1.2 is 0x10000012. MKWii uses the NDEV result for its extra-memory heap.
 extern "C" uint32_t OS__GetConsoleType_8019f33c(uint32_t /*r4*/, uint32_t /*r5*/, uint32_t /*r6*/,
                                                 uint32_t /*r7*/, uint32_t /*r8*/, uint32_t /*r31*/)
 {
-    constexpr uint32_t kRetailMem2Size = 64u * 1024u * 1024u;
+    // A retail Wii, whatever MEM2 holds: an SDK on a development console takes paths of its own (a 2009
+    // SDK refuses retail firmware there). A title that wants the NDEV answer asks for it in recomp.yml
+    // (project.console: ndev), as Mario Kart Wii does for its larger heap.
     const uint32_t physicalMem2Size = Memory::Read32(0x80003118u);
-    const uint32_t consoleType =
-        physicalMem2Size == kRetailMem2Size ? 0x00000012u : 0x10000012u;
+#if defined(WIINX_CONSOLE_NDEV)
+    const uint32_t consoleType = 0x10000012u;
+#else
+    const uint32_t consoleType = 0x00000023u;
+#endif
     static std::atomic<bool> logged{false};
     if (!logged.exchange(true)) {
         RT_LOG(RT_TAG_OS) << "OSGetConsoleType: MEM2="

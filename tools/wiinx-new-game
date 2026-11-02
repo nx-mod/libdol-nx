@@ -79,6 +79,19 @@ fi
 dol="$game_dir/disc/sys/main.dol"
 sha=$(sha256sum "$dol" | cut -d' ' -f1)
 
+# The IOS the game partition's TMD asks for: from the image, or from a disc extracted with its tmd.bin.
+ios=""
+reader=""
+for candidate in "$here/../build-host/wiinx-disc" "$here/../build/wiinx-disc"; do
+    [ -x "$candidate" ] && { reader=$candidate; break; }
+done
+if [ -f "$image" ] && [ -n "$reader" ]; then
+    ios=$("$reader" info "$image" 2>/dev/null | sed -n 's/^ *ios: *IOS\([0-9]*\).*/\1/p' | head -n 1)
+elif [ -f "$game_dir/disc/tmd.bin" ]; then
+    ios=$(od -An -tu1 -j $((0x18A)) -N 2 "$game_dir/disc/tmd.bin" | awk '{print $1 * 256 + $2}')
+fi
+[ -n "$ios" ] || echo "!! no TMD to read the IOS from: set project.ios in recomp.yml by hand" >&2
+
 cat > "$game_dir/game.toml" <<EOF
 # Read from the disc by tools/wiinx-new-game; do not edit by hand.
 name = "$name"
@@ -99,6 +112,7 @@ EOF
     echo "  display_name: $title"
     echo "  game_id: $game_id            # $region, revision $revision"
     echo "  region: $region_letter"
+    [ -n "$ios" ] && echo "  ios: $ios                  # what the TMD asks for"
     echo
     "$here/wiinx-inspect-dol" "$dol" --yaml
     echo

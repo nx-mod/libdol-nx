@@ -67,6 +67,7 @@ struct RuntimeUserConfig {
     // (Dolphin's "continuous scanning"), so a remote that dropped or was switched on
     // after launch shows up without restarting.
     std::optional<bool> wiiContinuousScan;
+    std::optional<bool> wiiRemoteSideways;
     // Accelerometer zero-point correction for the Bluetooth Wii Remote, in g and in
     // SDL's sensor frame (x right, y out of the button face, z towards the user).
     // SDL's Wii driver falls back to a nominal zero point when its read of the
@@ -519,6 +520,7 @@ inline RuntimeUserConfig ParseConfigDocument(const toml::value& document) {
         FindConfigValue<bool>(document, "audio", "attenuate_music_when_media_plays");
     config.wiiRemotes = FindConfigValue<bool>(document, "controller", "wii_remotes");
     config.wiiContinuousScan = FindConfigValue<bool>(document, "controller", "wii_continuous_scan");
+    config.wiiRemoteSideways = FindConfigValue<bool>(document, "controller", "wii_remote_sideways");
     config.wiiAccelOffsetX = FindConfigValue<double>(document, "controller", "wii_accel_offset_x");
     config.wiiAccelOffsetY = FindConfigValue<double>(document, "controller", "wii_accel_offset_y");
     config.wiiAccelOffsetZ = FindConfigValue<double>(document, "controller", "wii_accel_offset_z");
@@ -944,6 +946,18 @@ inline bool WiiContinuousScanEnabled(bool fallback = false) {
 inline bool SetWiiContinuousScanEnabled(bool value) {
     Mutable().wiiContinuousScan = value;
     return WriteSetting("controller", "wii_continuous_scan", value ? "true" : "false");
+}
+
+// Whether the Switch's controls stand for a Wii Remote held sideways (D-pad
+// turned, 1 and 2 on the face buttons). The title's own default is its
+// recomp.yml project.remote (WIINX_REMOTE_SIDEWAYS).
+inline bool WiiRemoteSideways() {
+#if defined(WIINX_REMOTE_SIDEWAYS)
+    constexpr bool kTitleDefault = true;
+#else
+    constexpr bool kTitleDefault = false;
+#endif
+    return Get().wiiRemoteSideways.value_or(kTitleDefault);
 }
 
 // Wii Remote accelerometer zero-point correction (g, SDL sensor frame); all zero

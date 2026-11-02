@@ -6,6 +6,8 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+
+#include "ios_versions.h"
 #include <optional>
 #include <sstream>
 #include <string>
@@ -512,20 +514,27 @@ void SystemBridge::SeedLowMemDefaults(const Memory::Config& config) {
     constexpr uint32_t kBusClockHz =
         static_cast<uint32_t>(TimeBaseContract::kBusClockHz);
     constexpr uint32_t kCpuClockHz = kBusClockHz * 3u;
-    // Mario Kart Wii boots under IOS36. These are the IOS kernel values that
-    // Dolphin exposes in low memory for IOS36 (VersionInfo.cpp). SDK helpers
-    // read them through the 0xC0000000 MEM1 alias.
-    constexpr uint32_t kIos36Version = 0x00240E18u;
-    constexpr uint32_t kIos36Date = 0x00030110u;
+    // The IOS this title's TMD asks for (recomp.yml `project.ios`), and what that IOS leaves in low memory
+    // (ios_versions.h). SDK helpers read it through the 0xC0000000 MEM1 alias, and an SDK checks the
+    // version against the one it was built for.
+#if defined(WIINX_TITLE_IOS)
+    constexpr uint16_t kTitleIos = WIINX_TITLE_IOS;
+#else
+    constexpr uint16_t kTitleIos = 36;
+#endif
+    const IosVersions::Ios* ios = IosVersions::Find(kTitleIos);
+    if (ios == nullptr) {
+        RT_LOG(RT_TAG_OS) << "IOS" << kTitleIos << " is not in the table; presenting IOS36" << std::endl;
+        ios = IosVersions::Find(36);
+    }
 
     constexpr uint32_t kMem2LoFloor = 0x90000800u;
     // Reserve enough guest memory for the runtime-built DVD FST.
     constexpr uint32_t kDvdFstReserveSize = 0x200000u;
-    // IOS36 reserves 128 KiB for IPC immediately below a 128 KiB IOS-owned
-    // block. Dolphin's RAM override preserves both sizes and moves them to the
-    // top of the expanded MEM2 mapping.
-    constexpr uint32_t kIPCArenaSize = 0x20000u;
-    constexpr uint32_t kIosReservedSize = 0x20000u;
+    // The IOS keeps its block at the top of MEM2 and the IPC buffer just below it. Dolphin's RAM override
+    // keeps both sizes and moves them to the top of the expanded MEM2 mapping, and so does this.
+    const uint32_t kIPCArenaSize = ios->ipcSize;
+    const uint32_t kIosReservedSize = ios->reservedSize;
 
     // The boot code exposes the current disc ID in low memory before DVDInit.
     // A game reads the region byte straight from here, and OSGetAppGamename
@@ -578,12 +587,20 @@ void SystemBridge::SeedLowMemDefaults(const Memory::Config& config) {
     // Seed OS clock values used by SDK timing helpers (OSBusClock/OSClock).
     entries.push_back({0x800000F8u, kBusClockHz, "__OSBusClock"});
     entries.push_back({0x800000FCu, kCpuClockHz, "__OSClock"});
-    entries.push_back({0x80003140u, kIos36Version, "IOS36 version"});
-    entries.push_back({0x80003144u, kIos36Date, "IOS36 date"});
+    entries.push_back({0x80003140u, ios->version, "IOS version"});
+    entries.push_back({0x80003144u, ios->date, "IOS date"});
+    RT_LOG(RT_TAG_OS) << "presenting IOS" << ios->number << std::endl;
 
     if (mem1Size != 0) {
         const uint32_t mem1End = Memory::kMem1CachedBase + mem1Size;
         entries.push_back({0x80000028u, mem1Size, "Legacy MEM1 size", true});
+        // The board model, as OSGetConsoleType answers it (os_init.cpp): RVL retail 3 unless the title
+        // asks for a development console (project.console: ndev).
+#if defined(WIINX_CONSOLE_NDEV)
+        entries.push_back({0x8000002Cu, 0x10000012u, "Board model (NDEV 1.2)", true});
+#else
+        entries.push_back({0x8000002Cu, 0x00000023u, "Board model (RVL retail 3)", true});
+#endif
         entries.push_back({0x80000030u, kMem1ArenaLoDefault, "Legacy MEM1 arena lo", true});
         entries.push_back({0x80000034u, mem1ArenaHiDefault, "Legacy MEM1 arena hi", true});
         entries.push_back({0x800000F0u, mem1Size, "Legacy simulated MEM1 size", true});
