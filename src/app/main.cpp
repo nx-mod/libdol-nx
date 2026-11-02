@@ -2094,6 +2094,19 @@ void SwitchWatchdogMain(void*) {
             std::snprintf(why, sizeof(why), "the guest stayed in 0x%08X for ten seconds", addr);
             RuntimeCrash::WriteCrashArtifacts("stuck", why, nullptr);
         }
+        // A game that stops drawing while its threads keep sleeping and waking
+        // (a wait that never completes, not a loop in one function) trips none
+        // of the above: once no frame has been drawn for eight seconds, the
+        // ring (who sleeps on what) and the crash artifacts (MEM1, registers).
+        static int lastGxFrames = -1;
+        static uint32_t gxFrozenSeconds = 0, noFrameDumps = 0;
+        gxFrozenSeconds = (g_gxFrameCount == lastGxFrames) ? gxFrozenSeconds + 1 : 0;
+        lastGxFrames = g_gxFrameCount;
+        if (g_gxFrameCount > 0 && gxFrozenSeconds == 8 && noFrameDumps < 1) {
+            ++noFrameDumps;
+            SwitchDumpTraceRing();
+            RuntimeCrash::WriteCrashArtifacts("noframes", "no frame drawn for eight seconds", nullptr);
+        }
         const long long ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  std::chrono::steady_clock::now() - g_switchBootStart)
                                  .count();
