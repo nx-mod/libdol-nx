@@ -131,9 +131,24 @@ var modPatchProfiles = new Lazy<IReadOnlyList<Translator.Cli.Configuration.Proje
     () => CollectModPatchProfiles(project, profile));
 var modPatchedAddresses = new Lazy<IReadOnlySet<uint>>(() =>
     BuildModPatchedAddresses(modPatchProfiles.Value));
+var guestJumpBuffers = new Lazy<GuestJumpBufferFunctions>(() =>
+{
+    var found = GuestJumpBufferFunctions.Find(image.Value);
+    if (found.Setjmp.Count != 0 || found.Longjmp.Count != 0)
+        Console.WriteLine(
+            $"[translator] setjmp at {string.Join(", ", found.Setjmp.Order().Select(jmpAddress => $"0x{jmpAddress:X8}"))}; " +
+            $"longjmp at {string.Join(", ", found.Longjmp.Order().Select(jmpAddress => $"0x{jmpAddress:X8}"))}.");
+    return found;
+});
 var leafInliningBlockedTargets = new Lazy<IReadOnlySet<uint>>(() =>
-    BuildLeafInliningBlockedTargets(
+{
+    // A spliced setjmp/longjmp would lose the call site that goes through the runtime.
+    var blocked = new HashSet<uint>(BuildLeafInliningBlockedTargets(
         modPatchedAddresses.Value, runtimeNativeGuestEffects.Value, baseTranslationExclusions.Value));
+    blocked.UnionWith(guestJumpBuffers.Value.Setjmp);
+    blocked.UnionWith(guestJumpBuffers.Value.Longjmp);
+    return blocked;
+});
 
 // Leaf inlining is a front-end decision: the splice happens before SSA, so the
 // canonical graph the emission wave lowers is already inlined and every
@@ -1251,7 +1266,8 @@ int RunTranslateRecursive(string[] argsTail)
                         StateFreeCallSiteVariants: stateFreeCallSiteVariantsByCaller.GetValueOrDefault(address),
                          StateFreeEntryVariants: stateFreeEntryVariantsByTarget.GetValueOrDefault(address),
                          ModOverridableCallTargets: modOverridableCallTargets,
-                         TailJumpCallTargets: tailJumpCallTargets),
+                         TailJumpCallTargets: tailJumpCallTargets,
+                         GuestJumpBuffers: guestJumpBuffers.Value),
                     residentPolicy,
                     address);
             }

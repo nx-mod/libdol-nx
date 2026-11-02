@@ -315,6 +315,19 @@ public sealed partial class CxxLinearCodeGenerator
                         break;
                     }
 
+                    // longjmp never returns, also when it is reached by a `b`.
+                    if (s_guestJumpBuffers is { } jumpTargets && jumpTargets.Longjmp.Contains(addr))
+                    {
+                        AppendFlush(sb, pad);
+                        RecordEmittedDirectCallTarget(addr);
+                        sb.AppendLine($"{pad}{{");
+                        sb.AppendLine($"{pad}    const uint32_t guest_jmp_buffer = ctx->gpr[3];");
+                        sb.AppendLine($"{pad}    InvokeDirectCpu<0x{addr:X8}u>(ctx);");
+                        sb.AppendLine($"{pad}    GuestJmp::Jump(ctx, guest_jmp_buffer);");
+                        sb.AppendLine($"{pad}}}");
+                        break;
+                    }
+
                     // A `bl` into another function's code that never returns to
                     // this caller (it reloads the link register before its `blr`)
                     // is a jump: the guest stack does not grow, so the host stack
@@ -329,6 +342,21 @@ public sealed partial class CxxLinearCodeGenerator
                         // it up on every jump.
                         RecordEmittedDirectCallTarget(addr);
                         sb.AppendLine($"{pad}MKW_TAIL_JUMP_TO(0x{addr:X8}u, ctx);");
+                        break;
+                    }
+
+                    // setjmp returns a second time when a longjmp lands here,
+                    // possibly from another guest stack: the host setjmp sits
+                    // in this frame, and everything comes back from the
+                    // context the guest longjmp loaded.
+                    if (s_guestJumpBuffers is { } jumpBuffers && jumpBuffers.Setjmp.Contains(addr))
+                    {
+                        AppendFlush(sb, pad);
+                        RecordEmittedDirectCallTarget(addr);
+                        sb.AppendLine($"{pad}if (setjmp(*GuestJmp::Arm(ctx)) == 0) {{");
+                        sb.AppendLine($"{pad}    InvokeDirectCpu<0x{addr:X8}u>(ctx);");
+                        sb.AppendLine($"{pad}}}");
+                        AppendReload(sb, pad);
                         break;
                     }
 

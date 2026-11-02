@@ -7,6 +7,7 @@
 #include "guest_os_layout.h"
 #include "runtime_log.h"
 #include "mkw_thread_local.h"
+#include "guest_jmp.h"
 
 #include <array>
 #include <atomic>

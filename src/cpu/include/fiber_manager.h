@@ -107,6 +107,10 @@ public:
     static bool HasFiber(uint32_t guestThreadAddr);
     static bool IsTerminated(uint32_t guestThreadAddr);
 
+    // A guest thread moved onto another host context (a guest longjmp onto
+    // another stack, see guest_jmp.cpp): switches to the thread go there now.
+    static void RebindHostContext(void* from, void* to);
+
 private:
     // The fiber entry point wrapper
 #if defined(_WIN32)

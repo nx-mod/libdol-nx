@@ -79,6 +79,7 @@ public sealed partial class CxxLinearCodeGenerator
 
     // Read by the static instruction emitter; set per emission, per thread.
     [ThreadStatic] private static IReadOnlySet<uint>? s_tailJumpCallTargets;
+    [ThreadStatic] private static Translator.Core.Loading.GuestJumpBufferFunctions? s_guestJumpBuffers;
 
     public CxxEmissionResult EmitWithFacts(uint entryPoint,
         SsaResult ssa,
@@ -104,9 +105,11 @@ public sealed partial class CxxLinearCodeGenerator
         bool enableLeafAbiSpillElision = false,
         IReadOnlySet<uint>? modOverridableCallTargets = null,
         bool enableGpuFifoBurstCoalescing = true,
-        IReadOnlySet<uint>? tailJumpCallTargets = null)
+        IReadOnlySet<uint>? tailJumpCallTargets = null,
+        Translator.Core.Loading.GuestJumpBufferFunctions? guestJumpBuffers = null)
     {
         s_tailJumpCallTargets = tailJumpCallTargets;
+        s_guestJumpBuffers = guestJumpBuffers;
         modOverridableCallTargets ??= new HashSet<uint>();
         nonReturningCallTargets ??= new HashSet<uint>();
         lrContinuationCallTargets ??= new HashSet<uint>();

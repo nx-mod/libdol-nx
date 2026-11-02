@@ -41,6 +41,8 @@ public sealed record TranslationOptions(
     // `blr`. A `bl` to one is a jump in disguise and is emitted as a host tail
     // call, so an interpreter looping through them does not grow the host stack.
     IReadOnlySet<uint>? TailJumpCallTargets = null,
+    // The title's setjmp/longjmp: their call sites go through the runtime.
+    Translator.Core.Loading.GuestJumpBufferFunctions? GuestJumpBuffers = null,
     IReadOnlyDictionary<uint, uint>? LinkedCallFallthroughLrOverrides = null,
     IReadOnlySet<uint>? KnownFunctionEntryPoints = null,
     IReadOnlyDictionary<uint, GuestAbiContract>? GuestAbiContracts = null,
@@ -755,7 +757,8 @@ public sealed class FunctionTranslator
             gqrConstantsRequireRuntimeGuard: options.GqrConstantsRequireRuntimeGuard,
             enableLeafAbiSpillElision: options.EnableLeafAbiSpillElision,
             modOverridableCallTargets: options.ModOverridableCallTargets,
-            tailJumpCallTargets: options.TailJumpCallTargets);
+            tailJumpCallTargets: options.TailJumpCallTargets,
+            guestJumpBuffers: options.GuestJumpBuffers);
     }
 
     private static IrTracePpc CreateTrace(PpcInstruction instruction)

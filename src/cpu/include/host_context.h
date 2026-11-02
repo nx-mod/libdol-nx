@@ -19,6 +19,7 @@ void ShutdownScheduler(Handle scheduler);
 Handle Create(std::size_t stackSize, Entry entry, void* argument);
 void Destroy(Handle context);
 bool IsCurrent(Handle context);
+Handle Current();
 void Switch(Handle target);
 
 } // namespace HostContext

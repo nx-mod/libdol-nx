@@ -36,6 +36,11 @@ std::mutex GuestFiberManager::s_mutex;
 std::unordered_map<uint32_t, GuestFiber> GuestFiberManager::s_fibers;
 std::vector<void*> GuestFiberManager::s_fibersPendingDelete;
 void* GuestFiberManager::s_schedulerFiber = nullptr;
+namespace {
+// The context InitializeScheduler made: s_schedulerFiber follows the main
+// thread if a longjmp moves it, this one is what shutdown releases.
+void* s_schedulerRoot = nullptr;
+}
 uint32_t GuestFiberManager::s_currentGuestThread = 0;
 
 namespace {
@@ -252,6 +257,21 @@ void GuestFiberManager::Initialize() {
     s_initialized = true;
 }
 
+void GuestFiberManager::RebindHostContext(void* from, void* to) {
+    std::lock_guard<std::mutex> lock(s_mutex);
+    if (!s_schedulerRoot) {
+        s_schedulerRoot = s_schedulerFiber;
+    }
+    for (auto& [addr, fiber] : s_fibers) {
+        if (fiber.fiber == from) {
+            fiber.fiber = to;
+        }
+    }
+    if (s_schedulerFiber == from) {
+        s_schedulerFiber = to;
+    }
+}
+
 void GuestFiberManager::Shutdown() {
     std::lock_guard<std::mutex> lock(s_mutex);
 
@@ -263,9 +283,10 @@ void GuestFiberManager::Shutdown() {
     }
     s_fibers.clear();
 
-    if (s_schedulerFiber) {
-        HostContext::ShutdownScheduler(s_schedulerFiber);
+    if (s_schedulerRoot || s_schedulerFiber) {
+        HostContext::ShutdownScheduler(s_schedulerRoot ? s_schedulerRoot : s_schedulerFiber);
         s_schedulerFiber = nullptr;
+        s_schedulerRoot = nullptr;
     }
 
     s_initialized = false;

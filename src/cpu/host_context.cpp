@@ -77,6 +77,11 @@ bool IsCurrent(Handle context)
     return context != nullptr && GetCurrentFiber() == context;
 }
 
+Handle Current()
+{
+    return GetCurrentFiber();
+}
+
 void Switch(Handle target)
 {
     SwitchToFiber(target);
@@ -203,6 +208,11 @@ bool IsCurrent(Handle context)
     return context != nullptr && context == g_current;
 }
 
+Handle Current()
+{
+    return g_current;
+}
+
 void Switch(Handle target)
 {
     auto* destination = static_cast<Context*>(target);
@@ -322,6 +332,11 @@ void Destroy(Handle context)
 bool IsCurrent(Handle context)
 {
     return context != nullptr && context == g_current;
+}
+
+Handle Current()
+{
+    return g_current;
 }
 
 void Switch(Handle target)
