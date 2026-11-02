@@ -60,8 +60,14 @@ Vendored with the runtime, each under its own license, in `third_party/`:
   Project. `data/dsp/dsp_coef.bin` (the free DSP resampling coefficients, hash
   checked at build time) and `data/wii/shared2/wc24/**` (the default
   WiiConnect24 tree a new NAND is seeded from) are Dolphin's `Data/Sys` files,
-  unmodified. Neither holds Nintendo code or game assets.
+  unmodified. Neither holds Nintendo code or game assets. Each IOS's low-memory
+  values (`src/platform/system/ios_versions.h`) are generated from its
+  `Source/Core/Core/IOS/VersionInfo.cpp`.
   <https://github.com/dolphin-emu/dolphin>
+- **WiiWare-Patcher** by KcrPL, with Wiimmfi's security patch by MrBean35000vr
+  and Leseratte - AGPL-3.0. `tools/src/wiimmfi/` holds it unchanged and builds it
+  as its own program, `wiinx-wiimmfi`; nothing of it is linked into libdol-nx.
+  <https://github.com/KcrPL/WiiWare-Patcher>
 
 ## Reimplemented natively from other work
 

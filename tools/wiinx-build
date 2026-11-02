@@ -97,7 +97,28 @@ fi
 python3 "$(dirname "$0")/wiinx-identity" "$game" --write || true
 
 if [ "$translate" = 1 ]; then
-    dol="$game/disc/sys/main.dol"
+    # Whatever recomp.yml translates, as wiinx-translate finds it: a disc game's main.dol under disc/, a
+    # WAD title's payload under game/, a NAND title's program under title/ (its modules merged first).
+    python3 "$here/wiinx-rso" build "$game" >/dev/null || true
+    dol=$(sed -n 's/^ *path: *\(.*main\.dol\) *$/\1/p' "$game/recomp.yml" | head -1)
+    [ -n "$dol" ] || dol=$(sed -n '/^ *dol:/,/sha256/s/^ *path: *\(.*\) *$/\1/p' "$game/recomp.yml" | head -1)
+    dol="$game/$dol"
+    # An online title on Wiimmfi (inputs.dol.wiimmfi: true): its own executable patched, once, before
+    # anything reads it. The SHA-256 recomp.yml pins is the patched one.
+    if sed -n '/^ *dol:/,/^[a-z]/p' "$game/recomp.yml" | grep -q '^[[:space:]]*wiimmfi:[[:space:]]*true'; then
+        want=$(sed -n '/^ *dol:/,/^[a-z]/s/^ *sha256: *\([0-9a-f]*\).*/\1/p' "$game/recomp.yml" | head -1)
+        if [ "$(sha256sum "$dol" | cut -d' ' -f1)" != "$want" ]; then
+            patcher=""
+            for candidate in "$libwiinx/build-host/wiinx-wiimmfi" "$libwiinx/build/wiinx-wiimmfi"; do
+                [ -x "$candidate" ] && { patcher=$candidate; break; }
+            done
+            [ -n "$patcher" ] || { echo "wiimmfi: true, but wiinx-wiimmfi is not built (the host tools)" >&2; exit 1; }
+            echo "== Wiimmfi patch: $(basename "$dol")"
+            (cd "$(dirname "$dol")" && "$patcher" "$(basename "$dol")" | sed 's/^/   /')
+            [ "$(sha256sum "$dol" | cut -d' ' -f1)" = "$want" ] || {
+                echo "$dol: patched, but not to the SHA-256 recomp.yml pins" >&2; exit 1; }
+        fi
+    fi
     # A game the library's natives were written from keeps its own table; every
     # other game's is found by matching code.
     if ! grep -q '^[[:space:]]*native_bindings:[[:space:]]*registered' "$game/recomp.yml"; then
@@ -110,6 +131,12 @@ if [ "$translate" = 1 ]; then
     if [ -z "$map" ] || [ ! -f "$game/$map" ]; then
         echo "== finding $(basename "$game")'s functions"
         "$here/wiinx-scan" functions "$dol" --out "$game/functions.map"
+    fi
+    # Where it keeps the SDK's own variables (the IPC buffer, the scheduler, the retrace queue), read
+    # out of the functions just bound; every title needs them, whatever made its project.
+    if [ ! -f "$game/globals.json" ]; then
+        echo "== finding $(basename "$game")'s SDK globals"
+        python3 "$here/wiinx-find-globals" "$game" --bind --out "$game/globals.json" || true
     fi
     "$here/wiinx-translate" "$game" --threads "$jobs"
 fi
