@@ -23,6 +23,7 @@
 
 #include "abi_bridge.h"
 #include "memory.h"
+#include "guest_globals.h"
 #include "generated/RuntimeConfig.h"
 #include "ppc_runtime.h"
 #include "recomp_mod_loader.h"
@@ -347,8 +348,11 @@ void SystemBridge::Initialize() {
     // These set up vtables and other critical infrastructure
     RT_LOG(RT_TAG_RUNTIME) << "Running static constructors for main DOL..." << std::endl;
 
-    const uint32_t dolCtorStart = 0x80244DE0;
-    const uint32_t dolCtorEnd = 0x80244EA0;
+    // The executable's .ctors, where the title's globals.json gives them
+    // (os.ctorsStart/os.ctorsEnd); a title without them runs its own from its
+    // entry point, as on the console.
+    const uint32_t dolCtorStart = RuntimeGuestGlobals::find("os.ctorsStart");
+    const uint32_t dolCtorEnd = dolCtorStart != 0 ? RuntimeGuestGlobals::find("os.ctorsEnd") : 0;
 
     int dolCount = 0;
     for (uint32_t addr = dolCtorStart; addr < dolCtorEnd; addr += 4) {
@@ -386,9 +390,10 @@ void SystemBridge::Initialize() {
     // StaticR.rel ctors must be run manually since we aren't using OSLink
     RT_LOG(RT_TAG_RUNTIME) << "Running static constructors for StaticR.rel..." << std::endl;
 
-    // Define range for StaticR.rel .ctors
-    const uint32_t ctorStart = 0x8088f400;
-    const uint32_t ctorEnd = 0x8088f704;
+    // Its module's .ctors (os.relCtorsStart/os.relCtorsEnd), run here because
+    // OSLink, which would run them, is not used; none without them.
+    const uint32_t ctorStart = RuntimeGuestGlobals::find("os.relCtorsStart");
+    const uint32_t ctorEnd = ctorStart != 0 ? RuntimeGuestGlobals::find("os.relCtorsEnd") : 0;
 
     int count = 0;
     for (uint32_t addr = ctorStart; addr < ctorEnd; addr += 4) {

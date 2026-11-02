@@ -513,8 +513,10 @@ PPC_NATIVE_OVERRIDE_VOID(801A08E0, OS__SetPeriodicAlarm_801a08e0, (CpuContext* c
 // RFLiIsWorking (RFL, the Mii library) lives here because its whole job is to
 // pump this file's alarm queue: RFLInitRes spins on it waiting for async RFL
 // work that only completes when the interrupt-driven alarmCheckCb_ fires.
-// Original at 0x800BD860 reads the "working" flag at RFL manager + 0x1B34,
-// returning 0 when sRFLManager is null or not named for this game.
+// The original reads the "working" flag at RFL manager + 0x1B34, returning 0
+// when sRFLManager is null. sRFLManager is the title's (globals.json
+// rfl.sRFLManager, read by wiinx-find-globals from this function's code, which
+// also warns when a title's RFL keeps the flag elsewhere); without it, 0.
 extern "C" uint32_t RFLiIsWorking_HLE_800bd860()
 {
     // Pump alarms/callbacks on the current guest thread when available. Using a

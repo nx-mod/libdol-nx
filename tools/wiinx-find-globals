@@ -128,7 +128,7 @@ class Finder:
         named = re.search(r"function_map:\s*\n\s*path:\s*(\S+)", project)
         functions_map = self.folder / (named.group(1) if named else "functions.map")
         for line in functions_map.read_text().splitlines():
-            if line.strip():
+            if line.strip() and not line.lstrip().startswith("#"):
                 parts = line.split()
                 self.names[parts[1] if len(parts) > 1 else parts[0]] = int(parts[0], 16)
         self.functions = sorted(self.names.values())
@@ -433,9 +433,57 @@ class Finder:
                 break
             built = {}
 
+    # Bluetooth, SC, RFL ---------------------------------------------------------
+    def follow(self, start):
+        """A function that is only a branch (b target) stands for its target."""
+        w = self.dol.word(start) or 0
+        if w >> 26 == 18 and not w & 3:
+            li = w & 0x3FFFFFC
+            li = li - 0x4000000 if li & 0x2000000 else li
+            return (start + li) & 0xFFFFFFFF
+        return start
+
+    def btm(self):
+        # BTM_IsDeviceUp: return btm_cb.devcb.state == 5 - one byte load from
+        # the control block it builds with lis/addi.
+        start, ev = self.events("BTM_IsDeviceUp")
+        loads = [e for e in ev if e[0] == "load" and isinstance(e[1], int) and e[2] == 1]
+        if start and loads:
+            self.put("btm.devState", loads[0][1], f"BTM_IsDeviceUp {start:08X} reads it")
+
+    def sc(self):
+        # SCGetProductCode: SCFindByteArrayItem(item, buffer, 6) into a
+        # small-data buffer (r4), which it returns.
+        start, ev = self.events("SCGetProductCode")
+        if not start:
+            return
+        built = [e for e in ev if e[0] == "addr" and e[2] == 4 and isinstance(e[1], tuple)]
+        if built:
+            self.put("sc.productCode", self.absolute(built[0][1]), f"SCGetProductCode {start:08X} fills it")
+
+    def rfl(self):
+        # RFLiIsWorking: sRFLManager (small data) and its working flag at
+        # +0x1B34, the offset the runtime reads (os_alarm.cpp).
+        start = self.bound("RFLiIsWorking")
+        if not start:
+            return
+        body = self.follow(start)
+        ev = trace(self.dol, body, 16)
+        first = [a for k, a in self.sda(ev, ("load",))]
+        if not first:
+            return
+        self.put("rfl.sRFLManager", first[0], f"RFLiIsWorking {start:08X} reads it")
+        for i in range(16):
+            w = self.dol.word(body + 4 * i) or 0
+            if w >> 26 == 32 and (w >> 16) & 31 == 3 and (w >> 21) & 31 == 3 and w & 0xFFFF != (first[0] - self.r13) & 0xFFFF:
+                if w & 0xFFFF != 0x1B34:
+                    print(f"warning: RFLiIsWorking reads the working flag at +0x{w & 0xFFFF:X}, "
+                          f"not the runtime's +0x1B34", file=sys.stderr)
+                break
+
     def run(self):
         self.setters, self.hints = None, []
-        for step in (self.vi, self.gx, self.audio, self.os, self.nand, self.egg):
+        for step in (self.vi, self.gx, self.audio, self.os, self.nand, self.egg, self.btm, self.sc, self.rfl):
             step()
         return self
 
