@@ -173,6 +173,38 @@ int main() {
     const u8 pixel[] = {0x61, 0x41, 0x00, 0x04, 0xA1, 0x61, 0xF3, 0x3C, 0x00, 0x80};
     check("pixel command bytes", g_fifo.size() == sizeof(pixel) && std::equal(g_fifo.begin(), g_fifo.end(), pixel), 1);
 
+    std::printf("GXSetTevDirect: stage 2\n");
+    g_fifo.clear();
+    store<u16>(kGxData + 0x002, 1);
+    sdk::gx::set_tev_direct(2);
+    const u8 direct[] = {0x61, 0x12, 0x00, 0x00, 0x00};
+    check("direct command bytes", g_fifo.size() == sizeof(direct) && std::equal(g_fifo.begin(), g_fifo.end(), direct), 1);
+    check("bpSentNot cleared", load<u16>(kGxData + 0x002), 0);
+
+    std::printf("GXSetChanCtrl: COLOR0A0, lit, mat vertex, both light nibbles, clamp diffuse, spot\n");
+    store<u32>(kGxData + 0x5FC, 0);
+    sdk::gx::set_chan_ctrl(4, 1, 0, 1, 0xFF, 2, 1);
+    check("colorControl[0]", load<u32>(kGxData + 0x0B8), 0x7F3F);
+    check("colorControl[2] (the alpha channel)", load<u32>(kGxData + 0x0B8 + 8), 0x7F3F);
+    check("dirty state COLOR0|ALPHA0", load<u32>(kGxData + 0x5FC), 0x5000);
+
+    std::printf("GXSetIndTexOrder: stage 1, coord 2, map 3\n");
+    g_fifo.clear();
+    store<u32>(kGxData + 0x170, 0x27000000);  // the IREF register id in the top byte
+    store<u32>(kGxData + 0x5FC, 0);
+    sdk::gx::set_ind_tex_order(1, 2, 3);
+    check("ras1_iref", load<u32>(kGxData + 0x170), 0x270004C0);
+    check("dirty state gains bits 0,1", load<u32>(kGxData + 0x5FC), 3);
+    const u8 iref[] = {0x61, 0x27, 0x00, 0x04, 0xC0};
+    check("iref command bytes", g_fifo.size() == sizeof(iref) && std::equal(g_fifo.begin(), g_fifo.end(), iref), 1);
+
+    std::printf("GXSetIndTexCoordScale: stage 2, scaleS 5, scaleT 3\n");
+    g_fifo.clear();
+    sdk::gx::set_ind_tex_coord_scale(2, 5, 3);
+    check("ras1_ss1 (opcode 0x26 in the top byte)", load<u32>(kGxData + 0x17C), 0x26000035);
+    const u8 ss[] = {0x61, 0x26, 0x00, 0x00, 0x35};
+    check("ss command bytes", g_fifo.size() == sizeof(ss) && std::equal(g_fifo.begin(), g_fifo.end(), ss), 1);
+
     std::printf(g_failures ? "%d FAILED\n" : "all passed\n", g_failures);
     return g_failures ? 1 : 0;
 }

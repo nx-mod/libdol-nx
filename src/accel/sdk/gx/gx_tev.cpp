@@ -1,4 +1,6 @@
-// GX's TEV setters, natively: GXSetTevColorIn, GXSetTevAlphaIn, GXSetTevOrder.
+// GX's material-setup setters, natively: the TEV combiner and order registers,
+// the konstant colours, the channel control and the indirect-texture setup -
+// what nw4r::lyt::Material::SetupGX writes.
 //
 // Every layout material sets up its TEV stages each time it is drawn
 // (nw4r::lyt::Material::SetupGX calls each of these up to eight times), so a
@@ -28,6 +30,10 @@ constexpr u32 kTevOrder = 0x150;    // u32[8]: tref, two stages each
 constexpr u32 kTevTexMap = 0x5A4;   // u32[16]: the texture map each stage was given
 constexpr u32 kTevTexCoordEnabled = 0x5E8;  // u32: the stages that use a texture coordinate
 constexpr u8 kChannelTable[9] = {0, 1, 0, 1, 0, 1, 7, 5, 6};
+constexpr u32 kColorControl = 0x0B8;  // u32[4]: colorControl, one per colour/alpha channel (XF)
+constexpr u32 kRas1Iref = 0x170;      // the indirect texture reference register (BP 0x27)
+constexpr u32 kRas1Ss0 = 0x178;       // indirect stages 0,1 scale (BP 0x25)
+constexpr u32 kRas1Ss1 = 0x17C;       // indirect stages 2,3 scale (BP 0x26)
 
 void send(GuestAddr gd, GuestAddr reg) {
     {
@@ -284,6 +290,94 @@ void set_alpha_compare(u32 comp0, u32 ref0, u32 op, u32 comp1, u32 ref1) noexcep
     bp_words(gd, {value});
 }
 
+// GXSetTevDirect(stage): GXSetTevIndirect with every field zero, so the IND_CMD
+// register (0x10 + stage) with nothing set - what a material with no indirect
+// texturing writes for each stage. The full GXSetTevIndirect takes stack
+// arguments and only an indirect material needs it; it stays translated.
+void set_tev_direct(u32 stage) noexcept {
+    const GuestAddr gd = detail::data();
+    if (gd == 0) {
+        return;
+    }
+    {
+        detail::Fifo fifo;
+        fifo.bp((0x10u + stage) << 24);
+    }
+    store<u16>(gd + detail::GxData2007::kBpSentNot, 0);
+}
+
+// GXSetChanCtrl(chan, enable, ambSrc, matSrc, lightMask, diffFn, attnFn): an XF
+// channel register (ogws GXLight.c). Deferred - the dirty-state flush sends it.
+void set_chan_ctrl(u32 chan, u32 enable, u32 amb_src, u32 mat_src, u32 light_mask, u32 diff_fn,
+                   u32 attn_fn) noexcept {
+    const GuestAddr gd = detail::data();
+    if (gd == 0) {
+        return;
+    }
+    // GX_AF_SPEC = 0, GX_AF_NONE = 2 (ogws GXEnum.h)
+    u32 reg = 0;
+    reg = insert(reg, mat_src, 0, 0x1u);
+    reg = insert(reg, enable, 1, 0x2u);
+    reg = insert(reg, light_mask, 2, 0x3Cu);                    // lights 0-3
+    reg = insert(reg, amb_src, 6, 0x40u);
+    reg = insert(reg, attn_fn == 0 ? 0u : diff_fn, 7, 0x180u);  // diffuse, GX_DF_NONE when specular
+    reg = insert(reg, attn_fn != 2 ? 1u : 0u, 9, 0x200u);       // attenuation enabled
+    reg = insert(reg, attn_fn != 0 ? 1u : 0u, 10, 0x400u);      // spotlight, not specular
+    reg = insert(reg, light_mask >> 4, 11, 0x7800u);            // lights 4-7
+    const u32 idx = chan % 4;
+    store<u32>(gd + kColorControl + idx * 4, reg);
+    u32 dirty = load<u32>(gd + detail::GxData2007::kDirtyState) | (0x1000u << idx);
+    if (chan == 4) {  // GX_COLOR0A0: the matching alpha channel too
+        store<u32>(gd + kColorControl + 2 * 4, reg);
+        dirty |= 0x1000u | 0x4000u;
+    } else if (chan == 5) {  // GX_COLOR1A1
+        store<u32>(gd + kColorControl + 3 * 4, reg);
+        dirty |= 0x2000u | 0x8000u;
+    }
+    store<u32>(gd + detail::GxData2007::kDirtyState, dirty);
+}
+
+// GXSetIndTexOrder(stage, coord, map): three bits of map then of coord per
+// stage in the IREF register (ogws GXBump.c)
+void set_ind_tex_order(u32 stage, u32 coord, u32 map) noexcept {
+    const GuestAddr gd = detail::data();
+    if (gd == 0 || stage > 3) {
+        return;
+    }
+    if (static_cast<s32>(map) == 255) {
+        map = 0;  // GX_TEXMAP_NULL -> GX_TEXMAP0
+    }
+    if (static_cast<s32>(coord) == 255) {
+        coord = 0;  // GX_TEXCOORD_NULL -> GX_TEXCOORD0
+    }
+    const GuestAddr reg = gd + kRas1Iref;
+    const u32 mapShift = stage * 6;
+    u32 value = load<u32>(reg);
+    value = insert(value, map, mapShift, 0x7u << mapShift);
+    value = insert(value, coord, mapShift + 3, 0x7u << (mapShift + 3));
+    store<u32>(reg, value);  // the register id (0x27) stays in the top byte
+    send(gd, reg);
+    store<u32>(gd + detail::GxData2007::kDirtyState, load<u32>(gd + detail::GxData2007::kDirtyState) | 3u);
+}
+
+// GXSetIndTexCoordScale(stage, scaleS, scaleT): four bits each, in SS0 (stages
+// 0,1) or SS1 (stages 2,3), the register id set in the top byte
+void set_ind_tex_coord_scale(u32 stage, u32 scaleS, u32 scaleT) noexcept {
+    const GuestAddr gd = detail::data();
+    if (gd == 0 || stage > 3) {
+        return;
+    }
+    const GuestAddr reg = gd + (stage < 2 ? kRas1Ss0 : kRas1Ss1);
+    const u32 opcode = stage < 2 ? 0x25u : 0x26u;
+    const u32 shift = (stage & 1) ? 8u : 0u;
+    u32 value = load<u32>(reg);
+    value = insert(value, scaleS, shift, 0xFu << shift);
+    value = insert(value, scaleT, shift + 4, 0xFu << (shift + 4));
+    value = insert(value, opcode, 24, 0xFF000000u);
+    store<u32>(reg, value);
+    send(gd, reg);
+}
+
 namespace {
 void GXSetTevColorIn(Cpu* cpu) {
     const Host& h = host();
@@ -310,6 +404,10 @@ void GXSetNumTevStages(Cpu* c) { set_num_tev_stages(r(c, 3) & 0xFF); }
 void GXSetNumTexGens(Cpu* c) { set_num_tex_gens(r(c, 3) & 0xFF); }
 void GXSetNumChans(Cpu* c) { set_num_chans(r(c, 3) & 0xFF); }
 void GXSetNumIndStages(Cpu* c) { set_num_ind_stages(r(c, 3) & 0xFF); }
+void GXSetChanCtrl(Cpu* c) { set_chan_ctrl(r(c, 3), r(c, 4), r(c, 5), r(c, 6), r(c, 7), r(c, 8), r(c, 9)); }
+void GXSetTevDirect(Cpu* c) { set_tev_direct(r(c, 3)); }
+void GXSetIndTexOrder(Cpu* c) { set_ind_tex_order(r(c, 3), r(c, 4), r(c, 5)); }
+void GXSetIndTexCoordScale(Cpu* c) { set_ind_tex_coord_scale(r(c, 3), r(c, 4), r(c, 5)); }
 void GXSetBlendMode(Cpu* c) { set_blend_mode(r(c, 3), r(c, 4), r(c, 5), r(c, 6)); }
 void GXSetAlphaCompare(Cpu* c) { set_alpha_compare(r(c, 3), r(c, 4) & 0xFF, r(c, 5), r(c, 6), r(c, 7) & 0xFF); }
 }  // namespace
@@ -327,6 +425,10 @@ extern const Native kGxTevNatives[] = {
     WIINX_NATIVE("GXSetNumTexGens", kGx_2007_12, GXSetNumTexGens),
     WIINX_NATIVE("GXSetNumChans", kGx_2007_12, GXSetNumChans),
     WIINX_NATIVE("GXSetNumIndStages", kGx_2007_12, GXSetNumIndStages),
+    WIINX_NATIVE("GXSetChanCtrl", kGx_2007_12, GXSetChanCtrl),
+    WIINX_NATIVE("GXSetTevDirect", kGx_2007_12, GXSetTevDirect),
+    WIINX_NATIVE("GXSetIndTexOrder", kGx_2007_12, GXSetIndTexOrder),
+    WIINX_NATIVE("GXSetIndTexCoordScale", kGx_2007_12, GXSetIndTexCoordScale),
     WIINX_NATIVE("GXSetBlendMode", kGx_2007_12, GXSetBlendMode),
     WIINX_NATIVE("GXSetAlphaCompare", kGx_2007_12, GXSetAlphaCompare),
     WIINX_NATIVE("GXSetTevColorIn", kGx_2007_12, GXSetTevColorIn),

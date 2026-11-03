@@ -64,6 +64,10 @@ void set_num_tev_stages(u32 count) noexcept;
 void set_num_tex_gens(u32 count) noexcept;
 void set_num_chans(u32 count) noexcept;
 void set_num_ind_stages(u32 count) noexcept;
+void set_chan_ctrl(u32 chan, u32 enable, u32 amb_src, u32 mat_src, u32 light_mask, u32 diff_fn, u32 attn_fn) noexcept;
+void set_tev_direct(u32 stage) noexcept;
+void set_ind_tex_order(u32 stage, u32 coord, u32 map) noexcept;
+void set_ind_tex_coord_scale(u32 stage, u32 scaleS, u32 scaleT) noexcept;
 void set_blend_mode(u32 type, u32 src, u32 dst, u32 op) noexcept;
 void set_alpha_compare(u32 comp0, u32 ref0, u32 op, u32 comp1, u32 ref1) noexcept;
 }  // namespace gx
