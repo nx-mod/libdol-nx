@@ -45,7 +45,16 @@ void init_tex_obj_lod(GuestAddr obj, u32 minFilter, u32 magFilter, f64 minLod, f
 // game's, called on `cpu`
 void load_tex_obj_preloaded(Cpu* cpu, GuestAddr obj, GuestAddr region, u32 map) noexcept;
 void load_tex_obj(Cpu* cpu, GuestAddr obj, u32 map) noexcept;
+// GXSetScissor: gxData's scissor registers, and the two BP words
+void set_scissor(u32 left, u32 top, u32 width, u32 height) noexcept;
 }  // namespace gx
+
+namespace tpl {
+// TPLBind: a texture palette's offsets made pointers, once, in place.
+void bind(GuestAddr palette) noexcept;
+// TPLGet: descriptor `id` (modulo the count) of a bound palette, or 0.
+GuestAddr get(GuestAddr palette, u32 id) noexcept;
+}  // namespace tpl
 
 namespace thp {
 // THPVideoDecode(file, tileY, tileU, tileV, work) for callers that already

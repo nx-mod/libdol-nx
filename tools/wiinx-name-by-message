@@ -1,0 +1,127 @@
+#!/usr/bin/env python3
+"""Name a game's SDK functions by the messages their own code prints.
+
+    tools/wiinx-name-by-message <game.dol> <map> [--out map] [--why]
+
+The SDK reports a failure with the function's own name in front of it:
+"OSReturnToMenu(): Falied to boot system menu.", "__OSHotReset(): Falied to
+reset system." That string is in every game linking the code, mapped or not,
+and the only function whose code builds its address is the one it names. So
+each "Name(): ..." string referenced from exactly one function names that
+function, where the map has no name for it yet. A message referenced from
+several functions, or a name two functions would get, names nothing.
+
+Names are hypotheses, as wiinx-name's are: nothing is bound from them. The map
+goes to tools/wiinx-sign-natives (--by-name), whose uniqueness and --cross
+checks decide what ships (docs/signatures.md, docs/symbol-sources.md).
+"""
+import bisect
+import re
+import struct
+import sys
+
+MESSAGE = re.compile(rb"([A-Za-z_][A-Za-z0-9_]*)\(\):")
+STORES = (36, 37, 38, 39, 44, 45, 47, 52, 53, 54, 55)  # rt is a source, not overwritten
+
+
+def load_dol(path):
+    data = open(path, "rb").read()
+    sections = []
+    for i in range(18):
+        offset, address, size = (struct.unpack_from(">I", data, base + 4 * i)[0] for base in (0x00, 0x48, 0x90))
+        if size:
+            sections.append((address, offset, size, i < 7))
+    return data, sections
+
+
+def strings(data, sections):
+    """{address: name} for every "Name():" string in the data sections."""
+    found = {}
+    for address, offset, size, is_text in sections:
+        if is_text:
+            continue
+        blob = data[offset:offset + size]
+        for match in MESSAGE.finditer(blob):
+            start = match.start()
+            if start and blob[start - 1] != 0:  # a string starts after a terminator
+                continue
+            found[address + start] = match.group(1).decode()
+    return found
+
+
+def references(data, sections, wanted):
+    """{string address: [instruction addresses]}: lis rX,hi then addi/ori rY,rX,lo."""
+    refs = {}
+    for address, offset, size, is_text in sections:
+        if not is_text:
+            continue
+        high = {}
+        for i in range(0, size - 3, 4):
+            word = struct.unpack_from(">I", data, offset + i)[0]
+            op, rt, ra, imm = word >> 26, (word >> 21) & 31, (word >> 16) & 31, word & 0xFFFF
+            if op == 15 and ra == 0:  # lis
+                high[rt] = imm << 16
+                continue
+            if op in (14, 24) and ra in high:  # addi / ori
+                low = imm - 0x10000 if op == 14 and imm & 0x8000 else imm
+                target = (high[ra] + low) & 0xFFFFFFFF
+                if target in wanted:
+                    refs.setdefault(target, []).append(address + i)
+            if op not in STORES:
+                high.pop(rt, None)  # rt overwritten
+    return refs
+
+
+def read_map(path):
+    entries = []
+    for line in open(path, errors="ignore"):
+        parts = line.split()
+        if parts and re.fullmatch(r"[0-9A-Fa-f]{8}", parts[0]):
+            entries.append((int(parts[0], 16), parts[1] if len(parts) > 1 else parts[0], line.rstrip("\n")))
+    return entries
+
+
+def main(argv):
+    if len(argv) < 2:
+        print(__doc__.strip())
+        return 2
+    data, sections = load_dol(argv[0])
+    entries = read_map(argv[1])
+    starts = sorted(a for a, _, _ in entries)
+    names = {a: n for a, n, _ in entries}
+    messages = strings(data, sections)
+    refs = references(data, sections, set(messages))
+
+    proposed = {}
+    for string, sites in refs.items():
+        owners = set()
+        for site in sites:
+            i = bisect.bisect_right(starts, site) - 1
+            if i >= 0:
+                owners.add(starts[i])
+        if len(owners) == 1:
+            proposed.setdefault(messages[string], set()).add(owners.pop())
+    taken = set(names.values())
+    named = {}
+    for name, owners in proposed.items():
+        if len(owners) != 1 or name in taken:
+            continue
+        owner = owners.pop()
+        if re.fullmatch(r"(0x)?[0-9A-Fa-f]{8}", names.get(owner, "")):
+            named.setdefault(owner, []).append(name)
+    named = {owner: ns[0] for owner, ns in named.items() if len(ns) == 1}
+
+    if "--why" in argv:
+        for owner, name in sorted(named.items()):
+            print(f"{owner:08x} {name}")
+    print(f"{len(messages)} messages, {len(named)} functions named", file=sys.stderr)
+    if "--out" in argv:
+        out = argv[argv.index("--out") + 1]
+        with open(out, "w") as handle:
+            for address, name, line in entries:
+                handle.write(f"{address:08x} {named[address]}\n" if address in named else line + "\n")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

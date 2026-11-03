@@ -49,6 +49,37 @@ std::span<const std::span<const Native>> native_tables() noexcept {
 }
 }  // namespace detail
 
+namespace {
+// A game binds a few dozen natives; they are set once at startup.
+struct BoundEntry {
+    std::string_view name;
+    Bound bound;
+};
+std::array<BoundEntry, 512> g_bound{};
+std::size_t g_boundCount = 0;
+}  // namespace
+
+void set_bound(std::string_view name, GuestAddr address, std::span<const GuestAddr> calls) noexcept {
+    for (std::size_t i = 0; i < g_boundCount; ++i) {
+        if (g_bound[i].name == name) {
+            g_bound[i].bound = {address, calls};
+            return;
+        }
+    }
+    if (g_boundCount < g_bound.size()) {
+        g_bound[g_boundCount++] = {name, {address, calls}};
+    }
+}
+
+const Bound* bound(std::string_view name) noexcept {
+    for (std::size_t i = 0; i < g_boundCount; ++i) {
+        if (g_bound[i].name == name) {
+            return &g_bound[i].bound;
+        }
+    }
+    return nullptr;
+}
+
 const Native* find_native(std::string_view name, std::string_view version_id) noexcept {
     for (std::span<const Native> table : detail::native_tables()) {
         for (const Native& native : table) {

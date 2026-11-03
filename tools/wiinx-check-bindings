@@ -125,7 +125,15 @@ def main(argv):
     if len(projects) < 2:
         print(__doc__.strip())
         return 2
-    titles = [Title(p) for p in projects]
+    # a project whose executable is not there yet (a disc not extracted) has
+    # nothing to compare: said, and left out
+    present = []
+    for project in projects:
+        if os.path.exists(dol_path(project)):
+            present.append(project)
+        else:
+            print(f"{project}: no executable at {dol_path(project)}, left out")
+    titles = [Title(p) for p in present]
     flagged = 0
 
     for title in titles:

@@ -3,6 +3,7 @@
 
 #include "dk.h"
 #include "memory.h"
+#include "runtime_config.h"
 #include "switch_layout.h"
 
 #include "wiinx/format/gx/command.hpp"
@@ -14,6 +15,7 @@
 #include <condition_variable>
 #include <cstring>
 #include <array>
+#include <atomic>
 #include <deque>
 #include <mutex>
 #include <thread>
@@ -23,6 +25,32 @@ void SwitchPinCurrentThread(int core) noexcept;  // (app/switch/switch_thread_st
 
 namespace dol::gx_native {
 namespace {
+
+// Where a frame's time goes, for the once-a-second line: the render thread's
+// work (the command processor, whose draws convert vertices, and the GPU draws
+// it sends) and the game thread's (the FIFO bytes it writes, and how long it
+// waits for the render thread: GXDrawDone, and the one frame in flight). A
+// title slow only where it draws thousands of small strips is told apart here.
+struct Timing {
+  uint64_t cp = 0, gpu = 0, busy = 0;  // (render thread) ticks
+  uint64_t lists = 0, listBytes = 0;   // (render thread) display lists called
+  // (game thread; the FIFO counts only grow, written by it alone: a plain
+  // load and store, as the gather pipe writes them a word at a time)
+  std::atomic<uint64_t> fifoBytes{0}, fifoWrites{0}, drawDoneWait{0}, frameWait{0};
+} g_timing;
+
+uint64_t ticks_us(uint64_t ticks) { return armTicksToNs(ticks) / 1000; }
+
+struct Ticks {  // adds the ticks it lives for to `into`
+  uint64_t& into;
+  const uint64_t start = armGetSystemTick();
+  ~Ticks() { into += armGetSystemTick() - start; }
+};
+struct AtomicTicks {
+  std::atomic<uint64_t>& into;
+  const uint64_t start = armGetSystemTick();
+  ~AtomicTicks() { into.fetch_add(armGetSystemTick() - start, std::memory_order_relaxed); }
+};
 
 // a hardware (physical) address as a pointer into guest memory, as libdol's
 // GX code reads CP array bases: cached MEM1/MEM2 first
@@ -64,6 +92,12 @@ struct Renderer {
   bool clearNext = true;
   uint32_t width = 0, height = 0;
   Counts counts;
+  // (debug.gx_trace) every 300th frame, twenty at most, written out in full:
+  // each batch's primitive, size, line width, viewport, scissor, texture 0 and
+  // first vertices, and each copy's source and target - what a picture is
+  // made of, read rather than guessed (logs/gx_trace_<frame>.txt)
+  FILE* trace = nullptr;
+  uint32_t traces = 0;
   dk::Texture* screen = nullptr;  // the swapchain image being presented (present_now)
   // The XFBs display copies went to, as images: VI shows one of them from the
   // flip on, so a copy is only drawn here and presented at VIFlush. A game may
@@ -177,11 +211,33 @@ struct Renderer {
     }
   }
 
+  void trace_batch() {
+    const auto& vp = state.Viewport();
+    const uint32_t lpsize = state.Bp(0x22);
+    const float scale = std::max(static_cast<float>(width) / 640.0f, static_cast<float>(height) / 480.0f);
+    std::fprintf(trace,
+                 "draw %u batch %02X: %u vertices, %zu indices; line %u/6 (%.2f px), point %u/6; "
+                 "viewport %.1f %.1f %.1f / %.1f %.1f %.1f; scissor %06X %06X offset %06X; "
+                 "tex0 mode %06X image %06X; colour %s alpha %s\n",
+                 frameDraws, batch.primitive, batch.count, batch.indices.size(), lpsize & 0xFF,
+                 (lpsize & 0xFF) / 6.0f * scale, (lpsize >> 8) & 0xFF, vp[0], vp[1], vp[2], vp[3], vp[4], vp[5],
+                 state.Bp(0x20), state.Bp(0x21), state.Bp(0x59), state.Bp(0x80), state.Bp(0x88),
+                 state.Pixel().colorWrite ? "on" : "off", state.Pixel().alphaWrite ? "on" : "off");
+    for (uint32_t i = 0; i < batch.count && i < 4; ++i) {
+      const float* v = batch.vertices.data() + static_cast<size_t>(i) * wiinx::gx::kVertexFloats;
+      std::fprintf(trace, "  v%u pos %.3f %.3f %.3f uv %.4f %.4f mtx %.0f\n", i, v[0], v[1], v[2], v[14], v[15], v[30]);
+    }
+  }
+
   void send_batch() {
     if (batch.count == 0) {
       return;
     }
+    if (trace) {
+      trace_batch();
+    }
     if (!batch.indices.empty()) {
+      const Ticks timed{g_timing.gpu};
       (dk::draw_converted(state, batch.primitive, batch.vertices.data(), batch.count, width, height, memory,
                           batch.indices.data(), static_cast<uint32_t>(batch.indices.size()))
            ? counts.batches : counts.refused)++;
@@ -310,6 +366,7 @@ void flush_now() {
   if (r.pending.empty()) {
     return;
   }
+  const Ticks timed{g_timing.cp};
   const size_t ran = r.processor.Run(r.pending.data(), r.pending.size());
   // (whatever is left is a packet still arriving - or bytes that are not a
   // command at all, which would hold everything after them; those are let go
@@ -333,6 +390,9 @@ void call_list_now(uint32_t address, uint32_t size) {
   Renderer& r = renderer();
   flush_now();  // what the FIFO set before the call is the list's state
   if (const uint8_t* list = guest_bytes(address, size)) {
+    const Ticks timed{g_timing.cp};
+    ++g_timing.lists;
+    g_timing.listBytes += size;
     r.processor.Run(list, size);
   }
 }
@@ -364,6 +424,14 @@ void begin_frame() {
   uint32_t imageWidth = 0, imageHeight = 0;
   dk::screen_image_size(&imageWidth, &imageHeight);
   const uint32_t allocatedRows = imageHeight * 528 / 480;
+  const uint32_t shownWidth = screenWidth, shownHeight = screenHeight;
+  // (graphics.efb_scale) a whole number of host pixels to the Wii's instead of
+  // the screen's 1.5 or 2.25: a picture drawn small, copied out and scaled up
+  // (Mega Man 9's 256x240) then keeps every row. Present stretches it after.
+  if (const int32_t k = RuntimeConfigFile::EfbScale(); k > 0) {
+    screenWidth = std::min<uint32_t>(640u * static_cast<uint32_t>(k), imageWidth);
+    screenHeight = std::min<uint32_t>(480u * static_cast<uint32_t>(k), imageHeight);
+  }
   if (!r.efb.block) {
     r.efb = dk::create_texture(DkImageFormat_RGBA8_Unorm, imageWidth, allocatedRows, 1, 1, 1, dk::TextureRender);
     r.efbView = dk::make_view(r.efb);
@@ -397,6 +465,17 @@ void begin_frame() {
   r.height = height;
   r.lastFrameDraws = r.frameDraws;
   r.frameDraws = 0;
+  if (!r.trace && r.traces < 20 && r.frameNumber != 0 && r.frameNumber % 300 == 0 &&
+      RuntimeConfigFile::GxTraceEnabled()) {
+    char path[128];
+    std::snprintf(path, sizeof(path), WIINX_GAME_PATH("logs/gx_trace_%u.txt"), r.frameNumber);
+    if ((r.trace = std::fopen(path, "w")) != nullptr) {
+      ++r.traces;
+      std::fprintf(r.trace, "frame %u: EFB %ux%u (%u rows) for a screen of %ux%u, scale %.3f x %.3f; display source %u,%u %ux%u\n",
+                   r.frameNumber, r.width, r.height, r.efbRows, shownWidth, shownHeight, r.width / 640.0f,
+                   r.height / 480.0f, r.displayLeft, r.displayTop, r.displayWidth, r.displayHeight);
+    }
+  }
   r.frameCopies = 0;
   r.snapFrame = kSnapshots && dk::probing() && r.lastFrameDraws > kSnapDraws && r.snapFramesDone < kSnapFrames;
 }
@@ -547,6 +626,10 @@ void copy_display_now(uint32_t address, bool clear) {
     }
   }
   r.clearNext = clear;
+  if (r.trace) {
+    std::fprintf(r.trace, "display copy after draw %u: XFB 0x%08X from %u,%u %ux%u%s\n", r.frameDraws, address,
+                 r.displayLeft, r.displayTop, r.displayWidth, r.displayHeight, clear ? " clear" : "");
+  }
   ++r.frameNumber;
   if (!r.snaps.empty()) {
     dk::wait_idle();
@@ -602,6 +685,32 @@ void copy_display_now(uint32_t address, bool clear) {
     }
     top[at] = '\0';
     dk::log("gx-native: apart: %u strips/fans (merged), %u splits:%s", total.alone, total.split, top);
+    static uint64_t last = armGetSystemTick();
+    const uint64_t now = armGetSystemTick();
+    const uint64_t cp = g_timing.cp, gpu = g_timing.gpu;
+    static uint64_t bytesBefore = 0, writesBefore = 0;
+    const uint64_t bytes = g_timing.fifoBytes.load(std::memory_order_relaxed);
+    const uint64_t writes = g_timing.fifoWrites.load(std::memory_order_relaxed);
+    // (the GPU draws are sent from inside the command processor's run: its own
+    // share is the difference)
+    dk::log("gx-native: time: last 60 frames in %llu ms; render thread busy %llu ms (commands %llu, GPU draws "
+            "%llu); game thread waited %llu ms in GXDrawDone, %llu ms for the frame before; FIFO %llu KB in %llu "
+            "writes; %llu display lists, %llu KB",
+            static_cast<unsigned long long>(ticks_us(now - last) / 1000),
+            static_cast<unsigned long long>(ticks_us(g_timing.busy) / 1000),
+            static_cast<unsigned long long>(ticks_us(cp > gpu ? cp - gpu : 0) / 1000),
+            static_cast<unsigned long long>(ticks_us(gpu) / 1000),
+            static_cast<unsigned long long>(ticks_us(g_timing.drawDoneWait.exchange(0)) / 1000),
+            static_cast<unsigned long long>(ticks_us(g_timing.frameWait.exchange(0)) / 1000),
+            static_cast<unsigned long long>((bytes - bytesBefore) / 1024),
+            static_cast<unsigned long long>(writes - writesBefore),
+            static_cast<unsigned long long>(g_timing.lists),
+            static_cast<unsigned long long>(g_timing.listBytes / 1024));
+    last = now;
+    bytesBefore = bytes;
+    writesBefore = writes;
+    g_timing.cp = g_timing.gpu = g_timing.busy = 0;
+    g_timing.lists = g_timing.listBytes = 0;
     std::fill(r.splits.begin(), r.splits.end(), 0u);
     total = {};
   }
@@ -629,6 +738,11 @@ void present_now(uint32_t address) {
   dk::Texture& screen = dk::acquire_screen();
   r.screen = &screen;
   r.screenView = dk::make_view(screen);
+  if (r.trace) {
+    std::fprintf(r.trace, "present XFB 0x%08X\n", address);
+    std::fclose(r.trace);
+    r.trace = nullptr;
+  }
   const Renderer::Xfb* shown = nullptr;
   for (const auto& slot : r.xfbs) {
     if (address != 0 && slot.address == address && slot.image.block && slot.width != 0) {
@@ -743,6 +857,15 @@ void copy_tex_now(uint32_t address, uint16_t left, uint16_t top, uint16_t srcWid
     return;
   }
   DkImageRect source{x0, y0, 0, x1 - x0, y1 - y0, 1};
+  if (r.trace) {
+    std::fprintf(r.trace,
+                 "copy after draw %u: 0x%08X %ux%u format %u%s from %u,%u %ux%u (host %u,%u %ux%u, %.3f host rows a texel row); "
+                 "filter %u %u %u %u %u %u %u\n",
+                 r.frameDraws, address, width, height, format, clear ? " clear" : "", left, top, srcWidth, srcHeight, x0,
+                 y0, x1 - x0, y1 - y0, static_cast<float>(y1 - y0) / height, vfilter ? vfilter[0] : 0,
+                 vfilter ? vfilter[1] : 0, vfilter ? vfilter[2] : 0, vfilter ? vfilter[3] : 0, vfilter ? vfilter[4] : 0,
+                 vfilter ? vfilter[5] : 0, vfilter ? vfilter[6] : 0);
+  }
   // (diagnosis) the first time each copy address is seen, in any frame: the
   // EFB just before it and what it is - a Mii's face or icon, a map, made at a
   // load and never again (snap_<frame>_6<nnn>, nnn the copy's number in the run)
@@ -867,7 +990,10 @@ void loop() {
     g_thread.queue.pop_front();
     g_thread.busy = true;
     held.unlock();
-    run(p);
+    {
+      const Ticks timed{g_timing.busy};
+      run(p);
+    }
     held.lock();
     g_thread.busy = false;
     if (p.kind == Packet::Kind::EndFrame) {
@@ -922,6 +1048,8 @@ void write(const uint8_t* data, size_t size) {
     write_now(data, size);
     return;
   }
+  g_timing.fifoBytes.store(g_timing.fifoBytes.load(std::memory_order_relaxed) + size, std::memory_order_relaxed);
+  g_timing.fifoWrites.store(g_timing.fifoWrites.load(std::memory_order_relaxed) + 1, std::memory_order_relaxed);
   g_thread.pending.insert(g_thread.pending.end(), data, data + size);
   if (g_thread.pending.size() >= kRunBatch) {
     push_bytes();
@@ -935,6 +1063,7 @@ void flush() {
   }
   push_bytes();
   if (kDrawDoneWaits) {
+    const AtomicTicks timed{g_timing.drawDoneWait};
     wait_idle();
   }
 }
@@ -1024,6 +1153,7 @@ void end_frame(uint32_t xfb) {
   p.a = xfb;
   push(std::move(p));
   // one frame in flight at most: the game draws the next while this one renders
+  const AtomicTicks timed{g_timing.frameWait};
   std::unique_lock<std::mutex> held(g_thread.lock);
   ++g_thread.framesQueued;
   g_thread.idle.wait(held, [] { return g_thread.framesDone + 1 >= g_thread.framesQueued; });

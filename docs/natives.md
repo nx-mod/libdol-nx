@@ -100,6 +100,47 @@ that build, and leaves alone any native a hand-written binding already claims -
 some need setup the generated form cannot know about, like the layout pane's
 resume address.
 
+A library a game links with no banner of its own (Bomberman Blast's nw4r.lyt)
+still has a build, and its code says which: a signature records the struct
+fields its function uses (`fields`, `wiinx-scan field_fingerprint` - a hash, no
+code), and where the game's bound function uses exactly those of a signature
+taken from a game whose banner names build B of that library, the game is laid
+out as B. Builds that all fit are the same layout as far as the game's code can
+tell: the one with natives for most of its functions is taken, then the one
+nearest the release of the library's package - nw4r ships as one, so
+Bomberman Blast's EF, G3D and SND banners (Nov 15 2007) date its LYT, which
+fits both 2008-03 and 2009-04 and is given 2008-03. A native the game has but
+cannot be given - another build, none proven - is named with the reason
+(`withheld:`), never skipped silently.
+
+### Where a game binds a native, for the native
+
+The generated bindings register every native they bind at startup
+(`wiinx::set_bound`): the guest address, and the return address after each
+indirect call (`bctrl`) the original makes, in code order, read from the game's
+own code. A native asks with `wiinx::bound(name)`:
+
+- whether a vtable entry is one of its own natives - a layout pane's child, a
+  material's animation - so the walk recurses natively instead of leaving
+  through the guest dispatcher and coming back;
+- where the original's nth call returns, for a call back into the game
+  (`wiinx::call_guest(cpu, target, binding, n)`, `Host::call_from`): some
+  callees resume through lr, and natives that call each other directly would
+  otherwise leave the wrong one.
+
+This replaced a per-native setup table and one resume address per call
+(2026-11-03): a library of natives nests, and each needs its own.
+
+### Overloads
+
+Two functions with one name - `AnimTransformBasic::Animate(u32, Pane*)` and
+`(u32, Material*)` - are named with their parameters as the demangler writes
+them: `nw4r::lyt::AnimTransformBasic::Animate(unsigned long, nw4r::lyt::Pane*)`.
+`wiinx-sign-natives` reads mangled map names through `tools/cwdemangle.py`, so
+a published map (New Super Mario Bros. Wii's) signs them by name; a map of ours,
+demangled without parameters, cannot tell them apart, and near-map finds them
+there instead.
+
 So adding a native is three things: write it, list it in the module's table,
 and sign it once from a game whose symbols are known. Every other game picks it
 up, with or without a map of its own - Punch-Out!!, which has none, binds them

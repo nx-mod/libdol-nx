@@ -79,7 +79,18 @@ the code it belongs to.
 A project with no licence is read, not taken from, and nothing derived from one
 is committed here.
 
-## 4. The set itself
+## 4. The game's own messages
+
+The SDK prints a failure with the function's name in front of it -
+"OSReturnToMenu(): Falied to boot system menu." - and that string is in every
+game that links the code. `tools/wiinx-name-by-message` names the one function
+whose code builds each such string's address, where the map has no name yet. On
+2026-11-02 it named `OSReturnToMenu`, `OSReturnToDataManager` and
+`OSLaunchManualViewer` in Bomberman Blast and Mega Man 9, which no map or symbol
+set had. Like every name here, a hypothesis until `wiinx-sign-natives --by-name
+--cross` verifies it.
+
+## 5. The set itself
 
 Every game signed adds to `data/symbols.json.gz`, and the set names the next
 game nobody has mapped. What it is worth is measured in

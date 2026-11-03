@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+"""Make a project's functions.map again, with today's tools.
+
+    tools/wiinx-refresh-map <project> [--dry-run]
+
+The map is generated, never written by hand, and the tools that make it keep
+getting better: the symbol set names more as games are signed, and new name
+sources arrive. So a project made weeks ago has a poorer map than the same tools
+would make now. This makes it the way wiinx-new-title and wiinx-new-game do:
+
+  1. wiinx-scan functions     where the executable's functions start
+  2. wiinx-name               names from the symbol set (data/symbols.json.gz)
+  3. wiinx-name-by-message    the SDK functions that print their own name
+  4. wiinx-rso build          a title's modules' blocks, where it has modules
+
+for the executable recomp.yml translates. A published map the project keeps
+beside it (MAP.txt) is not touched. The function starts decide where the
+translator splits functions, so a refreshed map wants a full retranslate.
+"""
+import os
+import re
+import subprocess
+import sys
+import tempfile
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+def executable(project):
+    text = open(os.path.join(project, "recomp.yml"), errors="ignore").read()
+    match = re.search(r"dol:\s*\n\s*path:\s*(\S+)", text)
+    return os.path.join(project, match.group(1)) if match else None
+
+
+def read(path):
+    entries = {}
+    if os.path.exists(path):
+        for line in open(path, errors="ignore"):
+            parts = line.split()
+            if len(parts) >= 2 and re.fullmatch(r"[0-9A-Fa-f]{8}", parts[0]):
+                entries[int(parts[0], 16)] = parts[1]
+    return entries
+
+
+def named(entries):
+    return sum(1 for a, n in entries.items() if not re.fullmatch(r"(0x)?[0-9A-Fa-f]{8}", n))
+
+
+def tool(name, *args):
+    subprocess.run([sys.executable, os.path.join(HERE, name), *args], check=True,
+                   stdout=subprocess.DEVNULL)
+
+
+def main(argv):
+    if not argv or argv[0].startswith("-"):
+        print(__doc__.strip())
+        return 2
+    project = os.path.abspath(argv[0])
+    dol = executable(project)
+    if not dol or not os.path.exists(dol):
+        print(f"{project}: no executable to scan ({dol})", file=sys.stderr)
+        return 1
+    target = os.path.join(project, "functions.map")
+    before = read(target)
+    # (a map that is only wiinx-rso's module blocks has none of the program's own)
+    with tempfile.TemporaryDirectory() as scratch:
+        starts = os.path.join(scratch, "starts.map")
+        names = os.path.join(scratch, "names.map")
+        merged = os.path.join(scratch, "functions.map")
+        tool("wiinx-scan", "functions", dol, "--out", starts)
+        tool("wiinx-name", dol, "--out", names)
+        known = read(names)
+        with open(merged, "w") as out:
+            for address, name in sorted(read(starts).items()):
+                out.write(f"{address:08x} {known.get(address, name)}\n")
+        tool("wiinx-name-by-message", dol, merged, "--out", merged)
+        after = read(merged)
+        print(f"{os.path.basename(project)}: {len(before)} starts, {named(before)} named "
+              f"-> {len(after)} starts, {named(after)} named")
+        if "--dry-run" in argv:
+            return 0
+        with open(merged) as src, open(target, "w") as dst:
+            dst.write(src.read())
+    if os.path.exists(os.path.join(project, "modules.json")):
+        tool("wiinx-rso", "build", project)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

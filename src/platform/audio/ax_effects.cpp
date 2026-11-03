@@ -3,6 +3,7 @@
 #include "hle_stubs.h"
 #include "memory.h"
 #include "ppc_runtime.h"
+#include "runtime_log.h"
 
 #include <cmath>
 #include <cstddef>
@@ -13,9 +14,11 @@
 
 extern "C" __attribute__((weak)) void func_8012B830(CpuContext* ctx);
 
-#if defined(__clang__)
 // PowerPC uses discrete fmuls/fadds; a fused multiply-add would change sample rounding.
+#if defined(__clang__)
 #pragma clang fp contract(off)
+#elif defined(__GNUC__)
+#pragma GCC optimize("fp-contract=off")
 #endif
 
 namespace {
@@ -334,6 +337,282 @@ void Render(uint32_t stateAddr, Frame& frame) {
 }
 
 } // namespace ReverbStd
+
+// AXFX_REVERBHI_EXP, the "Hi" reverb nw4r's FxReverbHi runs every audio frame
+// (Bomberman Blast spent a third of its time in it, translated): early
+// reflections, an optional pre-delay, three combs, two allpasses shared in
+// coefficient, a low-pass, a third allpass per channel, then crosstalk between
+// the three channels. Read from the SDK's callback instruction by instruction;
+// every product and sum is its own single-precision step, as the guest's are.
+namespace ReverbHi {
+
+constexpr uint32_t kSamplesPerFrame = 96;
+constexpr uint32_t kChannels = 3;
+constexpr float kOne = 1.0f;
+constexpr float kWetScale = 0.6f;       // .sdata2: the wet send's pre-scale
+constexpr float kCrosstalkScale = 0.5f; // .sdata2: the crosstalk's
+
+// field offsets into the struct in r4
+constexpr uint32_t kEarlyLines = 0x00;      // + channel * 4
+constexpr uint32_t kEarlyPos = 0x0C;        // three taps, + tap * 4
+constexpr uint32_t kEarlyLength = 0x18;
+constexpr uint32_t kEarlyCoef = 0x20;       // + tap * 4
+constexpr uint32_t kPreDelayLines = 0x2C;   // + channel * 4
+constexpr uint32_t kPreDelayPos = 0x38;
+constexpr uint32_t kPreDelayLength = 0x3C;  // 0: no pre-delay
+constexpr uint32_t kCombLines = 0x44;       // + channel * 12 + comb * 4
+constexpr uint32_t kCombPos = 0x68;         // + comb * 4
+constexpr uint32_t kCombLength = 0x74;      // + comb * 4
+constexpr uint32_t kCombCoef = 0x8C;        // + comb * 4
+constexpr uint32_t kAllpassLines = 0x98;    // + channel * 8 + allpass * 4
+constexpr uint32_t kAllpassPos = 0xB0;      // + allpass * 4
+constexpr uint32_t kAllpassLength = 0xB8;   // + allpass * 4
+constexpr uint32_t kLastLines = 0xC8;       // + channel * 4: the third allpass, one per channel
+constexpr uint32_t kLastPos = 0xD4;         // + channel * 4
+constexpr uint32_t kLastLength = 0xE0;      // + channel * 4
+constexpr uint32_t kAllpassCoef = 0xF8;
+constexpr uint32_t kLowPassHistory = 0xFC;  // + channel * 4
+constexpr uint32_t kLowPassCoef = 0x108;
+constexpr uint32_t kFlags = 0x10C;
+constexpr uint32_t kCrosstalk = 0x12C;
+constexpr uint32_t kWet = 0x134;
+constexpr uint32_t kBusIn = 0x138;
+constexpr uint32_t kBusOut = 0x13C;
+constexpr uint32_t kOutGain = 0x140;
+constexpr uint32_t kBusOutGain = 0x144;
+constexpr uint32_t kStructBytes = 0x148;
+
+struct Line {
+    uint8_t* data = nullptr;
+    uint32_t pos = 0;
+    uint32_t length = 0;
+};
+
+struct Frame {
+    uint8_t* main[kChannels]{};
+    const uint8_t* busIn[kChannels]{};
+    uint8_t* busOut[kChannels]{};
+    uint8_t* early[kChannels]{};
+    uint32_t earlyPos[3]{};
+    uint32_t earlyLength = 0;
+    float earlyCoef[3]{};
+    uint8_t* preDelay[kChannels]{};
+    uint32_t preDelayPos = 0, preDelayLength = 0;
+    uint8_t* comb[kChannels][3]{};
+    uint32_t combPos[3]{}, combLength[3]{};
+    float combCoef[3]{};
+    uint8_t* allpass[kChannels][2]{};
+    uint32_t allpassPos[2]{}, allpassLength[2]{};
+    Line last[kChannels];
+    float allpassCoef = 0.0f;
+    float lowPass[kChannels]{};
+    float lowPassCoef = 0.0f;
+    float crosstalk = 0.0f, wet = 0.0f, outGain = 0.0f, busOutGain = 0.0f;
+};
+
+// A line of `length` floats at the guest address in `field`, its position below its length.
+uint8_t* LineAt(uint32_t field, uint32_t length) {
+    return length == 0 ? nullptr
+                       : ReverbStd::ResolveGuestThreadRange(Memory::Read32(field), static_cast<size_t>(length) * sizeof(float));
+}
+
+bool BuildFrame(uint32_t buffersAddr, uint32_t rev, Frame& f) {
+    if (buffersAddr == 0 || rev == 0 || !Memory::Contains(rev, kStructBytes)) {
+        return false;
+    }
+    constexpr size_t kFrameBytes = kSamplesPerFrame * sizeof(int32_t);
+    const uint32_t busIn = Memory::Read32(rev + kBusIn), busOut = Memory::Read32(rev + kBusOut);
+    for (uint32_t ch = 0; ch < kChannels; ++ch) {
+        if (!(f.main[ch] = ReverbStd::ResolveGuestThreadRange(Memory::Read32(buffersAddr + ch * 4), kFrameBytes))) {
+            return false;
+        }
+        if (busIn && !(f.busIn[ch] = ReverbStd::ResolveGuestThreadRange(Memory::Read32(busIn + ch * 4), kFrameBytes))) {
+            return false;
+        }
+        if (busOut && !(f.busOut[ch] = ReverbStd::ResolveGuestThreadRange(Memory::Read32(busOut + ch * 4), kFrameBytes))) {
+            return false;
+        }
+    }
+    f.earlyLength = Memory::Read32(rev + kEarlyLength);
+    f.preDelayLength = Memory::Read32(rev + kPreDelayLength);
+    f.preDelayPos = Memory::Read32(rev + kPreDelayPos);
+    if (f.preDelayLength != 0 && f.preDelayPos >= f.preDelayLength) {
+        return false;
+    }
+    for (uint32_t i = 0; i < 3; ++i) {
+        f.earlyPos[i] = Memory::Read32(rev + kEarlyPos + i * 4);
+        f.earlyCoef[i] = Memory::ReadFloat32(rev + kEarlyCoef + i * 4);
+        f.combPos[i] = Memory::Read32(rev + kCombPos + i * 4);
+        f.combLength[i] = Memory::Read32(rev + kCombLength + i * 4);
+        f.combCoef[i] = Memory::ReadFloat32(rev + kCombCoef + i * 4);
+        if (f.earlyPos[i] >= f.earlyLength || f.combPos[i] >= f.combLength[i]) {
+            return false;
+        }
+    }
+    for (uint32_t i = 0; i < 2; ++i) {
+        f.allpassPos[i] = Memory::Read32(rev + kAllpassPos + i * 4);
+        f.allpassLength[i] = Memory::Read32(rev + kAllpassLength + i * 4);
+        if (f.allpassPos[i] >= f.allpassLength[i]) {
+            return false;
+        }
+    }
+    for (uint32_t ch = 0; ch < kChannels; ++ch) {
+        if (!(f.early[ch] = LineAt(rev + kEarlyLines + ch * 4, f.earlyLength))) {
+            return false;
+        }
+        if (f.preDelayLength != 0 &&
+            !(f.preDelay[ch] = LineAt(rev + kPreDelayLines + ch * 4, f.preDelayLength))) {
+            return false;
+        }
+        for (uint32_t i = 0; i < 3; ++i) {
+            if (!(f.comb[ch][i] = LineAt(rev + kCombLines + ch * 12 + i * 4, f.combLength[i]))) {
+                return false;
+            }
+        }
+        for (uint32_t i = 0; i < 2; ++i) {
+            if (!(f.allpass[ch][i] = LineAt(rev + kAllpassLines + ch * 8 + i * 4, f.allpassLength[i]))) {
+                return false;
+            }
+        }
+        Line& last = f.last[ch];
+        last.length = Memory::Read32(rev + kLastLength + ch * 4);
+        last.pos = Memory::Read32(rev + kLastPos + ch * 4);
+        if (last.pos >= last.length || !(last.data = LineAt(rev + kLastLines + ch * 4, last.length))) {
+            return false;
+        }
+        f.lowPass[ch] = Memory::ReadFloat32(rev + kLowPassHistory + ch * 4);
+    }
+    f.allpassCoef = Memory::ReadFloat32(rev + kAllpassCoef);
+    f.lowPassCoef = Memory::ReadFloat32(rev + kLowPassCoef);
+    f.crosstalk = Memory::ReadFloat32(rev + kCrosstalk);
+    f.wet = Memory::ReadFloat32(rev + kWet);
+    f.outGain = Memory::ReadFloat32(rev + kOutGain);
+    f.busOutGain = Memory::ReadFloat32(rev + kBusOutGain);
+    return true;
+}
+
+// One delay line tap: read the slot `pos` floats in, write `value` there, return the read.
+inline float Swap(uint8_t* line, uint32_t pos, float value) {
+    uint8_t* const slot = line + pos * 4u;
+    const float tap = ReverbStd::LoadFloat(slot);
+    ReverbStd::StoreFloat(slot, value);
+    return tap;
+}
+
+inline void Advance(uint32_t& pos, uint32_t length) {
+    pos = pos + 1u < length ? pos + 1u : 0u;
+}
+
+void Render(uint32_t rev, Frame& f) {
+    const float oneMinusLowPass = kOne - f.lowPassCoef;
+    const float wet = kWetScale * f.wet;
+    const float crosstalk = kCrosstalkScale * f.crosstalk;
+    const float ap = f.allpassCoef;
+    for (uint32_t sample = 0; sample < kSamplesPerFrame; ++sample) {
+        const uint32_t at = sample * 4u;
+        float out[kChannels];
+        for (uint32_t ch = 0; ch < kChannels; ++ch) {
+            int32_t raw = ReverbStd::LoadS32(f.main[ch] + at);
+            if (f.busIn[ch]) {
+                raw = static_cast<int32_t>(static_cast<uint32_t>(ReverbStd::LoadS32(f.busIn[ch] + at)) +
+                                           static_cast<uint32_t>(raw));
+            }
+            const float in = static_cast<float>(raw);
+
+            // early reflections: three taps, the input written at the third
+            const float e0 = ReverbStd::LoadFloat(f.early[ch] + f.earlyPos[0] * 4u) * f.earlyCoef[0];
+            const float e1 = ReverbStd::LoadFloat(f.early[ch] + f.earlyPos[1] * 4u) * f.earlyCoef[1];
+            const float t2 = Swap(f.early[ch], f.earlyPos[2], in);
+            const float e2 = f.earlyCoef[2] * t2;
+            const float e01 = e0 + e1;
+            const float early = e2 + e01;
+
+            const float x = f.preDelayLength != 0 ? Swap(f.preDelay[ch], f.preDelayPos, in) : in;
+
+            float acc = 0.0f;
+            for (uint32_t i = 0; i < 3; ++i) {
+                uint8_t* const slot = f.comb[ch][i] + f.combPos[i] * 4u;
+                const float tap = ReverbStd::LoadFloat(slot);
+                const float feedback = tap * f.combCoef[i];
+                acc = acc + tap;
+                ReverbStd::StoreFloat(slot, x + feedback);
+            }
+
+            uint8_t* const a1 = f.allpass[ch][0] + f.allpassPos[0] * 4u;
+            const float t1 = ReverbStd::LoadFloat(a1);
+            const float s1 = acc + t1 * ap;
+            ReverbStd::StoreFloat(a1, s1);
+            const float o1 = t1 - s1 * ap;
+
+            uint8_t* const a2 = f.allpass[ch][1] + f.allpassPos[1] * 4u;
+            const float t2b = ReverbStd::LoadFloat(a2);
+            const float s2 = o1 + t2b * ap;
+            ReverbStd::StoreFloat(a2, s2);
+            const float s2ap = s2 * ap;
+            const float o2 = t2b - s2ap;
+
+            const float held = f.lowPassCoef * f.lowPass[ch];
+            const float fresh = oneMinusLowPass * o2;
+            const float y = fresh + held;
+            f.lowPass[ch] = y;
+
+            Line& last = f.last[ch];
+            uint8_t* const a3 = last.data + last.pos * 4u;
+            const float t3 = ReverbStd::LoadFloat(a3);
+            const float s3 = y + t3 * ap;
+            ReverbStd::StoreFloat(a3, s3);
+            const float s3ap = s3 * ap;
+            const float o3 = t3 - s3ap;
+            Advance(last.pos, last.length);
+
+            const float wetOut = o3 * wet;
+            out[ch] = wetOut + early;
+        }
+
+        const float l = out[0], r = out[1], s = out[2];
+        const float rs = r + s, ls = l + s, lr = l + r;
+        const float rsx = rs * crosstalk, lsx = ls * crosstalk, lrx = lr * crosstalk;
+        const float mixed[kChannels] = {l + rsx, r + lsx, s + lrx};
+        for (uint32_t ch = 0; ch < kChannels; ++ch) {
+            const float scaled = mixed[ch] * f.outGain;
+            ReverbStd::StoreS32(f.main[ch] + at, ReverbStd::ConvertToIntegerWord(scaled));
+            if (f.busOut[ch]) {
+                const float bus = mixed[ch] * f.busOutGain;
+                ReverbStd::StoreS32(f.busOut[ch] + at, ReverbStd::ConvertToIntegerWord(bus));
+            }
+        }
+
+        for (uint32_t i = 0; i < 3; ++i) {
+            Advance(f.earlyPos[i], f.earlyLength);
+        }
+        if (f.preDelayLength != 0) {
+            Advance(f.preDelayPos, f.preDelayLength);
+        }
+        for (uint32_t i = 0; i < 3; ++i) {
+            Advance(f.combPos[i], f.combLength[i]);
+        }
+        for (uint32_t i = 0; i < 2; ++i) {
+            Advance(f.allpassPos[i], f.allpassLength[i]);
+        }
+    }
+
+    for (uint32_t i = 0; i < 3; ++i) {
+        Memory::Write32(rev + kEarlyPos + i * 4, f.earlyPos[i]);
+        Memory::Write32(rev + kCombPos + i * 4, f.combPos[i]);
+    }
+    if (f.preDelayLength != 0) {
+        Memory::Write32(rev + kPreDelayPos, f.preDelayPos);
+    }
+    for (uint32_t i = 0; i < 2; ++i) {
+        Memory::Write32(rev + kAllpassPos + i * 4, f.allpassPos[i]);
+    }
+    for (uint32_t ch = 0; ch < kChannels; ++ch) {
+        Memory::Write32(rev + kLastPos + ch * 4, f.last[ch].pos);
+        Memory::WriteFloat32(rev + kLowPassHistory + ch * 4, static_cast<double>(f.lowPass[ch]));
+    }
+}
+
+} // namespace ReverbHi
 } // namespace
 
 extern "C" void AXFXReverbStdExpCallback_8012b830(CpuContext* ctx) {
@@ -375,3 +654,36 @@ extern "C" void AXFXReverbStdExpCallback_8012b830(CpuContext* ctx) {
 
 REGISTER_NATIVE_FUNCTION_AS(0x8012B830, AXFXReverbStdExpCallback_8012b830,
                             "AXFXReverbStdExpCallback_8012b830");
+
+// AXFXReverbHiCallback(AXFX_BUFFERUPDATE* buffers, AXFX_REVERBHI_EXP* reverb),
+// read from Bomberman Blast (0x801BD694). Its translated form cannot run in
+// its place (natives replace it before translation), so a reverb this port
+// cannot serve leaves the frame dry, once said.
+extern "C" void AXFXReverbHiCallback_801bd694(CpuContext* ctx) {
+    if (!ctx) {
+        return;
+    }
+    const uint32_t buffersAddr = ctx->gpr[3];
+    const uint32_t rev = ctx->gpr[4];
+    try {
+        const uint32_t flags = Memory::Read32(rev + ReverbHi::kFlags);
+        if (flags != 0) {
+            Memory::Write32(rev + ReverbHi::kFlags, flags & ~2u);  // a reset: skip this frame
+            return;
+        }
+        ReverbHi::Frame frame;
+        if (ReverbHi::BuildFrame(buffersAddr, rev, frame)) {
+            ReverbHi::Render(rev, frame);
+            return;
+        }
+    } catch (const Memory::AccessViolation&) {
+    }
+    static bool said = false;
+    if (!said) {
+        said = true;
+        RT_LOG(RT_TAG_OS) << "AXFXReverbHiCallback: reverb state at 0x" << std::hex << rev << std::dec
+                          << " is not one this port serves; frames left dry" << std::endl;
+    }
+}
+
+REGISTER_NATIVE_FUNCTION_AS(0x801BD694, AXFXReverbHiCallback_801bd694, "AXFXReverbHiCallback_801bd694");

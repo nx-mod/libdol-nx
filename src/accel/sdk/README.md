@@ -21,6 +21,15 @@ PSMTX/VEC math, GD display-list builders, MSL (memcpy, math). Header:
 byte stuffing, restarts without markers, GX I8 tile output) straight into the
 game's three texture planes, then tells the graphics layer they changed.
 
+## Helpers without a native of their own
+
+| What | File | Used by |
+|---|---|---|
+| `tpl::bind`, `tpl::get` (TPLBind, TPLGet) | `tpl/tpl.cpp` | nw4r's lyt texture swaps (`TexMap::ReplaceImage`) |
+
+TPLBind follows ogws's TPL.c; the palette header's "unpacked" flag is at +2 in
+the code New Super Mario Bros. Wii ships (the decompilation's header says +1).
+
 ## Check
 
 ```sh

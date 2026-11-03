@@ -7,11 +7,13 @@ installed).
 | Tool | Does |
 |---|---|
 | `wiinx-scan` | lists a DOL's library builds; finds natives by signature; finds where a game's functions start, in its own code (`functions`); finds where its copy of the Wii's OS keeps the scheduler's globals (`os-globals`); signs functions; records builds and generates `include/wiinx/core/builds.hpp`. See [docs/signatures.md](../docs/signatures.md) and [docs/builds.md](../docs/builds.md) |
-| `wiinx-near-map` | names a game's natives from a game of a nearby SDK build by masked-code similarity, for `wiinx-sign-natives --by-name` to sign and verify. See [docs/signatures.md](../docs/signatures.md) |
+| `wiinx-near-map` | names a game's natives from a game of a nearby SDK build by masked-code similarity, or by field fingerprint where the same source was compiled differently, for `wiinx-sign-natives --by-name` to sign and verify. See [docs/signatures.md](../docs/signatures.md) |
 | `wiinx-extract` | pulls `main.dol`, or any file with `--file <path>`, out of a Wii `.iso` without extracting the disc: decrypts only the clusters it needs |
 | `wiinx-extract-disc` | the whole disc into a game project's `disc/`, through this library's own reader; Dolphin's `dolphin-tool` only as a fallback |
 | `wiinx-disc` | the reader itself (built from `tools/src/`): `info`, `list`, `dol`, `file`, `extract`. Reads raw images, CISO, WBFS, RVZ and WIA, GameCube and Wii |
 | `wiinx-inspect-dol` | a DOL's entry point, sections, BSS and small-data bases; `--yaml` for a project file |
+| `wiinx-disasm` | one function of a DOL, by address or name (either map layout, mangled or not), calls annotated - for reading a build's field offsets and vtable slots where a native is written |
+| `cwdemangle.py` | CodeWarrior's mangled C++ names demangled, with or without parameters; used by the signer and near-map |
 | `wiinx-install-title` | installs a title into a NAND the way a console stores one: ticket, TMD, contents decrypted, shared contents in `/shared1` with the map that names them. Takes a WAD you own or a title downloaded by `wiinx-fetch-title` |
 | `wiinx-wad` | looks inside a WAD - which title it is, what it wants, what it carries - and unpacks one, decrypting each content and writing the executable as `main.dol`. Reads both kinds, installable and boot2 |
 | `wiinx-unpack-u8` | lists or extracts a U8 archive (how channels pack their files), flagging compression inside |
@@ -38,6 +40,8 @@ installed).
 | `wiinx-make-globals` | a game's `globals.json` as the table its build links |
 | `wiinx-identity` | which title a project is, read from the title itself |
 | `wiinx-name` | names a game's functions by matching its code against games whose symbols are known |
+| `wiinx-refresh-map` | makes a project's `functions.map` again with today's tools: starts, names from the symbol set, names from messages, module blocks |
+| `wiinx-name-by-message` | names SDK functions by the `Name():` messages their own code prints (OSReset.c's and others), in any game - mapped or not ([docs/symbol-sources.md](../docs/symbol-sources.md)) |
 | `wiinx-suggest-names` | names a game's unknown functions from a game that names them |
 | `wiinx-sign-map`, `wiinx-sign-elf` | code signatures from a symbol map, or from an executable that carries its own symbols |
 | `wiinx-rso` | a title's RSO modules: code it loads and links at run time |
@@ -58,6 +62,15 @@ tools/wiinx-extract "Wii Sports + Wii Sports Resort.iso" sports.dol --file US/sy
 
 ## Notes
 
+- 2026-11-02: `wiinx-scan scan --out` no longer carries over a binding whose
+  native has signatures that do not match the code at that address: Bomberman
+  Blast kept NANDCreate, NANDCreateDir and NANDGetType on the SDK's internal
+  helpers that way and could not create its save. `wiinx-sign-natives` no
+  longer signs, by address, a map entry that is only an address (it signed
+  five Mario Kart Wii natives from unrelated Bomberman code), and takes a
+  WAD title's id from its `recomp.yml`. `wiinx-build` scans a program whose map
+  holds only `wiinx-rso`'s module blocks: the Wii Menu's had 0 of its own starts.
+
 - 2026-09-22: disc, DOL, NAND and game-project tools are all here. A game is
   created, translated and profiled from its own folder, wherever it lives;
   `wiinx-new-game` writes the path back to this checkout into its `recomp.yml`.
@@ -77,3 +90,9 @@ tools/wiinx-extract "Wii Sports + Wii Sports Resort.iso" sports.dol --file US/sy
   game's `recomp.yml` lists `runtime.defines` without `WIINX_NATIVE_GX`
   (`defines: []` is Aurora's build); the translator reads the same rule.
   `wiinx-near-map` added (docs/signatures.md, "Builds nobody has mapped").
+- 2026-11-03: `wiinx-disasm` and `cwdemangle.py` added. `wiinx-sign-natives`
+  signs from published (mangled) maps and reads a `game_id:` with a comment
+  after it; `wiinx-near-map` skips functions the game's map names otherwise and
+  matches by fields where similarity fails; `wiinx-emit-bindings` registers
+  each native's address and call sites (`wiinx::set_bound`) in place of its
+  `SETUP` table, and picks among builds that all fit by the package's release.

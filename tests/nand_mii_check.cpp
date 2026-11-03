@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
                                               std::istreambuf_iterator<char>()};
     std::printf("wiinx::nand Mii database check against %s (%zu bytes)\n\n", argv[1], reference.size());
 
-    Check("the reference file is the right size", reference.size() == kMiiDatabaseSize);
+    Check("the reference file is the right size", reference.size() == kMiiDatabaseFileSize);
     Check("Empty().Build() matches the runtime's own database byte for byte",
           MiiDatabase::Empty().Build() == reference);
 

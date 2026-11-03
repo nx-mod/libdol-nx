@@ -5,3 +5,10 @@
 - [ ] The maths the SDK ships: `sin`, `cos`, `atan2`, the ones a game's physics
       calls per object per frame
 - [ ] `rvl.mtx` beyond the 8 already here, and the vector and quaternion sets
+- [ ] AXFX as a library of its own here (`rvl.axfx`), both reverbs together:
+      `AXFXReverbStdExpCallback` (Mario Kart Wii) and `AXFXReverbHiCallback`
+      (Bomberman Blast) are platform natives in `platform/audio/ax_effects.cpp`,
+      bound by signature; written against `Host` and registered by name and build,
+      with a check each on fake guest memory
+- [ ] TPLBind and TPLGet as natives of their own (`tpl/tpl.cpp` has them as
+      helpers for lyt): sign them, and check the shipped builds agree

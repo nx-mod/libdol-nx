@@ -7,3 +7,6 @@
       Switch to try it on
 - [ ] Run the checks in CI on every push, which is the only automated
       correctness this library has
+- [ ] The Mii database against one the Mii Channel formatted on a real console:
+      `data/RFL_DB.dat` is our own first-run output, so `Empty().Build()` is only
+      checked against itself

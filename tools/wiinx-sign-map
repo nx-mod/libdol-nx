@@ -43,7 +43,9 @@ def load_scan():
 #
 #   00000054 00015c 80003154  4 __start 	Dolphin.a __start.c
 PLAIN = re.compile(r"^([0-9a-fA-F]{8})\s+(\S.*)$")
-LAYOUT = re.compile(r"^([0-9a-fA-F]{8}) ([0-9a-fA-F]{6}) ([0-9a-fA-F]{8})\s+(\d+) (\S+)")
+# A layout line: address, size, virtual address, alignment, name. The compiler's
+# maps write a six-digit size, Dolphin's symbol maps (NSMBW's) eight.
+LAYOUT = re.compile(r"^([0-9a-fA-F]{8}) ([0-9a-fA-F]{6,8}) ([0-9a-fA-F]{8})\s+(\d+) (\S+)")
 SECTION = re.compile(r"^(\S+) section layout$")
 
 

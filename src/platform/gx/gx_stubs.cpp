@@ -19,7 +19,6 @@ extern std::atomic<uint64_t> g_gxDrawDoneUs;
 #include "runtime_log.h"
 #include "abi_bridge.h"
 #include "native_bindings.h"
-#include "native_guest_return.h"
 #if defined(WIINX_NATIVE_GX)
 #include "../gpu/gx_native.h"
 #endif
@@ -227,11 +226,6 @@ extern "C" void GX__SetDirtyState_8016ee78() {
         }();
         CpuContext* cpu = TryGetCpuContext();
         if (target && cpu) {
-            // (the binding's return address in lr, as wiinx::Host::call does: a
-            // callee dispatched as a jump resumes through it)
-            if (const uint32_t resume = RuntimeNativeGuestReturn::Current(); resume != 0) {
-                cpu->lr = resume;
-            }
             InvokeIndirectCpu(target, cpu);
         }
     } catch (...) {}

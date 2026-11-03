@@ -15,6 +15,7 @@
 #pragma once
 
 #include "wiinx/core/host.hpp"
+#include "wiinx/core/native.hpp"
 #include "wiinx/core/types.hpp"
 
 namespace wiinx {
@@ -110,5 +111,17 @@ struct Guest {
         return load<T>(addr + Off + index * static_cast<u32>(sizeof(T)));
     }
 };
+
+// Calls guest function `target` as the original's nth indirect call would:
+// with the return address `binding` recorded for it in lr (Host::call_from).
+// Arguments are whatever set_gpr put in r3.. beforehand.
+inline void call_guest(Cpu* cpu, GuestAddr target, const Bound* binding, std::size_t n) noexcept {
+    const Host& h = host();
+    if (h.call_from != nullptr) {
+        h.call_from(cpu, target, binding != nullptr ? binding->call(n) : 0);
+    } else if (h.call != nullptr) {
+        h.call(cpu, target);
+    }
+}
 
 }  // namespace wiinx

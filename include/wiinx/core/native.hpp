@@ -56,6 +56,24 @@ void for_each_native(Fn&& fn);
 // The native for `name` in `version_id`, or null when none is known.
 const Native* find_native(std::string_view name, std::string_view version_id) noexcept;
 
+// Where this game binds a native, set by its generated bindings at startup:
+// the guest address, and the return address after each indirect call (bctrl)
+// the original makes, in code order. A library of natives calls itself - a
+// pane animates its children through their vtables - and needs both: an entry
+// that is one of its own natives is run directly, not sent out through the
+// guest dispatcher and back, and a call into game code leaves lr where the
+// original's would have been (some callees resume through it).
+struct Bound {
+    GuestAddr address = 0;
+    std::span<const GuestAddr> calls;  // after the 1st, 2nd, ... bctrl
+    // the return address of the original's nth indirect call, or 0
+    GuestAddr call(std::size_t n) const noexcept { return n < calls.size() ? calls[n] : 0; }
+};
+void set_bound(std::string_view name, GuestAddr address, std::span<const GuestAddr> calls) noexcept;
+// This game's binding of `name`, or null when it binds none. The name is the
+// native's (Native::name): one game binds one build of each.
+const Bound* bound(std::string_view name) noexcept;
+
 namespace detail {
 std::span<const std::span<const Native>> native_tables() noexcept;
 }  // namespace detail

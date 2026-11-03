@@ -101,13 +101,152 @@ def load_scan():
     return module
 
 
+def executable(game):
+    """The executable the project translates (recomp.yml inputs.dol.path): a
+    disc's main.dol, a WAD title's payload, a NAND title's program. Reading only
+    disc/sys/main.dol found nothing for a WAD or NAND title, and the build gate
+    below then let every build's natives in."""
+    project = os.path.join(game, "recomp.yml")
+    if os.path.exists(project):
+        match = re.search(r"dol:\s*\n\s*path:\s*(\S+)", open(project, errors="ignore").read())
+        if match and os.path.exists(os.path.join(game, match.group(1))):
+            return os.path.join(game, match.group(1))
+    fallback = os.path.join(game, "disc", "sys", "main.dol")
+    return fallback if os.path.exists(fallback) else None
+
+
 def linked_builds(game):
     """The build ids this game's executable names in its startup banners."""
-    dol = os.path.join(game, "disc", "sys", "main.dol")
-    if not os.path.exists(dol):
+    dol = executable(game)
+    if dol is None:
         return None
     scan = load_scan()
     return {build_id for build_id, _ in scan.builds(scan.Dol(dol)).values()}
+
+
+def function_extent(game, address):
+    """Where the function at `address` ends, from the game's own function map."""
+    starts = sorted({a for a, _ in symbol_map(game)} | set(map_starts(game)))
+    later = [a for a in starts if a > address]
+    return min(later[0] if later else address + 0x2000, address + 0x2000)
+
+
+def map_starts(game):
+    path = os.path.join(game, "functions.map")
+    found = []
+    if os.path.exists(path):
+        for line in open(path, errors="ignore"):
+            parts = line.split()
+            if parts and re.fullmatch(r"[0-9A-Fa-f]{8}", parts[0]):
+                found.append(int(parts[0], 16))
+    return found
+
+
+def call_sites(game, address):
+    """The address after each bctrl in the function at `address`, in code
+    order: where the original's nth indirect call returns. A native calling the
+    game back through a vtable leaves lr there (wiinx::Bound::call)."""
+    dol_path = executable(game)
+    if dol_path is None:
+        return []
+    scan = load_scan()
+    dol = scan.Dol(dol_path)
+    end = function_extent(game, address)
+    code = dol.read(address, end - address)
+    if code is None:
+        return []
+    return [address + i + 4 for i in range(0, len(code) - 3, 4)
+            if code[i:i + 4] == b"\x4e\x80\x04\x21"]  # bctrl
+
+
+def builds_by_game():
+    """{game id: {library: build id}} from data/builds.json's seen_in lists."""
+    table = {}
+    document = json.load(open(os.path.join(HERE, "..", "data", "builds.json")))
+    for build in document["builds"]:
+        library = build["id"].split("@")[0]
+        for game_id in build.get("seen_in", []):
+            table.setdefault(game_id, {})[library] = build["id"]
+    return table
+
+
+def inferred_builds(game, bindings, linked, gated):
+    """Builds of libraries the game names no banner for, proven from its code.
+
+    A native written for one build relies on that build's struct layout. A
+    library a game links without a banner (Bomberman Blast's nw4r.lyt) still has
+    a layout, and its code says which: where the game's function bound to such a
+    native uses exactly the struct fields (wiinx-scan field_fingerprint) of that
+    native's signature taken from a game whose banner names build B of the
+    native's own library, the game's copy is laid out as B. Only the native's
+    own library is inferred, and two candidate builds mean none is.
+    `gated` is [(native name, build id)] for the natives a build decides.
+    Returns ({library: build id}, {library: why})."""
+    dol_path = executable(game)
+    if dol_path is None:
+        return {}, {}
+    scan = load_scan()
+    dol = scan.Dol(dol_path)
+    by_game = builds_by_game()
+    banner_libraries = {b.split("@")[0] for b in (linked or ())}
+    signatures = json.load(open(os.path.join(HERE, "..", "data", "signatures.json")))["natives"]
+    candidates, evidence = {}, {}
+    for name, version_id in gated:
+        library = version_id.split("@")[0]
+        if library in banner_libraries or version_id.endswith("@any"):
+            continue
+        address = bindings.get(name) or bindings.get(f"{name}@{version_id}")
+        if not address:
+            continue
+        for signature in signatures:
+            if signature.get("registration") != name or not signature.get("fields"):
+                continue
+            code = dol.read(int(address, 16), signature["size"])
+            if code is None or scan.field_fingerprint(code) != signature["fields"]:
+                continue
+            sources = signature["signed_from"]
+            for source in sources if isinstance(sources, list) else [sources]:
+                build = by_game.get(source, {}).get(library)
+                if build:
+                    candidates.setdefault(library, set()).add(build)
+                    evidence.setdefault(library, f"{name} uses {source}'s fields")
+    # Builds that agree field for field on everything this game's code shows
+    # are the same layout as far as any native here can tell: Mario Kart Wii's
+    # 2008 lyt and New Super Mario Bros. Wii's 2009 one both fit Bomberman
+    # Blast's. Then the build with natives for the most of the game's bound
+    # functions is taken, the earliest on a tie - not none, which withheld
+    # every lyt native from it.
+    def covered(build):
+        return sum(1 for name, version_id in gated if version_id == build
+                   and (bindings.get(name) or bindings.get(f"{name}@{version_id}")))
+    inferred = {}
+    for library, builds in candidates.items():
+        released = package_release(library, linked)
+        def distance(build):  # days from the package's release, when it has one
+            return abs((day(build) - released).days) if released else 0
+        inferred[library] = sorted(builds, key=lambda b: (-covered(b), distance(b), b))[0]
+        if released:
+            evidence[library] += f"; its package ({library.split('.')[0]}) is of {released.isoformat()}"
+        if len(builds) > 1:
+            evidence[library] += f"; also fits {', '.join(sorted(builds - {inferred[library]}))}"
+    return inferred, {library: evidence[library] for library in inferred}
+
+
+def day(build_id):
+    """The date a build id carries: nw4r.lyt@2008-03-08 -> 2008-03-08."""
+    import datetime
+    return datetime.date.fromisoformat(build_id.split("@")[1])
+
+
+def package_release(library, linked):
+    """When the package a banner-less library came in was built, from its
+    siblings' banners. nw4r ships as one release: Bomberman Blast's EF, G3D and
+    SND all say Nov 15 2007 and its LYT says nothing (no banner in the
+    executable, so it never tells the console either) - its LYT is that
+    release's. None when the siblings disagree or there are none."""
+    package = library.split(".")[0]
+    dates = {day(b) for b in (linked or ()) if b.startswith(package + ".") and not b.startswith(library + "@")}
+    return next(iter(dates)) if len(dates) == 1 else None
 
 
 def canonical(name):
@@ -139,7 +278,10 @@ def symbol_map(game):
     for raw in open(path, errors="ignore"):
         found = line.match(raw.strip())
         if found:
-            entries.append((int(found.group(1), 16), found.group(2).strip()))
+            name = found.group(2).strip()
+            # a Dolphin layout line - size, virtual address, alignment, name
+            layout = re.fullmatch(r"[0-9a-fA-F]{6,8} [0-9a-fA-F]{8}\s+\d+ (\S+)", name)
+            entries.append((int(found.group(1), 16), layout.group(1) if layout else name))
     return entries
 
 
@@ -173,16 +315,25 @@ def main(argv):
     # A native written for one build of a library must not be registered in a
     # game that links another: both variants would claim the same address.
     builds = linked_builds(game)
+    gated = [(name, ids.get(version, version)) for name, version in natives]
+    inferred, why = inferred_builds(game, bindings, builds, gated)
+    if builds is not None:
+        builds = builds | set(inferred.values())
+    for library, build in sorted(inferred.items()):
+        print(f"  {library}: no banner; its code is laid out as {build} ({why[library]})")
 
     handwritten = already_bound(src_root)
 
     emitted = []
+    withheld = []
     seen = set()
     for index, (name, version) in enumerate(natives):
         if name in handwritten:
             continue
         version_id = ids.get(version, version)
         if builds is not None and not version_id.endswith("@any") and version_id not in builds:
+            if bindings.get(name) or bindings.get(f"{name}@{version_id}"):
+                withheld.append((name, version_id))
             continue
         # A scan writes an address under the native's own name when it knows the
         # build, and under the registration symbol for the natives that predate
@@ -196,7 +347,7 @@ def main(argv):
         if address in seen:
             continue
         seen.add(address)
-        emitted.append((f"wiinx_native_{index}", name, version, address))
+        emitted.append((f"wiinx_native_{index}", name, version, address, call_sites(game, int(address, 16))))
 
     out_dir = os.path.join(game, "native")
     os.makedirs(out_dir, exist_ok=True)
@@ -206,19 +357,29 @@ def main(argv):
                      "// regenerated from this game's bindings.json every translation.\n"
                      '#include "hle_stubs.h"\n'
                      '#include "abi_bridge.h"\n')
-        headers = sorted({version_header(version) for _, _, version, _ in emitted}
+        headers = sorted({version_header(version) for _, _, version, _, _ in emitted}
                          | {"wiinx/accel/nw4r.hpp", "wiinx/accel/sdk.hpp"})
         handle.write("".join(f'#include "{h}"\n' for h in headers) + "\n")
-        for symbol, name, version, address in emitted:
+        for symbol, name, version, address, calls in emitted:
+            listed = ", ".join(f"0x{c:08X}u" for c in calls)
+            span = f"{symbol}_calls" if calls else "{}"
             handle.write(
                 f'// {name}\n'
+                + (f'static constexpr wiinx::GuestAddr {symbol}_calls[] = {{{listed}}};\n' if calls else '')
+                + f'[[maybe_unused]] static const bool {symbol}_bound = (wiinx::set_bound("{name}", 0x{int(address, 16):08X}u, {span}), true);\n'
                 f'extern "C" void {symbol}(CpuContext* ctx) {{\n'
-                f'    static const wiinx::Native* const native =\n'
-                f'        wiinx::find_native("{name}", {version_expression(version)}.id);\n'
+                f'    static const wiinx::Native* const native = wiinx::find_native("{name}", {version_expression(version)}.id);\n'
                 f'    native->entry(reinterpret_cast<wiinx::Cpu*>(ctx));\n'
                 f'}}\n'
                 f'PPC_NATIVE_OVERRIDE_VOID({int(address, 16):08X}, {symbol}, (CpuContext* ctx), (ctx));\n\n')
     print(f"wrote {out}: {len(emitted)} of {len(natives)} natives bound in this game")
+    # Found in the game but held back: written for a build it does not link (or
+    # one nothing proves). Named, never skipped silently.
+    bound = {name for _, name, *_ in emitted}
+    for name, why in withheld:
+        if name not in bound:
+            reason = why if ":" in why else f"{why} - the game links another build of it, or none is proven"
+            print(f"  withheld: {name} [{reason}]")
     return 0
 
 

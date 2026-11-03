@@ -157,6 +157,9 @@ class State {
     std::uint32_t Bp(std::uint8_t reg) const { return mBpRegs[reg] & 0x00FFFFFF; }
     // PE_CONTROL loads so far (diagnosis: whether a game changes the EFB's format)
     std::uint32_t PeControlWrites() const { return mPeControlWrites; }
+    // BP 0x66 loads so far: the texture cache invalidated (GXInvalidateTexAll), which a game
+    // does after its CPU rewrites texture memory
+    std::uint32_t TexInvalidations() const { return mTexInvalidations; }
     // XF's viewport registers: scale x, y, z and offset x, y, z
     const std::array<float, 6>& Viewport() const { return mViewport; }
 
@@ -198,6 +201,7 @@ class State {
     std::array<std::uint32_t, 256> mBpRegs{};
     std::uint32_t mBpMask = 0x00FFFFFF;
     std::uint32_t mPeControlWrites = 0;
+    std::uint32_t mTexInvalidations = 0;
     std::array<std::uint64_t, 4> mBpWritten{};  // (a register never loaded holds the setters' defaults)
     static constexpr std::uint32_t kXfShadow = 0x1100;
     std::vector<std::uint32_t> mXfRaw = std::vector<std::uint32_t>(kXfShadow);

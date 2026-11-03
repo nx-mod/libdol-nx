@@ -4,6 +4,33 @@ Mario Kart Wii on a Switch, native GX (deko3d). The runtime logs per-frame
 counters to `logs/boot.log` every second; `[sched]`, `[idle]` and `[audio]` say
 where the game thread's time goes, `gx-native` what the renderer did.
 
+Since 2026-11-03 each `gx-native` second also says where the frame's time
+went:
+
+    gx-native: time: last 60 frames in 3520 ms; render thread busy 3400 ms
+      (commands 2900, GPU draws 500); game thread waited 1500 ms in GXDrawDone,
+      200 ms for the frame before; FIFO 9000 KB in 2300000 writes; 1200 display
+      lists, 800 KB
+
+- *commands*: the command processor on the render thread - decoding the FIFO
+  and display lists, converting vertices, batching (GPU draws are sent from
+  inside it and counted apart)
+- *GPU draws*: handing batches to deko3d
+- *GXDrawDone* / *the frame before*: the game thread waiting for the render
+  thread
+- *FIFO*: what the game wrote to the gather pipe itself, a word at a time;
+  *display lists*: what it called instead
+
+## Bomberman Blast: one slow menu, 2026-11-02
+
+Every menu ran at 60 but Characters (~17 fps), and battles were slow too. They
+are the only places that draw models as thousands of small GX strips: ~5,900
+GX draws a frame in Characters and ~8,200 in battle, merged into ~250 GPU
+draws, against ~580 in the menus that run at 60. The game thread waited in
+`GXDrawDone` for a quarter of the frame: the cost is per GX draw, on the
+render thread, not per GPU draw and not lyt (2-8% in every menu alike). The
+`time:` line above was added to split it.
+
 ## A race frame, 2026-10-13 (build 51, ~12 fps)
 
 About 80 ms a frame:

@@ -18,7 +18,9 @@ Opcodes, registers and stack offsets must match exactly. One hash covers the
 first 16 instructions (the start window, used to find candidates quickly), the
 other the whole function.
 
-A signature holds no code: only the hashes, the size and the build. That is what
+A signature holds no code: only the hashes, the size and the build - and, from
+2026-11-02, `fields`: a hash of the struct field offsets the function reads and
+writes, which says two builds share a layout where their code differs (docs/natives.md). That is what
 lets `data/signatures.json` be published.
 
 ## Scanning a game
@@ -211,6 +213,14 @@ disc named every address the scan had already bound by code - 97 of 97, from a
 project with no connection to this one. That is the strongest check these
 signatures have had.
 
+## Published maps
+
+A map published for a game keeps the compiler's mangled names
+(`Animate__Q34nw4r3lyt4PaneFUl`). `wiinx-sign-natives` reads them through
+`tools/cwdemangle.py`, matching each both with its parameters (how an
+overloaded native is named) and without, and signs a library native under its
+own name, anything else demangled the way our maps write it.
+
 ## Builds nobody has mapped
 
 A game whose SDK build no mapped game shares gets only the natives whose code
@@ -234,6 +244,22 @@ tools/wiinx-sign-natives wiiparty/disc/sys/main.dol near.map --by-name \
     --cross nsmbw/disc/sys/main.dol nsmbw/functions.map \
     --cross mkwii/disc/sys/main.dol mkwii/MAP.txt --write
 ```
+
+Two refinements (2026-11-03), both from Bomberman Blast against New Super Mario
+Bros. Wii:
+
+- A function the game's own map already names as something else is neither a
+  candidate nor a rival (names compared demangled, a library prefix allowed:
+  `RVL::EXIImm` is EXIImm). Bomberman links nw4r's lyt and the Home Menu's copy
+  of it (`nw4hbm::lyt`), near-identical: the copy's score sat inside the margin
+  of the real one's and neither was taken. It also stopped a wrong match - a
+  `memset` on what the game's map calls `TRK_memcpy`.
+- The same source compiled differently - other registers, a switch laid out as
+  a compare tree - scores as low as 40% word for word but reads and writes the
+  same fields. Where nothing reaches the threshold, one candidate of about the
+  reference's size with its field fingerprint (`fields`), of at least eight
+  fields, is taken; each is printed (`by fields:`) so it can be checked. From
+  Bomberman, eight, every one agreeing with a name its map has or with its code.
 
 2026-10-12, from New Super Mario Bros. Wii into Wii Party: 247 natives named
 (237 identical, 10 near), all 247 signed and verified. Natives bound by code:

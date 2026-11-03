@@ -68,6 +68,9 @@ struct RuntimeUserConfig {
     // after launch shows up without restarting.
     std::optional<bool> wiiContinuousScan;
     std::optional<bool> wiiRemoteSideways;
+    std::optional<int32_t> efbScale;
+    std::optional<bool> gxTrace;
+    std::optional<bool> nandTrace;
     // Accelerometer zero-point correction for the Bluetooth Wii Remote, in g and in
     // SDL's sensor frame (x right, y out of the button face, z towards the user).
     // SDL's Wii driver falls back to a nominal zero point when its read of the
@@ -521,6 +524,9 @@ inline RuntimeUserConfig ParseConfigDocument(const toml::value& document) {
     config.wiiRemotes = FindConfigValue<bool>(document, "controller", "wii_remotes");
     config.wiiContinuousScan = FindConfigValue<bool>(document, "controller", "wii_continuous_scan");
     config.wiiRemoteSideways = FindConfigValue<bool>(document, "controller", "wii_remote_sideways");
+    config.efbScale = FindConfigInt(document, "graphics", "efb_scale");
+    config.gxTrace = FindConfigValue<bool>(document, "debug", "gx_trace");
+    config.nandTrace = FindConfigValue<bool>(document, "debug", "nand_trace");
     config.wiiAccelOffsetX = FindConfigValue<double>(document, "controller", "wii_accel_offset_x");
     config.wiiAccelOffsetY = FindConfigValue<double>(document, "controller", "wii_accel_offset_y");
     config.wiiAccelOffsetZ = FindConfigValue<double>(document, "controller", "wii_accel_offset_z");
@@ -946,6 +952,27 @@ inline bool WiiContinuousScanEnabled(bool fallback = false) {
 inline bool SetWiiContinuousScanEnabled(bool value) {
     Mutable().wiiContinuousScan = value;
     return WriteSetting("controller", "wii_continuous_scan", value ? "true" : "false");
+}
+
+// How many host pixels the native renderer's EFB gives each of the Wii's: 0
+// (the default) follows the screen, 1.5 handheld and 2.25 docked; 1 or 2 keep
+// a whole number, so a picture the game copies out and scales loses no row.
+inline int32_t EfbScale() {
+    const int32_t value = Get().efbScale.value_or(0);
+    return value >= 0 && value <= 2 ? value : 0;
+}
+
+// Whether the native renderer writes a few frames' draws and copies out in
+// full (logs/gx_trace_<frame>.txt).
+inline bool GxTraceEnabled() {
+    return Get().gxTrace.value_or(false);
+}
+
+// Whether every NAND request a title makes - IOS_Open of a path, every /dev/fs
+// and /dev/es ioctl - is written to boot.log with its result, not only the
+// refused ones (debug.nand_trace): what a save that never gets made did.
+inline bool NandTraceEnabled() {
+    return Get().nandTrace.value_or(false);
 }
 
 // Whether the Switch's controls stand for a Wii Remote held sideways (D-pad

@@ -155,7 +155,7 @@ workspace_root: .
 # Everything below was read out of its own executable.
 project:
   id: {stem}-{identifier.lower()}
-  display_name: {stem}
+  display_name: {json.dumps(stem)}
   game_id: {identifier}
 {f"  title_id: {title_id}" + chr(10) if title_id else ""}{f"  ios: {ios}" + chr(10) if ios else ""}  region: {identifier[3] if len(identifier) == 4 else 'E'}
   base_manifest_format: mkwii-recomp-base-manifest

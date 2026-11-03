@@ -640,6 +640,9 @@ void State::ApplyBP(std::uint32_t value) {
     case 0x40:  // z mode
         SetZMode(Bits(v, 1, 0) != 0, static_cast<std::uint8_t>(Bits(v, 3, 1)), Bits(v, 1, 4) != 0);
         break;
+    case 0x66:  // texture cache invalidate (GXInvalidateTexAll)
+        ++mTexInvalidations;
+        break;
     case 0x43:  // PE control: the EFB's pixel format (1 = RGBA6_Z24, the one with alpha)
         mPixel.efbAlpha = Bits(v, 3, 0) == 1;
         ++mPeControlWrites;

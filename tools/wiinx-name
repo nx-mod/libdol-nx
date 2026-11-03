@@ -14,6 +14,7 @@ much of it is right. Every claim in the README about this was measured that way.
 import gzip
 import json
 import os
+import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -58,7 +59,10 @@ def read_map(path):
         parts = raw.split(maxsplit=1)
         if len(parts) == 2 and len(parts[0]) == 8:
             try:
-                entries[int(parts[0], 16)] = parts[1].strip()
+                name = parts[1].strip()
+                # a Dolphin layout line - size, virtual address, alignment, name
+                layout = re.fullmatch(r"[0-9a-fA-F]{6,8} [0-9a-fA-F]{8}\s+\d+ (\S+)", name)
+                entries[int(parts[0], 16)] = layout.group(1) if layout else name
             except ValueError:
                 pass
     return entries

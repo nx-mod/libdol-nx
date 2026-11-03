@@ -23,6 +23,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+from cwdemangle import demangle  # noqa: E402
 
 SIGNATURES = os.path.join(HERE, "..", "data", "signatures.json")
 WINDOW_BYTES = 16 * 4  # a signature needs at least this much to be unique
@@ -119,6 +120,11 @@ def by_name(src_root, entries, known):
     index = {}
     for address, name in entries:
         index.setdefault(canonical(name), []).append((address, name))
+        # a published map keeps the compiler's mangled names: each is also
+        # found demangled, with its parameters (how an overloaded native is
+        # named: Animate(unsigned long, nw4r::lyt::Pane*)) and without
+        for form in {demangle(name), demangle(name, params=False)} - {None}:
+            index.setdefault(canonical(form), []).append((address, form))
     def internal(name):
         # the SDK's own convention: helpers are __GXFoo or nandFoo, public
         # functions GXFoo, NANDFoo, GX::Foo
@@ -162,7 +168,9 @@ def symbol_map(path):
             match = line_pattern.match(line.strip())
             if match:
                 name = match.group(2).strip()
-                entries.append((int(match.group(1), 16), name))
+                # a Dolphin layout line - size, virtual address, alignment, name
+                layout = re.fullmatch(r"[0-9a-fA-F]{6,8} [0-9a-fA-F]{8}\s+\d+ (\S+)", name)
+                entries.append((int(match.group(1), 16), layout.group(1) if layout else name))
     entries.sort()
     return entries
 
@@ -177,6 +185,18 @@ def game_id(dol_path):
             return code
     except OSError:
         pass
+    # A title off the NAND or a WAD has no boot.bin: its project says, in the
+    # recomp.yml of the folder the executable sits under.
+    folder = os.path.dirname(os.path.abspath(dol_path))
+    for _ in range(3):
+        try:
+            with open(os.path.join(folder, "recomp.yml")) as handle:
+                match = re.search(r"^\s+game_id:\s*([A-Za-z0-9]{4,6})\s*(#.*)?$", handle.read(), re.M)
+            if match:
+                return match.group(1)
+        except OSError:
+            pass
+        folder = os.path.dirname(folder)
     return os.path.basename(dol_path)
 
 
@@ -209,6 +229,25 @@ def main(argv):
     extent = {address: (entries[index + 1][0] - address if index + 1 < len(entries) else 0)
               for index, (address, _) in enumerate(entries)}
     names = dict(entries)
+    # A library native is signed under its own name - the one its bindings and
+    # its table use - whatever the map spells there: a published map keeps the
+    # compiler's mangled names (Animate__Q34nw4r3lyt4PaneFUl).
+    # Any other name is kept in the form our own maps write: demangled,
+    # without its parameters (EGG::AsyncDisplay::endRender).
+    library = library_natives(src_root)
+    for address, registration in natives.items():
+        if registration in library:
+            names[address] = registration
+        elif (plain := demangle(names.get(address, ""), params=False)) is not None:
+            names[address] = plain
+    if "--by-name" not in argv:
+        # By address, a native is signed from whatever the map has at its
+        # reference address - which in any game but the one it was read from is
+        # some other function. A map entry that is only an address names nothing,
+        # so it is no evidence the code there is the native's: from Bomberman
+        # Blast, five Mario Kart Wii natives were signed from unrelated code.
+        natives = {address: registration for address, registration in natives.items()
+                   if not re.fullmatch(r"(0x)?[0-9A-Fa-f]{8}", names.get(address, ""))}
 
     natives = {address: registration for address, registration in natives.items()
                if not NOT_A_FUNCTION.search(names.get(address, ""))}
@@ -251,6 +290,9 @@ def main(argv):
             "size": size,
             "start": scan.masked_hash(code[:WINDOW_BYTES]),
             "body": scan.masked_hash(code),
+            # the struct fields it uses: what a native written for this game's
+            # build of the library relies on (wiinx-emit-bindings, banner-less copies)
+            "fields": scan.field_fingerprint(code),
             "signed_from": source,
             "registration": registration,
         }
@@ -291,6 +333,7 @@ def main(argv):
                 if code is None:
                     break
                 entry["size"], entry["body"], entry["spans"] = size, scan.masked_hash(code), spans
+                entry["fields"] = scan.field_fingerprint(code)
                 hits = hits_of(entry)
         if len(hits) != 1:
             ambiguous += 1
@@ -356,6 +399,14 @@ def main(argv):
                             for p in proven if p.get("registration") == e.get("registration")))]
         # (a signature already shipped - the same code, signed with another
         # game's name beside this one's - is not listed twice)
+        # An identical signature kept as it was still takes what this run
+        # learned about it: the struct fields its code uses.
+        learned = {(e.get("registration"), e.get("start"), e.get("body"), e.get("size")): e.get("fields")
+                   for e in proven if e.get("fields")}
+        for e in kept:
+            fields = learned.get((e.get("registration"), e.get("start"), e.get("body"), e.get("size")))
+            if fields and "fields" not in e:
+                e["fields"] = fields
         shipped = {(e.get("registration"), e.get("start"), e.get("body"), e.get("size")) for e in kept}
         proven = [e for e in proven
                   if (e.get("registration"), e.get("start"), e.get("body"), e.get("size")) not in shipped]

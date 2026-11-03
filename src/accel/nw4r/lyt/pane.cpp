@@ -21,9 +21,6 @@
 
 namespace wiinx::nw4r::lyt {
 
-// Set by the binding (see nw4r.hpp).
-GuestAddr g_calculateMtxAddress = 0;
-
 namespace {
 
 // Members both builds share (ogws lyt_pane.h / lyt_drawInfo.h).
@@ -93,9 +90,14 @@ Mtx34 rotation(char axis, f32 radians) noexcept {
 
 constexpr f32 kDegToRad = 3.14159265358979323846f / 180.0f;
 
+constexpr const char* kCalculateMtx = "nw4r::lyt::Pane::CalculateMtx";
+
 template <class L>
 void calculate_mtx(Cpu* cpu) {
     const Host& h = host();
+    // where this game binds it: the address its vtables hold, and lr for the
+    // one call the original makes (a child's CalculateMtx)
+    static const Bound* const binding = bound(kCalculateMtx);
     const Guest<L> self{h.gpr(cpu, 3)};
     const Guest<DrawInfo> info{h.gpr(cpu, 4)};
 
@@ -170,7 +172,7 @@ void calculate_mtx(Cpu* cpu) {
         const GuestAddr method = load<u32>(load<u32>(child) + L::kVtableCalculateMtx);
         h.set_gpr(cpu, 3, child);
         h.set_gpr(cpu, 4, info.addr);
-        if (method == g_calculateMtxAddress && g_calculateMtxAddress != 0) {
+        if (binding != nullptr && method == binding->address) {
             // An ordinary pane: its vtable entry is this native. Going out
             // through the guest dispatcher to arrive back here costs a lookup
             // and a call frame for every pane in the tree, and a menu is
@@ -178,7 +180,7 @@ void calculate_mtx(Cpu* cpu) {
             // children directly.
             calculate_mtx<L>(cpu);
         } else {
-            h.call(cpu, method);
+            call_guest(cpu, method, binding, 0);
         }
     }
 
@@ -192,14 +194,11 @@ void calculate_mtx(Cpu* cpu) {
 
 }  // namespace
 
-void set_pane_calculate_mtx_address(GuestAddr address) noexcept {
-    g_calculateMtxAddress = address;
-}
-
 // The module table picks these up.
 extern const Native kPaneNatives[] = {
     WIINX_NATIVE("nw4r::lyt::Pane::CalculateMtx", kLyt_2007_06, calculate_mtx<PaneLayout2007>),
     WIINX_NATIVE("nw4r::lyt::Pane::CalculateMtx", kLyt_2008_03, calculate_mtx<PaneLayout2008>),
+    WIINX_NATIVE("nw4r::lyt::Pane::CalculateMtx", kLyt_2009_04, calculate_mtx<PaneLayout2008>),
 };
 extern const std::size_t kPaneNativeCount = std::size(kPaneNatives);
 

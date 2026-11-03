@@ -75,6 +75,8 @@ add_library(wiinx_sdk STATIC
     src/accel/sdk/mtx/mtx.cpp
     src/accel/sdk/thp/thp.cpp
     src/accel/sdk/gx/gx_texture.cpp
+    src/accel/sdk/gx/gx_transform.cpp
+    src/accel/sdk/tpl/tpl.cpp
 )
 target_link_libraries(wiinx_sdk PUBLIC wiinx_core wiinx_format)
 wiinx_section(wiinx_sdk)
@@ -83,8 +85,9 @@ add_library(wiinx::sdk ALIAS wiinx_sdk)
 add_library(wiinx_nw4r STATIC
     src/accel/nw4r/nw4r.cpp
     src/accel/nw4r/lyt/pane.cpp
+    src/accel/nw4r/lyt/animation.cpp
 )
-target_link_libraries(wiinx_nw4r PUBLIC wiinx_core)
+target_link_libraries(wiinx_nw4r PUBLIC wiinx_core wiinx_sdk)
 wiinx_section(wiinx_nw4r)
 add_library(wiinx::nw4r ALIAS wiinx_nw4r)
 

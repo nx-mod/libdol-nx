@@ -128,7 +128,11 @@ if [ "$translate" = 1 ]; then
     # Where its functions start, unless the project names a map of its own
     # (a game whose symbols someone has already mapped).
     map=$(sed -n '/function_map:/{n;s/^[[:space:]]*path:[[:space:]]*//p;}' "$game/recomp.yml" | head -1)
-    if [ -z "$map" ] || [ ! -f "$game/$map" ]; then
+    # A map holding only wiinx-rso's module blocks (written just above) has none
+    # of the program's own functions: the Wii Menu translated 138 of them.
+    own=0
+    [ -n "$map" ] && [ -f "$game/$map" ] && own=$(awk '/^# wiinx-rso /{m=1;next} /^# end wiinx-rso /{m=0;next} !m && /^[0-9a-fA-F]{8}[ \t]/{n++} END{print n+0}' "$game/$map")
+    if [ -z "$map" ] || [ ! -f "$game/$map" ] || [ "$own" -eq 0 ]; then
         echo "== finding $(basename "$game")'s functions"
         "$here/wiinx-scan" functions "$dol" --out "$game/functions.map"
     fi

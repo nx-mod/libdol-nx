@@ -107,6 +107,37 @@ MKW_MEMORY_FORCE_INLINE bool FlatWriteNeedsPolicy(uint32_t address) {
     return (address & 0xFE000000u) == 0xCC000000u;  // 0xCC000000..0xCDFFFFFF
 }
 
+// Gekko lfs is the matching bit-level widening: a single's sign, exponent and
+// fraction placed in a double exactly. A host float-to-double cast is not that:
+// AArch64's fcvt quiets a signalling NaN (sets fraction bit 22) and, with FPCR.FZ
+// on for a title in non-IEEE mode, flushes a denormal to zero, where Gekko keeps
+// both. A game moving data through lfs/stfs - a fast copy, a packed colour - got
+// those bit patterns changed.
+MKW_MEMORY_FORCE_INLINE double ConvertPpcSingleBitsToDouble(uint32_t bits) {
+    const uint32_t exponent = (bits >> 23) & 0xFFu;
+    if (exponent - 1u < 0xFEu) [[likely]] {  // a normal number: the host cast is exact
+        float value;
+        std::memcpy(&value, &bits, sizeof(value));
+        return static_cast<double>(value);
+    }
+    const uint64_t sign = static_cast<uint64_t>(bits & 0x80000000u) << 32;
+    uint64_t fraction = bits & 0x007FFFFFu;
+    uint64_t wide = sign;
+    if (exponent == 0xFFu) {  // infinity or NaN, signalling or not, fraction kept
+        wide |= (0x7FFull << 52) | (fraction << 29);
+    } else if (fraction != 0) {  // a denormal: normalised into the double's range
+        int64_t e = 1 - 127 + 1023;
+        while ((fraction & 0x00800000u) == 0) {
+            fraction <<= 1;
+            --e;
+        }
+        wide |= (static_cast<uint64_t>(e) << 52) | ((fraction & 0x007FFFFFu) << 29);
+    }
+    double value;
+    std::memcpy(&value, &wide, sizeof(value));
+    return value;
+}
+
 // Gekko stfs conversion is a bit-level narrowing operation.  In particular it
 // does not behave like a host double-to-float cast for values which were left
 // in double precision, and it has hardware-tested handling for tiny values.
@@ -490,10 +521,10 @@ MKW_MEMORY_FORCE_INLINE uint32_t ReadResolved32(uint8_t* r, uint32_t o, uint32_t
 // Live via isa/ppc_isa_quantized.h (the psq resolved tier packs two lanes into
 // one 64-bit access); generated code never names it directly.
 MKW_MEMORY_FORCE_INLINE uint64_t ReadResolved64(uint8_t* r, uint32_t o, uint32_t a) { return ReadResolved<uint64_t>(r, o, a, ReadResolvedFallback<uint64_t>); }
-MKW_MEMORY_FORCE_INLINE float ReadResolvedFloat32(uint8_t* r, uint32_t o, uint32_t a) {
+MKW_MEMORY_FORCE_INLINE double ReadResolvedFloat32(uint8_t* r, uint32_t o, uint32_t a) {
     uint32_t bits = 0;
-    if (!ReadResolvedScalar(r, o, bits)) [[unlikely]] return ReadResolvedFallbackFloat32(a);
-    float value; std::memcpy(&value, &bits, sizeof(value)); return value;
+    if (!ReadResolvedScalar(r, o, bits)) [[unlikely]] bits = ReadResolvedFallback<uint32_t>(a);
+    return ConvertPpcSingleBitsToDouble(bits);
 }
 MKW_MEMORY_FORCE_INLINE double ReadResolvedFloat64(uint8_t* r, uint32_t o, uint32_t a) {
     uint64_t bits = 0;
@@ -564,11 +595,8 @@ MKW_MEMORY_FORCE_INLINE uint32_t FlatRead32(uint32_t address) {
     return FlatLoad<uint32_t>(address);
 }
 
-MKW_MEMORY_FORCE_INLINE float FlatReadFloat32(uint32_t address) {
-    const uint32_t bits = FlatRead32(address);
-    float value = 0.0f;
-    std::memcpy(&value, &bits, sizeof(value));
-    return value;
+MKW_MEMORY_FORCE_INLINE double FlatReadFloat32(uint32_t address) {
+    return ConvertPpcSingleBitsToDouble(FlatRead32(address));
 }
 
 MKW_MEMORY_FORCE_INLINE double FlatReadFloat64(uint32_t address) {

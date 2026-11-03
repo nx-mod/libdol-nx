@@ -25,10 +25,17 @@ which signs from this game's own code and keeps only what verifies.
 """
 import difflib
 import os
+import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+
+
+# a field fingerprint names a function only when it has this many fields, and
+# no other function of about its size shares it: two small functions that
+# touch the same three offsets prove nothing
+MIN_FIELDS = 8
 
 
 def load(name):
@@ -90,26 +97,65 @@ def main(argv):
     game_code = functions(game, game_entries, scan)
     by_size = sorted((len(words), address) for address, words in game_code.items())
 
+    # A function the game's own map already names as something else is no
+    # candidate, and no rival either: Bomberman Blast links nw4r's lyt and the
+    # Home Menu's copy of it (nw4hbm::lyt), near-identical, and the copy's
+    # score sat within the margin of the real one's.
+    game_names = dict(game_entries)
+    def taken(candidate, name):
+        theirs = game_names.get(candidate, "")
+        if not theirs or re.fullmatch(r"(fn_)?(0x)?[0-9A-Fa-f]{8}", theirs):
+            return False
+        ours = signer.canonical(signer.demangle(name, params=False) or name)
+        theirs = signer.canonical(theirs)
+        # (our maps qualify by library - RVL::EXIImm, MTX::PSMTXIdentity,
+        # RVL::OS::ExitThread - where a published one says EXIImm)
+        return not (theirs.endswith(ours) or ours.endswith(theirs))
+
+    def fingerprint(dol, address, size):
+        code = dol.read(address, size * 4)
+        return scan.field_fingerprint(code) if code else None
+
     claims = {}
+    by_fields = 0
+    fielded = []  # (name, address): printed, so each can be checked
     for address in sorted(natives):
         wanted = ref_code.get(address)
         if not wanted or signer.NOT_A_FUNCTION.search(names.get(address, "")):
             continue
         low, high = len(wanted) * 0.8, len(wanted) * 1.25
         scored = []
+        in_size = []
         for size, candidate in by_size:
             if size < low:
                 continue
             if size > high:
                 break
+            if taken(candidate, names[address]):
+                continue
+            in_size.append((size, candidate))
             matcher = difflib.SequenceMatcher(None, wanted, game_code[candidate], autojunk=False)
             if matcher.real_quick_ratio() < minimum or matcher.quick_ratio() < minimum:
                 continue
             scored.append((matcher.ratio(), candidate))
         scored.sort(reverse=True)
         if not scored or scored[0][0] < minimum:
-            continue
-        if len(scored) > 1 and scored[0][0] - scored[1][0] < margin:
+            # The same source compiled differently - other registers, a switch
+            # laid out as a compare tree - is not similar word for word, but
+            # reads and writes the same fields: one candidate of about its
+            # size with the reference's field fingerprint, and a fingerprint
+            # of enough fields to say something, is the function.
+            ref_size = len(wanted)
+            if len(scan.field_set(ref.read(address, ref_size * 4) or b"")) < MIN_FIELDS:
+                continue
+            want = fingerprint(ref, address, ref_size)
+            same = [c for size, c in in_size if fingerprint(game, c, size) == want]
+            if want is None or len(same) != 1:
+                continue
+            scored = [(0.0, same[0])]
+            by_fields += 1
+            fielded.append((names[address], same[0]))
+        elif len(scored) > 1 and scored[0][0] - scored[1][0] < margin:
             continue
         score, candidate = scored[0]
         # One function, one native: two that both look like it are both wrong.
@@ -128,7 +174,9 @@ def main(argv):
             handle.write(f"{address:08x} {named.get(address, f'fn_{address:08x}')}\n")
     exact = sum(1 for c, (s, _) in claims.items() if c in named and s >= 0.999)
     print(f"reference natives: {len(natives)}; named in this game: {len(named)} "
-          f"({exact} identical, {len(named) - exact} near)")
+          f"({exact} identical, {len(named) - exact - by_fields} near, {by_fields} by their fields)")
+    for name, candidate in fielded:
+        print(f"  by fields: {candidate:08x} {name}")
     print(f"wrote {out}")
     return 0
 

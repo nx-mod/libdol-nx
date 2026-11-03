@@ -100,6 +100,20 @@ int main() {
     check("dirty state gains bit 0", load<u32>(kGxData + 0x5FC), 0x81);
     check("bpSentNot cleared", load<u16>(kGxData + 0x002), 0);
 
+    std::printf("GXSetScissor: 640x480 at 10,20\n");
+    g_fifo.clear();
+    store<u32>(kGxData + 0x148, 0x20800800);  // register 0x20, bits outside the fields set
+    store<u32>(kGxData + 0x14C, 0x21000000);
+    store<u16>(kGxData + 0x002, 1);
+    sdk::gx::set_scissor(10, 20, 640, 480);
+    // top-left 352,362 and bottom-right 991,841, each corner offset by 342
+    check("gxData scissor0", load<u32>(kGxData + 0x148), 0x2096096A);
+    check("gxData scissor1", load<u32>(kGxData + 0x14C), 0x213DF349);
+    const u8 scissor[] = {0x61, 0x20, 0x96, 0x09, 0x6A, 0x61, 0x21, 0x3D, 0xF3, 0x49};
+    check("scissor command bytes",
+          g_fifo.size() == sizeof(scissor) && std::equal(g_fifo.begin(), g_fifo.end(), scissor), 1);
+    check("bpSentNot cleared", load<u16>(kGxData + 0x002), 0);
+
     std::printf(g_failures ? "%d FAILED\n" : "all passed\n", g_failures);
     return g_failures ? 1 : 0;
 }

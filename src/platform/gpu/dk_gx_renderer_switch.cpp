@@ -171,6 +171,13 @@ struct CachedTexture {
   // the frame its RAM was last hashed in: once a frame is enough, and hashing
   // on every bind (thousands a frame in a menu) was most of a draw's cost
   uint32_t checkedFrame = ~0u;
+  // the whole image's hash at its decode, and the texture-cache invalidate (BP 0x66) it was
+  // last checked under: after a new invalidate the whole image is hashed once, since the
+  // game says its CPU has rewritten texture memory - a sampled hash missed Mega Man 9's
+  // CPU-drawn 256x240 picture changing a few pixels (stale rows in text, old tiles behind
+  // sprites)
+  uint64_t full = 0;
+  uint32_t checkedInvalidation = 0;
 };
 
 // Frames presented, for the caches' ages (gx_frame_done).
@@ -188,6 +195,21 @@ uint64_t sample_hash(const uint8_t* data, size_t size) {
   uint64_t h = 0xcbf29ce484222325ull ^ size;
   const size_t step = size / 4096 + 1;
   for (size_t i = 0; i < size; i += step) {
+    h = mix(h, data[i]);
+  }
+  return h;
+}
+
+// the whole of `size` bytes, eight at a time
+uint64_t full_hash(const uint8_t* data, size_t size) {
+  uint64_t h = 0xcbf29ce484222325ull ^ size;
+  size_t i = 0;
+  for (; i + 8 <= size; i += 8) {
+    uint64_t word;
+    std::memcpy(&word, data + i, 8);
+    h = mix(h, word);
+  }
+  for (; i < size; ++i) {
     h = mix(h, data[i]);
   }
   return h;
@@ -296,17 +318,34 @@ TextureView* texture_for(const State& state, const TexMap& map, const CommandPro
   }
 
   auto& slot = g_textures[key];
-  if (slot && slot->checkedFrame == g_frame) {
+  const uint32_t invalidation = state.TexInvalidations();
+  if (slot && slot->checkedFrame == g_frame && slot->checkedInvalidation == invalidation) {
     slot->lastUsed = g_frame;
     return &slot->view;
   }
   uint64_t contents = sample_hash(data, size);
+  uint64_t full = 0;
   if (tlut) {
     contents = mix(contents, sample_hash(tlut, load.entries * 2));
   }
-  if (slot && slot->contents == contents) {
+  const auto whole = [&] {
+    uint64_t h = full_hash(data, size);
+    return tlut ? mix(h, full_hash(tlut, load.entries * 2)) : h;
+  };
+  if (slot && slot->checkedInvalidation != invalidation) {
+    full = whole();
+    if (slot->full == full) {
+      slot->contents = contents;
+      slot->checkedInvalidation = invalidation;
+      slot->lastUsed = slot->checkedFrame = g_frame;
+      return &slot->view;
+    }
+  } else if (slot && slot->contents == contents) {
     slot->lastUsed = slot->checkedFrame = g_frame;
     return &slot->view;
+  }
+  if (full == 0) {
+    full = whole();
   }
   const std::vector<uint8_t> rgba =
       IsPaletted(map.format)
@@ -345,6 +384,8 @@ TextureView* texture_for(const State& state, const TexMap& map, const CommandPro
     h = h > 1 ? h / 2 : 1;
   }
   slot->contents = contents;
+  slot->full = full;
+  slot->checkedInvalidation = invalidation;
   slot->checkedFrame = g_frame;
   return &slot->view;
 }

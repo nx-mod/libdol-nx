@@ -463,6 +463,31 @@ def masked_hash(code):
     return hashlib.sha256(struct.pack(f">{len(masked)}I", *masked)).hexdigest()[:16]
 
 
+def field_fingerprint(code):
+    """The struct layout a function works with, as a hash: the displacements of
+    its D-form loads and stores off any base but the stack (r1), the small-data
+    registers (r2, r13) and r0 - the fields it reads and writes - as a sorted set.
+
+    masked_hash says two builds' copies are the same code. This says less and is
+    true more often: that they use the same field offsets, which is what a native
+    written for one build's layout depends on. Two builds of a library that only
+    reorder instructions or move globals share it; one that moved a field does
+    not. No code is kept, only the hash."""
+    blob = ",".join(str(f) for f in sorted(field_set(code))).encode()
+    return hashlib.sha256(blob).hexdigest()[:16]
+
+
+def field_set(code):
+    """The displacements field_fingerprint hashes, as a set."""
+    fields = set()
+    for i in range(0, len(code) - 3, 4):
+        word = struct.unpack_from(">I", code, i)[0]
+        op, base, disp = word >> 26, (word >> 16) & 31, word & 0xFFFF
+        if 32 <= op <= 55 and base not in (0, 1, 2, 13):  # lwz..stfdu, D form
+            fields.add(disp - 0x10000 if disp & 0x8000 else disp)
+    return fields
+
+
 def masked_words(code):
     """A function's instructions with everything that legitimately moves blanked out.
 
@@ -721,7 +746,7 @@ def scan_with(dol, signatures):
     return bindings, missing
 
 
-def merge_bindings(path, scanned, prune):
+def merge_bindings(path, scanned, prune, dol=None):
     """What to write over an existing bindings file.
 
     Writing only what a scan matched loses two different things. A game can
@@ -732,17 +757,26 @@ def merge_bindings(path, scanned, prune):
     came to be one rescan away from losing strchr, strncmp and strrchr.
 
     So a rescan carries over what it cannot speak to, and says what it carried.
-    Returns (table, kept, stale, refused).
+    Not what the game's own map contradicts, though: a carried binding at an
+    address the map gives another function's name binds the native to that
+    function. Bomberman Blast kept NANDCreate, NANDCreateDir and NANDGetType on
+    the SDK's internal helpers (nandCreate, ...: other arguments) from a scan
+    made before those signatures were fixed, and could never create its save.
+    Those are dropped, and named. An address the map leaves unnamed is no
+    evidence either way: a hand binding (Mega Man 9's GX__SetViewport) or one
+    wiinx-find-globals placed by what the code touches (the VI retrace
+    callbacks) sits there, signed from other builds or not at all, and stays.
+    Returns (table, kept, stale, refused, contradicted).
     """
     if not os.path.exists(path):
-        return scanned, [], [], None
+        return scanned, [], [], None, []
     try:
         with open(path) as handle:
             existing = json.load(handle)
     except (OSError, ValueError) as problem:
-        return scanned, [], [], f"cannot read the file it would replace ({problem})"
+        return scanned, [], [], f"cannot read the file it would replace ({problem})", []
     if not isinstance(existing, dict):
-        return scanned, [], [], "the file it would replace is not an object"
+        return scanned, [], [], "the file it would replace is not an object", []
 
     # mkwii-nx's bindings are keyed by reference address rather than by
     # registration name: it is the game the reference addresses come from, so
@@ -753,15 +787,49 @@ def merge_bindings(path, scanned, prune):
     if existing and len(address_keyed) > len(existing) // 2:
         return scanned, [], [], (f"it is keyed by reference address, not by registration name "
                                  f"({len(address_keyed)} of {len(existing)} keys) - this is not "
-                                 f"the file `scan --out` writes")
+                                 f"the file `scan --out` writes"), []
 
     carried = {k: v for k, v in existing.items() if k not in scanned}
     if prune:
-        return scanned, [], [], None
-    signed = {registration_of(s) for s in load_signatures()}
-    kept = [k for k in carried if k not in signed]
-    stale = [k for k in carried if k in signed]
-    return {**carried, **scanned}, kept, stale, None
+        return scanned, [], [], None, []
+    signatures = {}
+    for signature in load_signatures():
+        signatures.setdefault(registration_of(signature), []).append(signature)
+
+    # The title's own map, beside the bindings: the names it gives addresses.
+    names = {}
+    map_path = os.path.join(os.path.dirname(os.path.abspath(path)), "functions.map")
+    if os.path.exists(map_path):
+        for line in open(map_path, errors="ignore"):
+            parts = line.split()
+            if len(parts) >= 2 and re.fullmatch(r"[0-9A-Fa-f]{8}", parts[0]) \
+                    and not re.fullmatch(r"(0x)?[0-9A-Fa-f]{8}", parts[1]):
+                names[int(parts[0], 16)] = parts[1]
+
+    def bare(name):
+        """A registration's function name, without the runtime's decorations."""
+        name = re.sub(r"(_HLE)?(_[89][0-9A-Fa-f]{7})?(_hle|_Cpu|_stub)?$", "", name)
+        return re.sub(r"(?<=\w)(::|__)", "", name)
+
+    def contradicts(registration, map_name):
+        """The map names the address as another function: a different name
+        once spelling is set aside, or the SDK's internal helper (nandCreate,
+        __GXSetViewport) where the native is the public function."""
+        mine, theirs = bare(registration), re.sub(r"(?<=\w)(::|__)", "", map_name)
+        if mine.replace("_", "").lower() != theirs.replace("_", "").lower():
+            return not mine.lower().startswith(("stub", "gx_stub", "func"))
+        internal = lambda n: n.startswith("_") or n[:1].islower()
+        return internal(theirs) and not internal(mine)
+
+    contradicted = []
+    for registration, address in list(carried.items()):
+        map_name = names.get(int(address, 16))
+        if map_name and contradicts(registration, map_name):
+            contradicted.append(f"{registration} (the map has {map_name})")
+            del carried[registration]
+    kept = [k for k in carried if k not in signatures]
+    stale = [k for k in carried if k in signatures]
+    return {**carried, **scanned}, kept, stale, None, contradicted
 
 
 def main(argv):
@@ -857,7 +925,7 @@ def main(argv):
             # under; the ones whose bindings are generated are keyed by their
             # own name, which is what the generator looks for.
             table = {b.get("registration") or b["name"]: b["address"] for b in bindings}
-            table, kept, stale, refused = merge_bindings(path, table, "--prune" in argv)
+            table, kept, stale, refused, contradicted = merge_bindings(path, table, "--prune" in argv, dol)
             if refused:
                 print(f"refused to write {path}: {refused}")
                 return 1
@@ -870,6 +938,9 @@ def main(argv):
             # carry-over are named, because either can be the thing that is
             # wrong: a hand-written entry nothing signs, or a native a signature
             # used to match and no longer does.
+            if contradicted:
+                print(f"  dropped {len(contradicted)} binding(s) at an address the game's map gives another "
+                      f"function: " + ", ".join(sorted(contradicted)))
             if kept:
                 print(f"  kept {len(kept)} binding(s) no signature covers: " + ", ".join(sorted(kept)))
             if stale:

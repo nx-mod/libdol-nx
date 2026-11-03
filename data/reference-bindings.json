@@ -2794,6 +2794,11 @@
     "library": "libdol-nx",
     "native": "VIGetDTVStatus_HLE_801bad38"
   },
+  "0x801BD694": {
+    "file": "libdol-nx/src/platform/audio/ax_effects.cpp",
+    "library": "libdol-nx",
+    "native": "AXFXReverbHiCallback_801bd694"
+  },
   "0x801BF3B4": {
     "file": "libwii-nx/src/input/wpad.cpp",
     "library": "libwii-nx",

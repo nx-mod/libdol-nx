@@ -59,5 +59,9 @@ g++ -std=c++20 -Iinclude tests/core_check.cpp src/core/*.cpp -o check && ./check
 - Registry made explicit (`add_natives`) so core stays below the modules.
 - `Host::call` has no return address: the runtime's lyt native hard-coded Mario
   Kart Wii's, which a library cannot know.
+- 2026-11-03: `set_bound` / `bound` - where the game binds each native, and
+  where the original's indirect calls return - and `Host::call_from`, which
+  calls with that return address in lr (`call_guest` in guest.hpp wraps both).
+  docs/natives.md has why.
 - `LibVersion` generalized beyond libraries; `set_detected` / `detected` added
   so platform behavior can depend on builds too.

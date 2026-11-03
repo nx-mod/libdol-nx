@@ -20,6 +20,11 @@ name (`ppc_runtime.h`, `memory.h`), and the translator fixes those names.
 
 ## Notes
 
+- 2026-11-02: `lfs` is a bit-exact widening (`ConvertPpcSingleBitsToDouble`,
+  `memory_access.h`), the twin of `stfs`'s narrowing: a host float-to-double
+  cast quiets a signalling NaN and, with FPCR.FZ on, flushes a denormal, where
+  Gekko keeps both.
+
 - 2026-09-22: ported. `ppc_helpers.cpp` and `fpu_helpers.cpp` keep the exact
   float rounding the translated code does - no fast math, no contraction - and
   are built outside the unity groups so that cannot be lost.

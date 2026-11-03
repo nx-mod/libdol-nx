@@ -39,6 +39,10 @@ struct Host {
     // whatever set_gpr put in r3.. beforehand. The host chooses the link
     // register: only it knows where the calling native is bound in this game.
     void (*call)(Cpu* cpu, GuestAddr target) = nullptr;
+    // The same with `resume` in the link register: a native's own return
+    // address for that call (Bound::call), so it is right however natives
+    // nest. 0 leaves lr as call() would.
+    void (*call_from)(Cpu* cpu, GuestAddr target, GuestAddr resume) = nullptr;
 
     // Tells the graphics layer that native code rewrote [addr, addr + size),
     // the way a DMA would - textures sampled from there must be re-read.
