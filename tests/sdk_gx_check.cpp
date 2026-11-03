@@ -145,6 +145,34 @@ int main() {
     check("tref[0]", load<u32>(kGxData + 0x150), (0x28FFFFFFu & ~0x3FFu) | (7u << 7));
     check("stage 0 uses none", load<u32>(kGxData + 0x5E8), 1u << 3);
 
+    std::printf("GXSetTevColorOp: an add with bias and scale, then a comparison\n");
+    store<u32>(kGxData + 0x180, 0xC0000000);
+    sdk::gx::set_tev_color_op(0, 0, 1, 2, 1, 3);
+    // op 0, scale 2 at 20, bias 1 at 16, clamp at 19, output 3 at 22
+    check("tevc[0] add", load<u32>(kGxData + 0x180), 0xC0000000u | (2u << 20) | (1u << 16) | (1u << 19) | (3u << 22));
+    sdk::gx::set_tev_color_op(0, 9, 0, 0, 0, 0);
+    // op 9: bit 18 from op's low bit, op >> 1 in the scale bits, bias 3
+    check("tevc[0] comparison", load<u32>(kGxData + 0x180), 0xC0000000u | (1u << 18) | (0u << 20) | (3u << 16) | ((9u << 19) & 0x300000u));
+
+    std::printf("GXSetTevKColor / ColorS10: konstant 1, colour 3\n");
+    g_fifo.clear();
+    store<u16>(kGxData + 0x002, 1);
+    sdk::gx::set_tev_kcolor(1, 0x11223344);  // r 0x11, g 0x22, b 0x33, a 0x44
+    sdk::gx::set_tev_color_s10(3, 0x00050006, 0x00070008);  // r 5, g 6, b 7, a 8
+    const u8 konst[] = {0x61, 0xE2, 0x84, 0x40, 0x11, 0x61, 0xE3, 0x82, 0x20, 0x33,
+                        0x61, 0xE6, 0x00, 0x80, 0x05, 0x61, 0xE7, 0x00, 0x60, 0x07,
+                        0x61, 0xE7, 0x00, 0x60, 0x07, 0x61, 0xE7, 0x00, 0x60, 0x07};
+    check("konstant command bytes", g_fifo.size() == sizeof(konst) && std::equal(g_fifo.begin(), g_fifo.end(), konst), 1);
+
+    std::printf("GXSetBlendMode / AlphaCompare\n");
+    g_fifo.clear();
+    store<u32>(kGxData + 0x220, 0x41000000);
+    sdk::gx::set_blend_mode(1, 4, 5, 0);  // blend, src alpha, inverse src alpha
+    check("cmode0", load<u32>(kGxData + 0x220), 0x41000000u | 1u | (4u << 8) | (5u << 5));
+    sdk::gx::set_alpha_compare(4, 0x80, 0, 7, 0);  // greater 0x80, and always
+    const u8 pixel[] = {0x61, 0x41, 0x00, 0x04, 0xA1, 0x61, 0xF3, 0x3C, 0x00, 0x80};
+    check("pixel command bytes", g_fifo.size() == sizeof(pixel) && std::equal(g_fifo.begin(), g_fifo.end(), pixel), 1);
+
     std::printf(g_failures ? "%d FAILED\n" : "all passed\n", g_failures);
     return g_failures ? 1 : 0;
 }

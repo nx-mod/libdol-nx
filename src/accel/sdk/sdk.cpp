@@ -23,6 +23,8 @@ extern const Native kGxTransformNatives[];
 extern const std::size_t kGxTransformNativeCount;
 extern const Native kGxTevNatives[];
 extern const std::size_t kGxTevNativeCount;
+extern const Native kGxGeometryNatives[];
+extern const std::size_t kGxGeometryNativeCount;
 }  // namespace gx
 
 std::span<const Native> natives() noexcept {
@@ -37,6 +39,7 @@ std::span<const Native> natives() noexcept {
         table.insert(table.end(), gx::kGxNatives, gx::kGxNatives + gx::kGxNativeCount);
         table.insert(table.end(), gx::kGxTransformNatives, gx::kGxTransformNatives + gx::kGxTransformNativeCount);
         table.insert(table.end(), gx::kGxTevNatives, gx::kGxTevNatives + gx::kGxTevNativeCount);
+        table.insert(table.end(), gx::kGxGeometryNatives, gx::kGxGeometryNatives + gx::kGxGeometryNativeCount);
         return table;
     }();
     return all;

@@ -29,6 +29,13 @@ fed Aurora's copy of the state and stay for the Aurora build.
 | `GXSetTevColorIn`       | 2007-12-11 | `gx_tev.cpp`       |
 | `GXSetTevAlphaIn`       | 2007-12-11 | `gx_tev.cpp`       |
 | `GXSetTevOrder`         | 2007-12-11 | `gx_tev.cpp`       |
+| `GXSetTevColorOp`, `GXSetTevAlphaOp` | 2007-12-11 | `gx_tev.cpp` |
+| `GXSetTevKColorSel`, `GXSetTevKAlphaSel` | 2007-12-11 | `gx_tev.cpp` |
+| `GXSetTevSwapMode`, `GXSetTevSwapModeTable` | 2007-12-11 | `gx_tev.cpp` |
+| `GXSetTevKColor`, `GXSetTevColorS10` | 2007-12-11 | `gx_tev.cpp` |
+| `GXSetNumTevStages`     | 2007-12-11 | `gx_tev.cpp`       |
+| `GXSetBlendMode`, `GXSetAlphaCompare` | 2007-12-11 | `gx_tev.cpp` |
+| `GXBegin`               | 2007-12-11 | `gx_geometry.cpp`: the header and the SDK's dummy flush primitive; the dirty-state flush stays the game's (`__GXSetDirtyState`, through its binding) |
 
 The deko3d build switches off the ~120 Aurora-era GX natives in platform/gx
 (they call Aurora's GX), so under it every GX setter not written here runs as
@@ -36,8 +43,8 @@ the game's translated code, its FIFO writes a word at a time. Each one here
 writes the original's words in one burst. `GXSetScissor` came first: Bomberman
 Blast's Characters menu calls it thousands of times a frame; the TEV setters
 next, which `nw4r::lyt::Material::SetupGX` calls up to eight times each per
-material. The rest of SetupGX's setters (TEV ops, konstant colours and
-selections, swap tables, channels, blend and alpha compare) are in TODO.md.
+material. What is left of SetupGX's setters (channels, texture generation, indirect
+stages, the texture matrix and palette loads) is in TODO.md.
 
 ## Check
 

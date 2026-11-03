@@ -52,6 +52,20 @@ void set_scissor(u32 left, u32 top, u32 width, u32 height) noexcept;
 void set_tev_color_in(u32 stage, u32 a, u32 b, u32 c, u32 d) noexcept;
 void set_tev_alpha_in(u32 stage, u32 a, u32 b, u32 c, u32 d) noexcept;
 void set_tev_order(u32 stage, u32 coord, u32 map, u32 color) noexcept;
+void set_tev_color_op(u32 stage, u32 op, u32 bias, u32 scale, u32 clamp, u32 out) noexcept;
+void set_tev_alpha_op(u32 stage, u32 op, u32 bias, u32 scale, u32 clamp, u32 out) noexcept;
+void set_tev_kcolor_sel(u32 stage, u32 sel) noexcept;
+void set_tev_kalpha_sel(u32 stage, u32 sel) noexcept;
+void set_tev_swap_mode(u32 stage, u32 ras, u32 tex) noexcept;
+void set_tev_swap_mode_table(u32 table, u32 r, u32 g, u32 b, u32 a) noexcept;
+void set_tev_kcolor(u32 id, u32 rgba) noexcept;
+void set_tev_color_s10(u32 id, u32 rg, u32 ba) noexcept;
+void set_num_tev_stages(u32 count) noexcept;
+void set_num_tex_gens(u32 count) noexcept;
+void set_num_chans(u32 count) noexcept;
+void set_num_ind_stages(u32 count) noexcept;
+void set_blend_mode(u32 type, u32 src, u32 dst, u32 op) noexcept;
+void set_alpha_compare(u32 comp0, u32 ref0, u32 op, u32 comp1, u32 ref1) noexcept;
 }  // namespace gx
 
 namespace tpl {

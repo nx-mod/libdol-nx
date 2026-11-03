@@ -77,6 +77,7 @@ add_library(wiinx_sdk STATIC
     src/accel/sdk/gx/gx_texture.cpp
     src/accel/sdk/gx/gx_transform.cpp
     src/accel/sdk/gx/gx_tev.cpp
+    src/accel/sdk/gx/gx_geometry.cpp
     src/accel/sdk/tpl/tpl.cpp
 )
 target_link_libraries(wiinx_sdk PUBLIC wiinx_core wiinx_format)

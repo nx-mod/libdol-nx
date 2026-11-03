@@ -83,7 +83,9 @@ void put_u16(u8*& at, u16 value) {
 void load_texture(Cpu* cpu, GuestAddr writer, GuestAddr glyph) {
     const Host& h = host();
     const Called& c = called();
-    const GuestAddr loading = h.global ? h.global("ut.CharWriter_loadingTexture") : 0;
+    // (looked up once: a lookup by name per glyph made this slower than the
+    // translated original)
+    static const GuestAddr loading = h.global ? h.global("ut.CharWriter_loadingTexture") : 0;
     const u32 texture = load<u32>(glyph + Glyph::kTexture);
     const u32 small = load<u32>(writer + Writer::kFilterSmall);
     const u32 large = load<u32>(writer + Writer::kFilterLarge);
@@ -140,20 +142,29 @@ void print_glyph(Cpu* cpu) {
     const f32 y = static_cast<f32>(h.fpr(cpu, 2));
     const f32 z = static_cast<f32>(h.fpr(cpu, 3));
 
-    const u32 glyphWidth = load<u8>(glyph + Glyph::kGlyphWidth);
-    const u32 height = load<u8>(glyph + Glyph::kHeight);
-    const u32 cellX = load<u16>(glyph + Glyph::kCellX);
-    const u32 cellY = load<u16>(glyph + Glyph::kCellY);
-    const u32 texWidth = load<u16>(glyph + Glyph::kTexWidth);
-    const u32 texHeight = load<u16>(glyph + Glyph::kTexHeight);
+    // each object resolved once, its fields read from there: a lookup per
+    // field was most of this function's time
+    const u8* g = at(glyph, 0x14);
+    const u8* w = at(writer, 0x40);
+    if (g == nullptr || w == nullptr) {
+        return;
+    }
+    const u32 glyphWidth = g[Glyph::kGlyphWidth];
+    const u32 height = g[Glyph::kHeight];
+    const u32 cellX = from_be<u16>(g + Glyph::kCellX);
+    const u32 cellY = from_be<u16>(g + Glyph::kCellY);
+    const u32 texWidth = from_be<u16>(g + Glyph::kTexWidth);
+    const u32 texHeight = from_be<u16>(g + Glyph::kTexHeight);
 
     // the original's single-precision operations, in its order
-    const f32 x2 = x + static_cast<f32>(glyphWidth) * load<f32>(writer + Writer::kScaleX);
-    const f32 y2 = y + static_cast<f32>(height) * load<f32>(writer + Writer::kScaleY);
+    const f32 x2 = x + static_cast<f32>(glyphWidth) * from_be<f32>(w + Writer::kScaleX);
+    const f32 y2 = y + static_cast<f32>(height) * from_be<f32>(w + Writer::kScaleY);
     const u16 texLeft = tex_coord(cellX, texWidth);
     const u16 texTop = tex_coord(cellY, texHeight);
     const u16 texRight = tex_coord(cellX + glyphWidth, texWidth);
     const u16 texBottom = tex_coord(cellY + height, texHeight);
+    const u32 colors[4] = {from_be<u32>(w + Writer::kColorLeftUp), from_be<u32>(w + Writer::kColorRightUp),
+                           from_be<u32>(w + Writer::kColorRightDown), from_be<u32>(w + Writer::kColorLeftDown)};
 
     load_texture(cpu, writer, glyph);
 
@@ -165,19 +176,19 @@ void print_glyph(Cpu* cpu) {
 
     // four vertices: position (f32 x3), colour (RGBA8), texture coordinate (u16 x2)
     u8 quad[4 * 20];
-    u8* at = quad;
-    const auto vertex = [&](f32 vx, f32 vy, u32 colorOffset, u16 s, u16 t) {
-        put_f32(at, vx);
-        put_f32(at, vy);
-        put_f32(at, z);
-        put_u32(at, load<u32>(writer + colorOffset));
-        put_u16(at, s);
-        put_u16(at, t);
+    u8* out = quad;
+    const auto vertex = [&](f32 vx, f32 vy, u32 color, u16 s, u16 t) {
+        put_f32(out, vx);
+        put_f32(out, vy);
+        put_f32(out, z);
+        put_u32(out, color);
+        put_u16(out, s);
+        put_u16(out, t);
     };
-    vertex(x, y, Writer::kColorLeftUp, texLeft, texTop);
-    vertex(x2, y, Writer::kColorRightUp, texRight, texTop);
-    vertex(x2, y2, Writer::kColorRightDown, texRight, texBottom);
-    vertex(x, y2, Writer::kColorLeftDown, texLeft, texBottom);
+    vertex(x, y, colors[0], texLeft, texTop);
+    vertex(x2, y, colors[1], texRight, texTop);
+    vertex(x2, y2, colors[2], texRight, texBottom);
+    vertex(x, y2, colors[3], texLeft, texBottom);
     if (h.gx_write) {
         h.gx_write(quad, sizeof(quad));
     }
