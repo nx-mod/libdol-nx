@@ -114,6 +114,37 @@ int main() {
           g_fifo.size() == sizeof(scissor) && std::equal(g_fifo.begin(), g_fifo.end(), scissor), 1);
     check("bpSentNot cleared", load<u16>(kGxData + 0x002), 0);
 
+    std::printf("GXSetTevColorIn / AlphaIn: stage 2\n");
+    g_fifo.clear();
+    store<u32>(kGxData + 0x180 + 8, 0xC4AB1234);  // tevc[2]: register 0xC4, other bits set
+    store<u32>(kGxData + 0x1C0 + 8, 0xC5FF0003);  // teva[2]
+    sdk::gx::set_tev_color_in(2, 8, 10, 12, 15);
+    check("tevc[2] (low sixteen bits: 8, 10, 12, 15)", load<u32>(kGxData + 0x188), 0xC4AB8ACF);
+    sdk::gx::set_tev_alpha_in(2, 7, 0, 5, 2);
+    // a 7 at 13, 0 at 10, 5 at 7, 2 at 4; bits 0..3 and 16+ kept
+    check("teva[2]", load<u32>(kGxData + 0x1C8), 0xC5FFE2A3);
+    const u8 tev[] = {0x61, 0xC4, 0xAB, 0x8A, 0xCF, 0x61, 0xC5, 0xFF, 0xE2, 0xA3};
+    check("tev command bytes", g_fifo.size() == sizeof(tev) && std::equal(g_fifo.begin(), g_fifo.end(), tev), 1);
+
+    std::printf("GXSetTevOrder: stage 3 (odd), coord 1, map 2, colour GX_COLOR0A0 (4)\n");
+    g_fifo.clear();
+    store<u32>(kGxData + 0x150 + 4, 0x29000000);  // tref[1]: register 0x29
+    store<u32>(kGxData + 0x5E8, 0);
+    store<u32>(kGxData + 0x5FC, 0x80);
+    sdk::gx::set_tev_order(3, 1, 2, 4);
+    // upper half: map 2 at 12, coord 1 at 15, channel table[4] = 0 at 19, enabled at 18
+    check("tref[1]", load<u32>(kGxData + 0x154), 0x29000000u | (2u << 12) | (1u << 15) | (1u << 18));
+    check("stage 3's map", load<u32>(kGxData + 0x5A4 + 12), 2);
+    check("stage 3 uses a coordinate", load<u32>(kGxData + 0x5E8), 1u << 3);
+    check("dirty state gains bit 0", load<u32>(kGxData + 0x5FC), 0x81);
+    std::printf("GXSetTevOrder: stage 0, no coordinate (GX_TEXCOORD_NULL), no map, rasterised colour off\n");
+    g_fifo.clear();
+    store<u32>(kGxData + 0x150, 0x28FFFFFF);
+    sdk::gx::set_tev_order(0, 0xFF, 0xFF, 0xFF);
+    // low half: map 0, coord 0, channel 7, not enabled
+    check("tref[0]", load<u32>(kGxData + 0x150), (0x28FFFFFFu & ~0x3FFu) | (7u << 7));
+    check("stage 0 uses none", load<u32>(kGxData + 0x5E8), 1u << 3);
+
     std::printf(g_failures ? "%d FAILED\n" : "all passed\n", g_failures);
     return g_failures ? 1 : 0;
 }

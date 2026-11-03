@@ -9,7 +9,13 @@ extern const Native kPaneNatives[];
 extern const std::size_t kPaneNativeCount;
 extern const Native kAnimationNatives[];
 extern const std::size_t kAnimationNativeCount;
+extern const Native kDrawQuadNatives[];
+extern const std::size_t kDrawQuadNativeCount;
 }  // namespace lyt
+namespace ut {
+extern const Native kCharWriterNatives[];
+extern const std::size_t kCharWriterNativeCount;
+}  // namespace ut
 
 std::span<const Native> natives() noexcept {
     // One list out of the module's tables, built once. g3d, snd and ef join
@@ -18,6 +24,8 @@ std::span<const Native> natives() noexcept {
         std::vector<Native> table;
         table.insert(table.end(), lyt::kPaneNatives, lyt::kPaneNatives + lyt::kPaneNativeCount);
         table.insert(table.end(), lyt::kAnimationNatives, lyt::kAnimationNatives + lyt::kAnimationNativeCount);
+        table.insert(table.end(), lyt::kDrawQuadNatives, lyt::kDrawQuadNatives + lyt::kDrawQuadNativeCount);
+        table.insert(table.end(), ut::kCharWriterNatives, ut::kCharWriterNatives + ut::kCharWriterNativeCount);
         return table;
     }();
     return all;

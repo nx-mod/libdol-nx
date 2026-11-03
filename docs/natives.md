@@ -131,6 +131,17 @@ own code. A native asks with `wiinx::bound(name)`:
 This replaced a per-native setup table and one resume address per call
 (2026-11-03): a library of natives nests, and each needs its own.
 
+A native also calls game functions that are not natives - `PrintGlyph` calls
+the game's `GXBegin`, whose dirty-state flush is the SDK's own code. So the
+bindings register every function they name, under its binding key and the
+names its signatures give it (`GX__Begin_8016f0f0` is also `GXBegin`), and
+each native's entry lists its original's direct calls (`bl`): target and
+return address. `wiinx::call_bound(cpu, bound("GXBegin"), self)` calls the
+game's function with lr where the original's call returns. A global the
+native needs comes from the game's globals.json through `Host::global`
+(`ut.CharWriter_loadingTexture`, found by wiinx-find-globals in PrintGlyph's
+own code).
+
 ### Overloads
 
 Two functions with one name - `AnimTransformBasic::Animate(u32, Pane*)` and

@@ -47,6 +47,11 @@ void load_tex_obj_preloaded(Cpu* cpu, GuestAddr obj, GuestAddr region, u32 map) 
 void load_tex_obj(Cpu* cpu, GuestAddr obj, u32 map) noexcept;
 // GXSetScissor: gxData's scissor registers, and the two BP words
 void set_scissor(u32 left, u32 top, u32 width, u32 height) noexcept;
+// GXSetTevColorIn, GXSetTevAlphaIn, GXSetTevOrder: gxData's TEV registers and
+// their BP words
+void set_tev_color_in(u32 stage, u32 a, u32 b, u32 c, u32 d) noexcept;
+void set_tev_alpha_in(u32 stage, u32 a, u32 b, u32 c, u32 d) noexcept;
+void set_tev_order(u32 stage, u32 coord, u32 map, u32 color) noexcept;
 }  // namespace gx
 
 namespace tpl {

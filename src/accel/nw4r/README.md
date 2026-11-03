@@ -22,6 +22,8 @@ Natives for nw4r, Nintendo's Wii middleware: `lyt` layouts, `g3d` 3D, `snd`,
 | `nw4r::lyt::Material::Animate` | 2007-06, 2008-03, 2009-04 | `lyt/animation.cpp` |
 | `nw4r::lyt::AnimTransformBasic::Animate(unsigned long, nw4r::lyt::Pane*)` | 2007-06, 2008-03, 2009-04 | `lyt/animation.cpp` |
 | `nw4r::lyt::AnimTransformBasic::Animate(unsigned long, nw4r::lyt::Material*)` | 2008-03, 2009-04 | `lyt/animation.cpp` |
+| `nw4r::lyt::detail::DrawQuad` (with and without the alpha) | 2007-06, 2008-03, 2009-04 | `lyt/draw_quad.cpp` |
+| `nw4r::ut::CharWriter::PrintGlyph` | any (`nw4r.ut` has no banner; 2007-11 and 2009 agree field for field) | `ut/char_writer.cpp` |
 
 An overloaded function is named with its parameters, as the demangler writes
 them (`tools/cwdemangle.py`): one name per function. What each build lays out
@@ -49,5 +51,8 @@ build).
   binding (`wiinx::bound`): only the runtime knows where a native is bound in a
   given game and where the original's calls return, so a native never
   hard-codes an address.
+- 2026-11-03: `ut::CharWriter::PrintGlyph`: the quad in one FIFO write, the
+  texture through the game's own GX functions when it changes (its static
+  cache from globals.json).
 - Next: g3d `CalcWorld` and `CalcView` (located in Mario Kart Wii at 0x800679A0
   and 0x80066AA0). They feed gameplay-visible state, so exact float order.

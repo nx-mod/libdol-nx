@@ -481,9 +481,23 @@ class Finder:
                           f"not the runtime's +0x1B34", file=sys.stderr)
                 break
 
+    def ut(self):
+        # nw4r::ut::CharWriter::PrintGlyph keeps the texture it last loaded in a
+        # static (LoadingTexture: slot, texture, filter; 16 bytes) and compares
+        # the glyph's against it before loading: its first absolute load is the
+        # static's slot field. The PrintGlyph native reads and updates it.
+        start = self.bound("nw4r::ut::CharWriter::PrintGlyph")
+        if not start:
+            return
+        loads = [e for e in trace(self.dol, start, 80) if e[0] == "load" and not isinstance(e[1], tuple)]
+        if loads:
+            self.put("ut.CharWriter_loadingTexture", loads[0][1],
+                     f"PrintGlyph {start:08X} compares the glyph's texture with it")
+
     def run(self):
         self.setters, self.hints = None, []
-        for step in (self.vi, self.gx, self.audio, self.os, self.nand, self.egg, self.btm, self.sc, self.rfl):
+        for step in (self.vi, self.gx, self.audio, self.os, self.nand, self.egg, self.btm, self.sc, self.rfl,
+                     self.ut):
             step()
         return self
 

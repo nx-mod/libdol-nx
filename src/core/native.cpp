@@ -55,19 +55,20 @@ struct BoundEntry {
     std::string_view name;
     Bound bound;
 };
-std::array<BoundEntry, 512> g_bound{};
+std::array<BoundEntry, 2048> g_bound{};  // natives and every function a game's bindings name
 std::size_t g_boundCount = 0;
 }  // namespace
 
-void set_bound(std::string_view name, GuestAddr address, std::span<const GuestAddr> calls) noexcept {
+void set_bound(std::string_view name, GuestAddr address, std::span<const GuestAddr> calls,
+               std::span<const DirectCall> direct) noexcept {
     for (std::size_t i = 0; i < g_boundCount; ++i) {
         if (g_bound[i].name == name) {
-            g_bound[i].bound = {address, calls};
+            g_bound[i].bound = {address, calls, direct};
             return;
         }
     }
     if (g_boundCount < g_bound.size()) {
-        g_bound[g_boundCount++] = {name, {address, calls}};
+        g_bound[g_boundCount++] = {name, {address, calls, direct}};
     }
 }
 

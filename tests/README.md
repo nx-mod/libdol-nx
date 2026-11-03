@@ -13,6 +13,7 @@ cmake -S . -B build -G Ninja && cmake --build build && ctest --test-dir build
 |---|---|
 | `core_check` | typed guest memory reads and writes big-endian at the right offsets |
 | `nw4r_lyt_check` | layout matrices match the original's arithmetic |
+| `nw4r_ut_check` | a glyph's quad in the FIFO, the game's GX functions called from the original's call sites, the texture cache |
 | `nw4r_lyt_animation_check` | the layout animation walk: every kind of target, the curves' exact values, a TPL bound and swapped in, calls out with their return addresses, each build's offsets |
 | `sdk_mtx_check` | the matrix library, including its paired-single multiply order |
 | `sdk_thp_check` | the video decoder against a known frame |

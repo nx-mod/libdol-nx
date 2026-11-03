@@ -159,6 +159,39 @@ def call_sites(game, address):
             if code[i:i + 4] == b"\x4e\x80\x04\x21"]  # bctrl
 
 
+def direct_calls(game, address):
+    """(target, return address) of each `bl` in the function at `address`, in
+    code order: where a native calling the same game function the original
+    calls leaves lr (wiinx::Bound::returning_from)."""
+    dol_path = executable(game)
+    if dol_path is None:
+        return []
+    scan = load_scan()
+    dol = scan.Dol(dol_path)
+    end = function_extent(game, address)
+    code = dol.read(address, end - address)
+    found = []
+    for i in range(0, len(code or b"") - 3, 4):
+        word = int.from_bytes(code[i:i + 4], "big")
+        if word >> 26 == 18 and word & 3 == 1:  # bl (relative, linking)
+            offset = word & 0x03FFFFFC
+            if offset & 0x02000000:
+                offset -= 0x04000000
+            found.append(((address + i + offset) & 0xFFFFFFFF, address + i + 4))
+    return found
+
+
+def public_names(signatures):
+    """{registration: names a signature gives it}: GX__Begin_8016f0f0 is GXBegin
+    and GX::Begin, so a native asks for the game's GXBegin by that name."""
+    names = {}
+    for entry in signatures:
+        registration = entry.get("registration")
+        if registration and entry.get("name") and not re.fullmatch(r"(0x)?[0-9A-Fa-f]{8}", entry["name"]):
+            names.setdefault(registration, set()).add(entry["name"])
+    return names
+
+
 def builds_by_game():
     """{game id: {library: build id}} from data/builds.json's seen_in lists."""
     table = {}
@@ -347,7 +380,8 @@ def main(argv):
         if address in seen:
             continue
         seen.add(address)
-        emitted.append((f"wiinx_native_{index}", name, version, address, call_sites(game, int(address, 16))))
+        emitted.append((f"wiinx_native_{index}", name, version, address, call_sites(game, int(address, 16)),
+                        direct_calls(game, int(address, 16))))
 
     out_dir = os.path.join(game, "native")
     os.makedirs(out_dir, exist_ok=True)
@@ -357,16 +391,39 @@ def main(argv):
                      "// regenerated from this game's bindings.json every translation.\n"
                      '#include "hle_stubs.h"\n'
                      '#include "abi_bridge.h"\n')
-        headers = sorted({version_header(version) for _, _, version, _, _ in emitted}
+        headers = sorted({version_header(version) for _, _, version, _, _, _ in emitted}
                          | {"wiinx/accel/nw4r.hpp", "wiinx/accel/sdk.hpp"})
         handle.write("".join(f'#include "{h}"\n' for h in headers) + "\n")
-        for symbol, name, version, address, calls in emitted:
+        # every function the bindings name, natives or not, by its key and by
+        # the names its signatures give it - for natives that call the game
+        signatures = json.load(open(os.path.join(HERE, "..", "data", "signatures.json")))["natives"]
+        known = public_names(signatures)
+        native_names = {name for _, name, *_ in emitted}
+        functions = []
+        for key, value in sorted(bindings.items()):
+            if not isinstance(value, str) or not re.fullmatch(r"0x[0-9A-Fa-f]{8}", value):
+                continue
+            for spelled in sorted({key} | known.get(key, set())):
+                if spelled not in native_names and '"' not in spelled:
+                    functions.append((spelled, int(value, 16)))
+        handle.write("// what the game's bindings name, for natives that call into it\n"
+                     "static const struct { const char* name; wiinx::GuestAddr address; } kBoundFunctions[] = {\n"
+                     + "".join(f'    {{"{n}", 0x{a:08X}u}},\n' for n, a in functions)
+                     + "};\n"
+                     "[[maybe_unused]] static const bool kBoundFunctionsSet = [] {\n"
+                     "    for (const auto& f : kBoundFunctions) wiinx::set_bound(f.name, f.address, {});\n"
+                     "    return true;\n"
+                     "}();\n\n")
+        for symbol, name, version, address, calls, direct in emitted:
             listed = ", ".join(f"0x{c:08X}u" for c in calls)
             span = f"{symbol}_calls" if calls else "{}"
+            pairs = ", ".join(f"{{0x{t:08X}u, 0x{r:08X}u}}" for t, r in direct)
+            direct_span = f"{symbol}_direct" if direct else "{}"
             handle.write(
                 f'// {name}\n'
                 + (f'static constexpr wiinx::GuestAddr {symbol}_calls[] = {{{listed}}};\n' if calls else '')
-                + f'[[maybe_unused]] static const bool {symbol}_bound = (wiinx::set_bound("{name}", 0x{int(address, 16):08X}u, {span}), true);\n'
+                + (f'static constexpr wiinx::DirectCall {symbol}_direct[] = {{{pairs}}};\n' if direct else '')
+                + f'[[maybe_unused]] static const bool {symbol}_bound = (wiinx::set_bound("{name}", 0x{int(address, 16):08X}u, {span}, {direct_span}), true);\n'
                 f'extern "C" void {symbol}(CpuContext* ctx) {{\n'
                 f'    static const wiinx::Native* const native = wiinx::find_native("{name}", {version_expression(version)}.id);\n'
                 f'    native->entry(reinterpret_cast<wiinx::Cpu*>(ctx));\n'

@@ -6,6 +6,7 @@ buttons, and the animations they run.
 | File | Natives |
 |---|---|
 | `pane.cpp` | `Pane::CalculateMtx`: each pane's matrix from its parent's, down the tree |
+| `draw_quad.cpp` | `detail::DrawQuad`, both forms: the quad of every picture, window and bounding pane, one FIFO write after the game's own `GXBegin` (2007 adds the height, 2007-11 and later subtract it) |
 | `animation.cpp` | `Pane::Animate`, `Pane::AnimateSelf`, `Material::Animate`, `AnimTransformBasic::Animate` (the pane and the material form): the whole animation walk, root to last key |
 
 Both are ported from the ogws decompilation (doldecomp/ogws, CC0) and checked

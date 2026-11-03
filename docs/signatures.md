@@ -260,6 +260,12 @@ Bros. Wii:
   reference's size with its field fingerprint (`fields`), of at least eight
   fields, is taken; each is printed (`by fields:`) so it can be checked. From
   Bomberman, eight, every one agreeing with a name its map has or with its code.
+  Four of the fields must lie past the first eight bytes: offsets 0..7 are a
+  colour's bytes in any number of functions, and an alpha `DrawQuad`'s {0..6}
+  matched unrelated game code. Where several share a fingerprint, one whose
+  nearest named neighbour belongs to another library (the Home Menu's
+  `nw4hbm::lyt` copy) is passed over, then similarity decides by the margin;
+  a similarity tie inside the margin goes to the fields too.
 
 2026-10-12, from New Super Mario Bros. Wii into Wii Party: 247 natives named
 (237 identical, 10 near), all 247 signed and verified. Natives bound by code:

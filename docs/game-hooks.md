@@ -83,8 +83,9 @@ move through `globals.json`, beside it, by the SDK's names:
 runtime looks each name up once (`src/cpu/include/guest_globals.h`). A name a
 game leaves out is 0: the native that wanted it skips the write or falls back,
 instead of writing to another game's address. Names in use: `vi.*`, `gx.*`,
-`ax.*`, `dsp.*`, `ai.*`, `os.*`, `ipc.*`, `dvd.*`, `rfl.*`, `egg.*`; grep for
-`find("` to list them. Most are found from a function that uses them - a
+`ax.*`, `dsp.*`, `ai.*`, `os.*`, `ipc.*`, `dvd.*`, `rfl.*`, `egg.*`, `ut.*`; grep
+for `find("` to list them. A native in accel, below the runtime, asks through
+`Host::global(name)` instead (`ut.CharWriter_loadingTexture`). Most are found from a function that uses them - a
 small-data offset in `VIWaitForRetrace` is `retraceQueue` in every game.
 
 ## Notes

@@ -14,7 +14,7 @@ fed Aurora's copy of the state and stay for the Aurora build.
 
 | Build id            | Banner                                  | Seen in                             |
 |---------------------|-----------------------------------------|-------------------------------------|
-| `rvl.gx@2007-12-11` | `RVL_SDK - GX` Dec 11 2007 (0x4199_60831) | Mario Kart Wii, Pikmin 2 (Wii), channels |
+| `rvl.gx@2007-12-11` | `RVL_SDK - GX` Dec 11 2007 (0x4199_60831) | Mario Kart Wii, Bomberman Blast, Pikmin 2 (Wii), channels |
 
 ## Natives
 
@@ -25,6 +25,19 @@ fed Aurora's copy of the state and stay for the Aurora build.
 | `GXInitTexObjLOD`       | 2007-12-11 | `gx_texture.cpp` |
 | `GXLoadTexObjPreLoaded` | 2007-12-11 | `gx_texture.cpp` |
 | `GXLoadTexObj`          | 2007-12-11 | `gx_texture.cpp` |
+| `GXSetScissor`          | 2007-12-11 | `gx_transform.cpp` |
+| `GXSetTevColorIn`       | 2007-12-11 | `gx_tev.cpp`       |
+| `GXSetTevAlphaIn`       | 2007-12-11 | `gx_tev.cpp`       |
+| `GXSetTevOrder`         | 2007-12-11 | `gx_tev.cpp`       |
+
+The deko3d build switches off the ~120 Aurora-era GX natives in platform/gx
+(they call Aurora's GX), so under it every GX setter not written here runs as
+the game's translated code, its FIFO writes a word at a time. Each one here
+writes the original's words in one burst. `GXSetScissor` came first: Bomberman
+Blast's Characters menu calls it thousands of times a frame; the TEV setters
+next, which `nw4r::lyt::Material::SetupGX` calls up to eight times each per
+material. The rest of SetupGX's setters (TEV ops, konstant colours and
+selections, swap tables, channels, blend and alpha compare) are in TODO.md.
 
 ## Check
 

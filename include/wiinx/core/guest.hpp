@@ -115,6 +115,23 @@ struct Guest {
 // Calls guest function `target` as the original's nth indirect call would:
 // with the return address `binding` recorded for it in lr (Host::call_from).
 // Arguments are whatever set_gpr put in r3.. beforehand.
+// Calls game function `name` (any function its bindings name) where the
+// original calls it directly: lr is the return address of the original's `bl`
+// to it. Returns false when the game binds no such function.
+inline bool call_bound(Cpu* cpu, const Bound* function, const Bound* from) noexcept {
+    if (function == nullptr || function->address == 0) {
+        return false;
+    }
+    const Host& h = host();
+    const GuestAddr resume = from != nullptr ? from->returning_from(function->address) : 0;
+    if (h.call_from != nullptr) {
+        h.call_from(cpu, function->address, resume);
+    } else if (h.call != nullptr) {
+        h.call(cpu, function->address);
+    }
+    return true;
+}
+
 inline void call_guest(Cpu* cpu, GuestAddr target, const Bound* binding, std::size_t n) noexcept {
     const Host& h = host();
     if (h.call_from != nullptr) {

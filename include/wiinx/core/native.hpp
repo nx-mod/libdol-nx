@@ -63,13 +63,31 @@ const Native* find_native(std::string_view name, std::string_view version_id) no
 // that is one of its own natives is run directly, not sent out through the
 // guest dispatcher and back, and a call into game code leaves lr where the
 // original's would have been (some callees resume through it).
+struct DirectCall {
+    GuestAddr target = 0;  // what the original's `bl` calls
+    GuestAddr resume = 0;  // and where it returns
+};
 struct Bound {
     GuestAddr address = 0;
-    std::span<const GuestAddr> calls;  // after the 1st, 2nd, ... bctrl
+    std::span<const GuestAddr> calls;    // after the 1st, 2nd, ... bctrl
+    std::span<const DirectCall> direct;  // each bl, in code order
     // the return address of the original's nth indirect call, or 0
     GuestAddr call(std::size_t n) const noexcept { return n < calls.size() ? calls[n] : 0; }
+    // where the original's call to `target` returns, or 0 when it makes none
+    GuestAddr returning_from(GuestAddr target) const noexcept {
+        for (const DirectCall& c : direct) {
+            if (c.target == target) {
+                return c.resume;
+            }
+        }
+        return 0;
+    }
 };
-void set_bound(std::string_view name, GuestAddr address, std::span<const GuestAddr> calls) noexcept;
+// A game's bindings register every function they name, natives or not: a
+// native that calls into the game (GXBegin, whose dirty-state flush is the
+// SDK's) finds it by name, and its own `direct` list says where it returns.
+void set_bound(std::string_view name, GuestAddr address, std::span<const GuestAddr> calls,
+               std::span<const DirectCall> direct = {}) noexcept;
 // This game's binding of `name`, or null when it binds none. The name is the
 // native's (Native::name): one game binds one build of each.
 const Bound* bound(std::string_view name) noexcept;

@@ -9,6 +9,7 @@
 
 #include "abi_bridge.h"
 #include "guest_flat_memory.h"
+#include "guest_globals.h"
 #include "memory.h"
 #include "memory_access.h"
 
@@ -62,6 +63,7 @@ void WiinxInstallHost() {
         }
         InvokeIndirectCpu(target, ctx);
     };
+    host.global = [](const char* name) -> wiinx::GuestAddr { return RuntimeGuestGlobals::find(name); };
     host.notify_write = [](wiinx::GuestAddr addr, wiinx::u32 size) { GxNotifyGuestRamDmaWrite(addr, size); };
     // GX natives' commands take the gather pipe's own path, display lists included
     host.gx_write = [](const wiinx::u8* data, wiinx::u32 size) { GX_HLE_FIFO_WriteBurst(data, size); };

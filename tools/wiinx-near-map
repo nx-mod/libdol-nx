@@ -23,6 +23,7 @@ reference's names. Nothing is bound from it directly - it is the input to
 
 which signs from this game's own code and keeps only what verifies.
 """
+import bisect
 import difflib
 import os
 import re
@@ -36,6 +37,10 @@ sys.path.insert(0, HERE)
 # no other function of about its size shares it: two small functions that
 # touch the same three offsets prove nothing
 MIN_FIELDS = 8
+# ... and this many of them past the first eight bytes: offsets 0..7 are the
+# bytes of a colour or the words of a pair, in any number of unrelated
+# functions (an alpha DrawQuad's {0..6} matched game code in Bomberman Blast)
+MIN_FAR_FIELDS = 4
 
 
 def load(name):
@@ -112,6 +117,23 @@ def main(argv):
         # RVL::OS::ExitThread - where a published one says EXIImm)
         return not (theirs.endswith(ours) or ours.endswith(theirs))
 
+    named_starts = sorted(a for a, n in game_entries if n and not re.fullmatch(r"(fn_)?(0x)?[0-9A-Fa-f]{8}", n))
+    def neighbour(candidate):
+        """The name of the nearest function the game's map names"""
+        if not named_starts:
+            return None
+        i = bisect.bisect_left(named_starts, candidate)
+        near = [named_starts[j] for j in (i - 1, i) if 0 <= j < len(named_starts)]
+        return game_names[min(near, key=lambda a: abs(a - candidate))]
+
+    def library(name):
+        """nw4r::lyt of nw4r::lyt::Pane::Animate (or of its mangled form)"""
+        if not name:
+            return None
+        plain = signer.demangle(name, params=False) or name
+        parts = plain.split("::")
+        return "::".join(parts[:2]) if len(parts) > 2 else None
+
     def fingerprint(dol, address, size):
         code = dol.read(address, size * 4)
         return scan.field_fingerprint(code) if code else None
@@ -139,24 +161,39 @@ def main(argv):
                 continue
             scored.append((matcher.ratio(), candidate))
         scored.sort(reverse=True)
-        if not scored or scored[0][0] < minimum:
+        tied = len(scored) > 1 and scored[0][0] >= minimum and scored[0][0] - scored[1][0] < margin
+        if not scored or scored[0][0] < minimum or tied:
             # The same source compiled differently - other registers, a switch
             # laid out as a compare tree - is not similar word for word, but
             # reads and writes the same fields: one candidate of about its
             # size with the reference's field fingerprint, and a fingerprint
-            # of enough fields to say something, is the function.
+            # of enough fields to say something, is the function. The same
+            # settles two that look alike within the margin.
             ref_size = len(wanted)
-            if len(scan.field_set(ref.read(address, ref_size * 4) or b"")) < MIN_FIELDS:
+            fields = scan.field_set(ref.read(address, ref_size * 4) or b"")
+            if len(fields) < MIN_FIELDS or sum(1 for f in fields if abs(f) >= 8) < MIN_FAR_FIELDS:
                 continue
             want = fingerprint(ref, address, ref_size)
             same = [c for size, c in in_size if fingerprint(game, c, size) == want]
-            if want is None or len(same) != 1:
+            if want is None or not same:
                 continue
+            if len(same) > 1:
+                # several share the fields: a copy of the library linked twice
+                # (the Home Menu's nw4hbm::lyt beside nw4r::lyt) sits among its
+                # own library's functions, which the game's map names
+                own = library(names[address])
+                same = [c for c in same if library(neighbour(c)) in (None, own)] or same
+            if len(same) > 1:
+                # still several - unrolled copies, a sibling class's
+                # override: the one most like the reference's code, by the margin
+                ranked = sorted(((difflib.SequenceMatcher(None, wanted, game_code[c], autojunk=False).ratio(), c)
+                                 for c in same), reverse=True)
+                if ranked[0][0] - ranked[1][0] < margin:
+                    continue
+                same = [ranked[0][1]]
             scored = [(0.0, same[0])]
             by_fields += 1
             fielded.append((names[address], same[0]))
-        elif len(scored) > 1 and scored[0][0] - scored[1][0] < margin:
-            continue
         score, candidate = scored[0]
         # One function, one native: two that both look like it are both wrong.
         if candidate in claims and claims[candidate][0] >= score:

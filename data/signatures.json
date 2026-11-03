@@ -5314,6 +5314,16 @@
    "fields": "2242ea9a9e62b9e8"
   },
   {
+   "name": "GXSetScissor",
+   "build": "any",
+   "size": 112,
+   "start": "0af35a59d3906f90",
+   "body": "b6aaf823ac961388",
+   "fields": "2242ea9a9e62b9e8",
+   "signed_from": "SMNE01",
+   "registration": "GXSetScissor"
+  },
+  {
    "name": "GXSetScissorBoxOffset",
    "build": "any",
    "size": 100,
@@ -11682,6 +11692,36 @@
    "registration": "nw4r__lyt__detail__DrawQuad_80084d20"
   },
   {
+   "name": "nw4r::lyt::detail::DrawQuad(const nw4r::math::VEC2&, const nw4r::lyt::Size&, unsigned char, const nw4r::math::VEC2[4]*, const nw4r::ut::Color*)",
+   "build": "any",
+   "size": 1376,
+   "start": "d56f482fc2d69e05",
+   "body": "d14fc76d29b93536",
+   "fields": "e7072b3cb73fd853",
+   "signed_from": "SMNE01",
+   "registration": "nw4r::lyt::detail::DrawQuad(const nw4r::math::VEC2&, const nw4r::lyt::Size&, unsigned char, const nw4r::math::VEC2[4]*, const nw4r::ut::Color*)"
+  },
+  {
+   "name": "nw4r::lyt::detail::DrawQuad(const nw4r::math::VEC2&, const nw4r::lyt::Size&, unsigned char, const nw4r::math::VEC2[4]*, const nw4r::ut::Color*)",
+   "build": "any",
+   "size": 1376,
+   "start": "cf262b408d9a6daa",
+   "body": "52b525b40d7ab6d1",
+   "fields": "e7072b3cb73fd853",
+   "signed_from": "WM8E",
+   "registration": "nw4r::lyt::detail::DrawQuad(const nw4r::math::VEC2&, const nw4r::lyt::Size&, unsigned char, const nw4r::math::VEC2[4]*, const nw4r::ut::Color*)"
+  },
+  {
+   "name": "nw4r::lyt::detail::DrawQuad(const nw4r::math::VEC2&, const nw4r::lyt::Size&, unsigned char, const nw4r::math::VEC2[4]*, const nw4r::ut::Color*, unsigned char)",
+   "build": "any",
+   "size": 304,
+   "start": "568b2a54fffb232d",
+   "body": "b927b76535ae50c3",
+   "fields": "1eacc8c10d0cdd8e",
+   "signed_from": "SMNE01",
+   "registration": "nw4r::lyt::detail::DrawQuad(const nw4r::math::VEC2&, const nw4r::lyt::Size&, unsigned char, const nw4r::math::VEC2[4]*, const nw4r::ut::Color*, unsigned char)"
+  },
+  {
    "name": "nw4r::snd::SoundPlayer::SetVolume",
    "build": "any",
    "size": 64,
@@ -11702,6 +11742,26 @@
    "registration": "SoundPlayerSetVolume_800a35e0",
    "spans": 4,
    "fields": "e2634ed3c5ed9a23"
+  },
+  {
+   "name": "nw4r::ut::CharWriter::PrintGlyph",
+   "build": "any",
+   "size": 640,
+   "start": "0cfc4bdd48741fb2",
+   "body": "cd399b7a8d7c8101",
+   "fields": "9def186db674c01a",
+   "signed_from": "SMNE01",
+   "registration": "nw4r::ut::CharWriter::PrintGlyph"
+  },
+  {
+   "name": "nw4r::ut::CharWriter::PrintGlyph",
+   "build": "any",
+   "size": 636,
+   "start": "2d48914710bdb996",
+   "body": "30313d8de2eb69b4",
+   "fields": "865f73a82ef16a33",
+   "signed_from": "WM8E",
+   "registration": "nw4r::ut::CharWriter::PrintGlyph"
   },
   {
    "name": "strcat",

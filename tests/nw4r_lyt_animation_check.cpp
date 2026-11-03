@@ -304,4 +304,65 @@ int main() {
     run({"nw4r.lyt@2007-06-08", 0xB7, 0x18, 0x1C}, false);
     run({"nw4r.lyt@2008-03-08", 0xBB, 0x1C, 0x20}, true);
     run({"nw4r.lyt@2009-04-02", 0xBB, 0x1C, 0x20}, true);
+
+    // DrawQuad, the alpha form: two textures, colours with their alpha scaled
+    std::vector<u8> fifo;
+    static std::vector<u8>* sink;
+    sink = &fifo;
+    Host q = h;
+    q.gx_write = [](const u8* data, u32 size) { sink->insert(sink->end(), data, data + size); };
+    set_host(q);
+    set_bound("GXBegin", 0x9700, {});
+    constexpr DirectCall begin[] = {{0x9700, 0xA100}};
+    set_bound("nw4r::lyt::detail::DrawQuad(const nw4r::math::VEC2&, const nw4r::lyt::Size&, unsigned char, "
+              "const nw4r::math::VEC2[4]*, const nw4r::ut::Color*)", 0x9800, {}, begin);
+    std::fill(g_memory.begin(), g_memory.end(), 0);
+    g_calls.clear();
+    f32_at(0x100, 10.0f);  // base
+    f32_at(0x104, 20.0f);
+    f32_at(0x108, 4.0f);   // size
+    f32_at(0x10C, 6.0f);
+    for (u32 i = 0; i < 16; ++i) {
+        f32_at(0x200 + i * 4, static_cast<f32>(i));  // two textures' four corners
+    }
+    for (u32 i = 0; i < 4; ++i) {
+        u32_at(0x300 + i * 4, 0x10203000u | (0xC0 + i));
+    }
+    const Native* quad = find_native("nw4r::lyt::detail::DrawQuad(const nw4r::math::VEC2&, const nw4r::lyt::Size&, "
+                                     "unsigned char, const nw4r::math::VEC2[4]*, const nw4r::ut::Color*, unsigned char)",
+                                     "nw4r.lyt@2008-03-08");
+    assert(quad != nullptr);
+    g_gpr[3] = 0x100;
+    g_gpr[4] = 0x108;
+    g_gpr[5] = 2;
+    g_gpr[6] = 0x200;
+    g_gpr[7] = 0x300;
+    g_gpr[8] = 128;
+    quad->entry(nullptr);
+    assert(g_calls.size() == 1 && g_calls[0].target == 0x9700 && g_calls[0].resume == 0xA100 && g_calls[0].r3 == 0x80);
+    // four vertices of x, y, colour and two coordinate pairs: 28 bytes
+    assert(fifo.size() == 4 * 28);
+    const auto word = [&](size_t at) {
+        return u32(fifo[at]) << 24 | u32(fifo[at + 1]) << 16 | u32(fifo[at + 2]) << 8 | fifo[at + 3];
+    };
+    // right bottom (the third vertex): x + width, y - height (2008 subtracts),
+    // colour 3 with alpha 0xC3 * 128 / 255, texture 0's +24 and texture 1's
+    assert(word(56) == bits(14.0f) && word(60) == bits(14.0f));
+    assert(word(64) == (0x10203000u | (0xC3u * 128 / 255)));
+    assert(word(68) == bits(6.0f) && word(72) == bits(7.0f) && word(76) == bits(14.0f) && word(80) == bits(15.0f));
+    // the 2007 build adds the height
+    const Native* quad2007 = find_native("nw4r::lyt::detail::DrawQuad(const nw4r::math::VEC2&, const nw4r::lyt::Size&, "
+                                         "unsigned char, const nw4r::math::VEC2[4]*, const nw4r::ut::Color*)",
+                                         "nw4r.lyt@2007-06-08");
+    fifo.clear();
+    // (the arguments again: the call to GXBegin left its own in r3..r5, as it
+    // would on the console)
+    g_gpr[3] = 0x100;
+    g_gpr[4] = 0x108;
+    g_gpr[5] = 2;
+    g_gpr[6] = 0x200;
+    g_gpr[7] = 0;  // no colours
+    quad2007->entry(nullptr);
+    assert(fifo.size() == 4 * 24 && word(48 + 4) == bits(26.0f));
+    std::printf("DrawQuad ok\n");
 }

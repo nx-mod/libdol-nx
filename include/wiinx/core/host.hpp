@@ -56,6 +56,11 @@ struct Host {
     // or 0 when the game has none bound.
     GuestAddr (*gx_data)() = nullptr;
 
+    // A global of the game's SDK or middleware by its name in the game's
+    // globals.json (wiinx-find-globals): "ut.CharWriter_loadingTexture". 0
+    // when the game has none, or the host has no such table.
+    GuestAddr (*global)(const char* name) = nullptr;
+
     // Optional: where natives send an occasional status line.
     void (*log)(const char* line) = nullptr;
 };
